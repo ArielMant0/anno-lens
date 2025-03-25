@@ -33,6 +33,10 @@
             type: String,
             required: false
         },
+        colorType: {
+            type: String,
+            default: "ordinal"
+        },
         radius: {
             type: Number,
             default: 4
@@ -41,18 +45,22 @@
             type: Boolean,
             default: false
         },
+        searchRadius: {
+            type: Number,
+            default: 20,
+        }
     })
 
     const emit = defineEmits(["move", "hover", "click", "right-click"])
 
     const el = ref(null)
     const overlay = ref(null)
-    const searchRadius = ref(25)
 
     let tree;
     let ctx;
     let x, y, colors;
     let xUnit, yUnit;
+    let lensX = 0, lensY = 0;
 
     const getX = d => d[props.xAttr]
     const getY = d => d[props.yAttr]
@@ -64,9 +72,20 @@
         if (!ctx) ctx = el.value.getContext("2d")
 
         if (props.colorAttr) {
-            const cvals = Array.from(new Set(props.data.map(getC)).values())
-            cvals.sort()
-            colors = d3.scaleOrdinal(d3.schemeCategory10).domain(cvals)
+            let scale, vals;
+            switch (props.colorType) {
+                default:
+                case "ordinal":
+                    scale = d3.scaleOrdinal(d3.schemeCategory10)
+                    vals = Array.from(new Set(props.data.map(getC)).values())
+                    vals.sort()
+                    break;
+                case "sequential":
+                    scale = d3.scaleSequential(d3.interpolateTurbo)
+                    vals = d3.extent(props.data, getC)
+                    break;
+            }
+            colors = scale.domain(vals)
         } else {
             colors = null;
         }
@@ -106,15 +125,15 @@
         return result;
     }
 
-    function drawLens(px, py) {
+    function drawLens() {
         const svg = d3.select(overlay.value)
         svg.selectAll(".lens")
-            .data([[px, py]])
+            .data([[lensX, lensY]])
             .join("circle")
             .classed("lens", true)
             .attr("cx", d => d[0])
             .attr("cy", d => d[1])
-            .attr("r", searchRadius.value)
+            .attr("r", props.searchRadius)
             .attr("fill", "none")
             .attr("stroke", "black")
             .attr("stroke-width", 2)
@@ -122,15 +141,17 @@
 
     function onMove(event) {
         const [mx, my] = d3.pointer(event, el.value)
-        const res = findInCirlce(mx, my, searchRadius.value)
+        const res = findInCirlce(mx, my, props.searchRadius)
         emit("hover", makeCoords(res), event, res)
         if (props.showLens) {
-            drawLens(mx, my)
+            lensX = mx;
+            lensY = my
+            drawLens()
         }
     }
     function onClick(event) {
         const [mx, my] = d3.pointer(event, el.value)
-        const res = findInCirlce(mx, my, searchRadius.value)
+        const res = findInCirlce(mx, my, props.searchRadius)
         if (res.length > 0) {
             emit("click", makeCoords(res), event, res)
         }
@@ -165,7 +186,13 @@
 
     onMounted(init)
 
-    watch(props, init, { deep: true })
+    watch(() => ([props.searchRadius, props.showLens]), drawLens, { deep: true })
+    watch(() => {
+        const obj = Object.assign({}, props)
+        delete obj.searchRadius
+        delete obj.showLens
+        return obj
+    }, init, { deep: true })
 </script>
 
 <style scoped>

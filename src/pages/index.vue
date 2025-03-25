@@ -7,7 +7,7 @@
                 style="min-width: 300px;"
                 label="Dataset"
                 @update:model-value="v => app.setDataset(v)"
-                :items="['heart_disease_uci', 'iris']"/>
+                :items="['iris', 'heart_disease_uci', 'pollution']"/>
         </div>
         <MultiLensVis :dataset="dataset"/>
     </main>

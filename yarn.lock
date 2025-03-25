@@ -2853,6 +2853,39 @@ __metadata:
   languageName: node
   linkType: hard
 
+"interaction-layers@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "interaction-layers@workspace:."
+  dependencies:
+    "@eslint/js": ^9.14.0
+    "@mdi/font": 7.4.47
+    "@vitejs/plugin-vue": ^5.0.5
+    "@vue/compiler-sfc": ^3.5.13
+    "@vueuse/core": ^13.0.0
+    d3: ^7.9.0
+    eslint: ^9.14.0
+    eslint-plugin-import: ^2.29.1
+    eslint-plugin-n: ^16.6.2
+    eslint-plugin-node: ^11.1.0
+    eslint-plugin-promise: ^6.4.0
+    eslint-plugin-vue: ^9.30.0
+    pinia: ^2.1.7
+    roboto-fontface: "*"
+    sass: ^1.86.0
+    sass-embedded: ^1.86.0
+    unplugin-auto-import: ^0.17.6
+    unplugin-fonts: ^1.1.1
+    unplugin-vue-components: ^0.27.2
+    unplugin-vue-router: ^0.10.0
+    vite: ^5.4.0
+    vite-plugin-vue-layouts: ^0.11.0
+    vite-plugin-vuetify: ^2.0.3
+    vue: ^3.4.31
+    vue-router: ^4.4.0
+    vuetify: ^3.6.14
+  languageName: unknown
+  linkType: soft
+
 "internal-slot@npm:^1.1.0":
   version: 1.1.0
   resolution: "internal-slot@npm:1.1.0"
@@ -3491,39 +3524,6 @@ __metadata:
   checksum: aa92de608021b242401676e35cfa5aa42dd70cbdc082b916da7fb925c542173e36bce97ea3e804923fe92c0ad991434e4a38327e15a1b5b5f945d66df615ae6d
   languageName: node
   linkType: hard
-
-"multi-lens@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "multi-lens@workspace:."
-  dependencies:
-    "@eslint/js": ^9.14.0
-    "@mdi/font": 7.4.47
-    "@vitejs/plugin-vue": ^5.0.5
-    "@vue/compiler-sfc": ^3.5.13
-    "@vueuse/core": ^13.0.0
-    d3: ^7.9.0
-    eslint: ^9.14.0
-    eslint-plugin-import: ^2.29.1
-    eslint-plugin-n: ^16.6.2
-    eslint-plugin-node: ^11.1.0
-    eslint-plugin-promise: ^6.4.0
-    eslint-plugin-vue: ^9.30.0
-    pinia: ^2.1.7
-    roboto-fontface: "*"
-    sass: ^1.86.0
-    sass-embedded: ^1.86.0
-    unplugin-auto-import: ^0.17.6
-    unplugin-fonts: ^1.1.1
-    unplugin-vue-components: ^0.27.2
-    unplugin-vue-router: ^0.10.0
-    vite: ^5.4.0
-    vite-plugin-vue-layouts: ^0.11.0
-    vite-plugin-vuetify: ^2.0.3
-    vue: ^3.4.31
-    vue-router: ^4.4.0
-    vuetify: ^3.6.14
-  languageName: unknown
-  linkType: soft
 
 "nanoid@npm:^3.3.8":
   version: 3.3.11

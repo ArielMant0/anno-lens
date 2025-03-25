@@ -11,6 +11,9 @@
             :x-attr="datasetX"
             :y-attr="datasetY"
             :color-attr="datasetColor"
+            :color-type="colorType"
+            :radius="3"
+            :search-radius="lensRadius"
             class="mt-2"
             :width="w"
             :height="h"
@@ -32,7 +35,7 @@
     const app = useApp()
     const tt = useTooltip()
 
-    const { datasetX, datasetY, datasetColor } = storeToRefs(app)
+    const { datasetX, datasetY, datasetColor, colorType } = storeToRefs(app)
 
     const props = defineProps({
         dataset: {
@@ -51,14 +54,19 @@
         click: []
     })
 
+    const lensRadius = ref(10)
+
     const windowSize = ref(5000)
     const offset = computed(() => Math.floor(windowSize.value * 0.1))
 
     function makeItemTooltip(d) {
-        const keys = Object.keys(d)
-        return keys
-            .map(k => `<div>${k}: <b>${d[k]}</b></div>`)
-            .join("")
+        return `
+        <tr class="mb-1">
+            <td class="pr-2">${datasetX.value}: <b>${d[datasetX.value]}</b></td>
+            <td class="pr-1 pl-1">${datasetY.value}: <b>${d[datasetY.value]}</b></td>
+            <td class="pl-2">${datasetColor.value}: <b>${d[datasetColor.value]}</b></td>
+        </tr>
+        `
     }
 
     function addMove(coords) {
@@ -78,7 +86,8 @@
             int.hover = arr
             const [mx, my] = pointer(event, document.body)
             const tmp = data.slice(0, 3).reduce((acc,d) => acc + makeItemTooltip(d), '')
-            tt.show(`<div class="pa-2 text-caption">${tmp}</div>`, mx, my)
+            const extra = data.length > 3 ? `<div>and ${data.length-3} more..</div>` : ''
+            tt.show(`<div class="pa-1 text-caption"><table class="mb-1">${tmp}</table>${extra}</div>`, mx, my)
         } else {
             tt.hide()
         }
@@ -95,13 +104,25 @@
     }
 
     async function init() {
+        data.value = []
         int.move = []
         int.hover = []
         int.click = []
         data.value = await csv(`/data/${props.dataset}.csv`, autoType)
     }
 
-    onMounted(init)
+    onMounted(function() {
+        window.addEventListener("wheel", function(event) {
+            lensRadius.value = Math.max(
+                5,
+                Math.min(
+                    Math.max(w.value, h.value),
+                    Math.round(lensRadius.value + event.deltaY * -0.05)
+                )
+            )
+        })
+        init()
+    })
 
     watch(props, init, { deep: true })
 </script>
