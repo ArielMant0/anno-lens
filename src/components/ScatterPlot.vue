@@ -6,11 +6,21 @@
 </template>
 
 <script setup>
-    import * as d3 from 'd3'
+    import { DATA_TYPES } from '@/stores/app'
+import * as d3 from 'd3'
+import { watch } from 'vue'
 
     const props = defineProps({
         data: {
             type: Array,
+            required: true
+        },
+        time: {
+            type: Number,
+            required: true
+        },
+        update: {
+            type: Number,
             required: true
         },
         width: {
@@ -34,8 +44,11 @@
             required: false
         },
         colorType: {
-            type: String,
-            default: "ordinal"
+            type: Number,
+            default: 1
+        },
+        colorScale: {
+            type: Function
         },
         radius: {
             type: Number,
@@ -44,6 +57,14 @@
         showLens: {
             type: Boolean,
             default: false
+        },
+        numLens: {
+            type: Number,
+            default: 1,
+        },
+        activeLens: {
+            type: Number,
+            default: 0,
         },
         searchRadius: {
             type: Number,
@@ -57,7 +78,7 @@
     const overlay = ref(null)
 
     let tree;
-    let ctx;
+    let ctx, frame = null;
     let x, y, colors;
     let xUnit, yUnit;
     let lensX = 0, lensY = 0;
@@ -67,48 +88,21 @@
     const getC = d => props.colorAttr ? d[props.colorAttr] : "darkgreen"
     const getColor = d => colors ? colors(getC(d)) : "darkgreen"
 
-
     function draw() {
-        if (!ctx) ctx = el.value.getContext("2d")
-
-        if (props.colorAttr) {
-            let scale, vals;
-            switch (props.colorType) {
-                default:
-                case "ordinal":
-                    scale = d3.scaleOrdinal(d3.schemeCategory10)
-                    vals = Array.from(new Set(props.data.map(getC)).values())
-                    vals.sort()
-                    break;
-                case "sequential":
-                    scale = d3.scaleSequential(d3.interpolateTurbo)
-                    vals = d3.extent(props.data, getC)
-                    break;
-            }
-            colors = scale.domain(vals)
-        } else {
-            colors = null;
-        }
-
         ctx.clearRect(0, 0, props.width, props.height)
         props.data.forEach(d => {
             ctx.beginPath()
             const c = getColor(d)
             ctx.fillStyle = c
-            ctx.strokeStyle = d3.color(c).darker()
+            ctx.strokeStyle =  c ? d3.color(c).darker() : "black"
             ctx.arc(x(getX(d)), y(getY(d)), props.radius, 0, Math.PI*2)
             ctx.fill()
             ctx.stroke()
         })
     }
 
-    function findInCirlce(px, py, r, filter) {
-        const result = [],
-            radius2 = r * r,
-            accept = filter ?
-                d => filter(d) && result.push(d) :
-                d => result.push(d);
-
+    function findInCirlce(px, py, r) {
+        const result = [], radius2 = r * r
         tree.visit(function(node, x1, y1, x2, y2) {
             if (node.length) {
                 return x1 >= px + r || y1 >= py + r || x2 < px - r || y2 < py - r;
@@ -118,7 +112,7 @@
                 dy = +tree._y.call(null, node.data) - py;
 
             if (dx * dx + dy * dy < radius2) {
-                do { accept(node.data); } while (node = node.next);
+                do { result.push(node.data.id); } while (node = node.next);
             }
         });
 
@@ -127,38 +121,80 @@
 
     function drawLens() {
         const svg = d3.select(overlay.value)
+
         svg.selectAll(".lens")
-            .data([[lensX, lensY]])
-            .join("circle")
+            .data(d3.range(0, props.numLens))
+            .join("path")
             .classed("lens", true)
-            .attr("cx", d => d[0])
-            .attr("cy", d => d[1])
-            .attr("r", props.searchRadius)
-            .attr("fill", "none")
+            .attr("transform", `translate(${lensX},${lensY})`)
+            .attr("d", d => d3.arc()({
+                innerRadius: props.searchRadius * d,
+                outerRadius: props.searchRadius * (d + 1),
+                startAngle: 0,
+                endAngle: Math.PI * 2
+            }) )
+            .attr("fill", d => d === props.activeLens ? "grey" : "none")
+            .attr("fill-opacity", 0.25)
             .attr("stroke", "black")
             .attr("stroke-width", 2)
     }
 
+    function getLensData(mx, my) {
+        const res = []
+        let prev = new Set()
+        for (let i = 1; i <= props.numLens; ++i) {
+            const ids = findInCirlce(mx, my, props.searchRadius*i)
+            res.push(ids.filter(id => !prev.has(id)))
+            prev = new Set(ids)
+        }
+        return res
+    }
+
+    function updateLens() {
+        emit("hover", getLensData(lensX, lensY))
+        if (props.showLens) {
+            drawLens()
+        }
+    }
+
     function onMove(event) {
         const [mx, my] = d3.pointer(event, el.value)
-        const res = findInCirlce(mx, my, props.searchRadius)
-        emit("hover", makeCoords(res), event, res)
+        emit("hover", getLensData(mx, my))
+        lensX = mx;
+        lensY = my
         if (props.showLens) {
-            lensX = mx;
-            lensY = my
             drawLens()
         }
     }
     function onClick(event) {
         const [mx, my] = d3.pointer(event, el.value)
-        const res = findInCirlce(mx, my, props.searchRadius)
+        const res = getLensData(mx, my)
         if (res.length > 0) {
-            emit("click", makeCoords(res), event, res)
+            emit("click", res)
         }
     }
 
-    function makeCoords(data) {
-        return data.map(d => ([xUnit(getX(d)), yUnit(getY(d))]))
+    function makeColorScale() {
+        if (props.colorScale !== undefined) {
+            colors = props.colorScale
+        } else if (props.colorAttr) {
+            let scale, vals;
+            switch (props.colorType) {
+                default:
+                case DATA_TYPES.ORDINAL:
+                    scale = d3.scaleOrdinal(d3.schemeCategory10)
+                    vals = Array.from(new Set(props.data.map(getC)).values())
+                    vals.sort()
+                    break;
+                case DATA_TYPES.SEQUENTIAL:
+                    scale = d3.scaleSequential(d3.interpolateTurbo)
+                    vals = d3.extent(props.data, getC)
+                    break;
+            }
+            colors = scale.domain(vals)
+        } else {
+            colors = null;
+        }
     }
 
     function init() {
@@ -181,18 +217,23 @@
             .y(d => y(getY(d)))
             .addAll(props.data)
 
+        ctx = ctx ? ctx : el.value.getContext("2d")
+
+        makeColorScale()
+
         draw()
     }
 
     onMounted(init)
 
-    watch(() => ([props.searchRadius, props.showLens]), drawLens, { deep: true })
-    watch(() => {
-        const obj = Object.assign({}, props)
-        delete obj.searchRadius
-        delete obj.showLens
-        return obj
-    }, init, { deep: true })
+    watch(() => props.searchRadius, updateLens)
+    watch(() => ([props.showLens, props.activeLens, props.numLens]), drawLens, { deep: true })
+    watch(() => ([props.colorAttr, props.colorScale, props.colorType]), makeColorScale, { deep: true })
+    watch(() => props.time, init)
+    watch(() => props.update, function() {
+        makeColorScale()
+        draw()
+    })
 </script>
 
 <style scoped>

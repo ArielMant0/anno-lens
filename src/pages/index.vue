@@ -6,8 +6,10 @@
                 density="compact"
                 style="min-width: 300px;"
                 label="Dataset"
+                item-title="name"
+                item-value="file"
                 @update:model-value="v => app.setDataset(v)"
-                :items="['iris', 'heart_disease_uci', 'pollution']"/>
+                :items="DATASETS"/>
         </div>
         <MultiLensVis :dataset="dataset"/>
     </main>
@@ -16,7 +18,7 @@
 <script setup>
   import MultiLensVis from '@/components/MultiLensVis.vue';
   import { storeToRefs } from 'pinia'
-  import { useApp } from '@/stores/app';
+  import { DATASETS, useApp } from '@/stores/app';
 
   const app = useApp()
 
