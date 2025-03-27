@@ -5,12 +5,22 @@
         </div>
         <div v-else>
             <div style="text-align: center;" :style="{ maxWidth: width+'px' }" class="text-caption text-dots">{{ columnName }}</div>
-            <BarChart :data="derived"
+            <BarChart
+                :data="derived"
                 x-attr="x"
                 y-attr="y"
                 color-attr="color"
                 :width="width"
                 :height="height" />
+<!--
+            <KDEChart v-if="columnType === DATA_TYPES.SEQUENTIAL"
+                :data="raw"
+                :binned="derived"
+                x-attr="x"
+                y-attr="y"
+                color-attr="color"
+                :width="width"
+                :height="height" /> -->
         </div>
     </v-card>
 </template>
@@ -21,6 +31,7 @@
     import BarChart from './vis/BarChart.vue';
     import { DATA_TYPES } from '@/stores/app';
     import DM from '@/use/data-manager';
+    import KDEChart from './vis/KDEChart.vue';
 
     const props = defineProps({
         lens: {
@@ -57,13 +68,16 @@
         }
     })
 
+    const raw = ref([])
     const derived = ref([])
     const columnName = ref("")
+    const columnType = ref(-1)
 
     function init() {
         const data = DM.getLensData(props.lens)
         if (!data || data.length === 0) {
             columnName.value = ""
+            columnType.value = -1
             derived.value = []
             return
         }
@@ -72,6 +86,7 @@
 
         if (!DM.lensColumns[props.lens][props.index] || type === null || type === undefined) {
             columnName.value = ""
+            columnType.value = -1
             derived.value = []
             return
         }
@@ -79,12 +94,13 @@
         const column = DM.lensColumns[props.lens][props.index].name
         const scale = DM.scales[column]
         columnName.value = column
+        columnType.value = type
 
         switch(type) {
             case DATA_TYPES.ORDINAL: {
                 const tmp = d3.group(data, d => d[column])
                 const list = []
-                DM.stats[column].bins.map(c => {
+                DM.filterStats[column].bins.map(c => {
                     const values = tmp.get(c)
                     list.push({ x: c, y: values ? values.length : 0, color: scale(c) })
                 })
@@ -94,7 +110,7 @@
             case DATA_TYPES.SEQUENTIAL: {
                 const tmp = d3.bin()
                     .thresholds(5)
-                    .domain([DM.stats[column].min, DM.stats[column].max])
+                    .domain([DM.filterStats[column].min, DM.filterStats[column].max])
                     .value(d => d[column])
                     (data)
 

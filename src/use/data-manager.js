@@ -9,6 +9,7 @@ class DataManager {
         this.columns = []
         this.types = []
         this.stats = {}
+        this.filterStats = {}
         this.lensData = []
         this.lensTypes = []
         this.lensColumns = []
@@ -25,7 +26,7 @@ class DataManager {
             const vals = dataToNumbers(data, c, types[i])
             const ord = types[i] === DATA_TYPES.ORDINAL
             if (ord) {
-                unique = data.map(d => d[c])
+                unique = Array.from(new Set(data.map(d => d[c])))
                 unique.sort()
             } else {
                 const tmp = bin().thresholds(5)(vals)
@@ -41,8 +42,41 @@ class DataManager {
                 deviation: deviation(vals),
             }
         })
+        this.filterStats = this.stats;
         const app = useApp()
         app.updateData()
+    }
+
+    computeFilterStats(ids) {
+        if (ids.length === 0) {
+            this.filterStats = this.stats
+        } else {
+            const set = new Set(ids)
+            const data = this.data.filter(d => set.has(d.id))
+            this.columns.forEach((c, i) => {
+                let unique = []
+                const filterType = this.types[i]
+                const vals = dataToNumbers(data, c, filterType)
+                const ord = filterType === DATA_TYPES.ORDINAL
+                if (ord) {
+                    unique = Array.from(new Set(data.map(d => d[c])))
+                    unique.sort()
+                } else {
+                    const tmp = bin().thresholds(5)(vals)
+                    unique = tmp.map(d => d.x0).concat(tmp.at(-1).x1)
+                }
+                this.filterStats[c] = {
+                    min: min(vals),
+                    max: max(vals),
+                    bins: unique,
+                    mean: mean(vals),
+                    median: median(vals),
+                    variance: variance(vals),
+                    deviation: deviation(vals),
+                }
+            })
+        }
+        console.log(this.filterStats)
     }
 
     setLensData(data=[]) {

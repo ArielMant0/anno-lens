@@ -8,9 +8,9 @@ export function dataToNumbers(data, column, type) {
             vals = data.map(d => d[column])
             break;
         case DATA_TYPES.ORDINAL:
-            const g = group(data, d => d[column])
-            const n = Array.from(g.keys())
-            vals = data.map(d => n.indexOf(d[column]))
+            const list = Array.from(new Set(data.map(d => d[column])))
+            const n = new Map(list.map((v, i) => ([i, v])))
+            vals = data.map(d => n.get(d[column]))
             break
     }
     return vals

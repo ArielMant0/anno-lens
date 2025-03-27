@@ -16,6 +16,10 @@
             type: Array,
             required: true
         },
+        selected: {
+            type: Array,
+            default: () => ([])
+        },
         time: {
             type: Number,
             required: false
@@ -91,6 +95,8 @@
     let x, y, colors, opacities;
     let lensX = props.width * 0.5, lensY = props.height * 0.5;
 
+    let dataIds = new Set()
+
     const getX = d => getAttr(d, props.xAttr)
     const getY = d => getAttr(d, props.yAttr)
     const getC = d => props.colorAttr ? getAttr(d, props.colorAttr) : "darkgreen"
@@ -101,6 +107,7 @@
     function draw() {
         ctx.clearRect(0, 0, props.width, props.height)
         props.data.forEach(d => {
+            if (dataIds.size > 0 && !dataIds.has(d.id)) return
             ctx.globalAlpha = getOpacity(d)
             ctx.beginPath()
             const c = getColor(d)
@@ -110,6 +117,7 @@
             ctx.fill()
             ctx.stroke()
         })
+        drawLens()
     }
 
     function findInCirlce(px, py, r) {
@@ -217,6 +225,11 @@
         }
     }
 
+    function updateSelected() {
+        dataIds = new Set(props.selected)
+        draw()
+    }
+
     function init() {
         const off = props.radius + 2
 
@@ -239,7 +252,7 @@
 
         draw()
 
-        drawLens()
+        updateSelected()
     }
 
     onMounted(init)
@@ -248,12 +261,14 @@
     watch(() => ([props.showLens, props.activeLens, props.numLens]), drawLens, { deep: true })
     watch(() => ([props.colorAttr, props.colorScale, props.colorType]), function() {
         makeColorScale()
-        draw()
+        updateSelected()
     }, { deep: true })
+
+    watch(() => props.selected, updateSelected)
     watch(() => props.time, init)
     watch(() => props.update, function() {
         makeColorScale()
-        draw()
+        updateSelected()
     })
 </script>
 

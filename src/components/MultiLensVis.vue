@@ -41,6 +41,7 @@
                             <ScatterPlot
                                 style="position: absolute; top: 0; left: 0;"
                                 :data="data"
+                                :selected="dataF"
                                 :update="showTime"
                                 :x-attr="datasetX"
                                 :y-attr="datasetY"
@@ -56,9 +57,21 @@
                     </div>
 
                     <div v-else class="mr-2">
-                        <div :style="{ width: w+'px' }">Color: {{ chosenColorAttr }} <span v-if="!int.fromLens">(default)</span></div>
+                        <div :style="{ width: w+'px' }" class="d-flex justify-space-between">
+                            <div>
+                                Color: {{ chosenColorAttr }} <span v-if="!int.fromLens">(default)</span>
+                            </div>
+                            <FilterDesc v-if="int.filterAttr !== null"
+                                :data="int.filterValues"
+                                :name="int.filterAttr"
+                                @clear="setFilter(null)"
+                                :ordinal="int.filterType === DATA_TYPES.ORDINAL"
+                                :scale="int.scales[int.filterAttr]"/>
+                        </div>
+
                         <ScatterPlot
                             :data="data"
+                            :selected="dataF"
                             :time="dataTime"
                             :update="lensTime"
                             :x-attr="datasetX"
@@ -79,7 +92,12 @@
                     </div>
 
                     <div style="margin-top: 25px;">
-                        <ColorLegend :scale="int.scales[chosenColorAttr]" :height="h"></ColorLegend>
+                        <ColorLegend
+                            :scale="int.scales[chosenColorAttr]"
+                            :selected="chosenColorAttr === int.filterAttr ? int.filterValues : []"
+                            @click="setFilter"
+                            @brush="setFilter"
+                            :height="h" />
                     </div>
 
                     <div style="margin-top: 25px;" :style="{ opacity: int.showAttrMap ? 0.25 : 1 }">
@@ -126,7 +144,9 @@
     import LensResults from './LensResults.vue';
     import BarChart from './vis/BarChart.vue';
     import DM from '@/use/data-manager';
-import ColorLegend from './vis/ColorLegend.vue';
+    import ColorLegend from './vis/ColorLegend.vue';
+import FilterDesc from './FilterDesc.vue';
+import { it } from 'vuetify/locale';
 
     const app = useApp()
 
@@ -145,6 +165,19 @@ import ColorLegend from './vis/ColorLegend.vue';
     const h = ref(500)
 
     const data = ref([])
+    const dataF = computed(() => {
+        if (int.filterAttr === null) return []
+        if (int.filterType === DATA_TYPES.ORDINAL) {
+            const v = int.filterValues
+            return data.value
+                .filter(d => v.includes(d[int.filterAttr]))
+                .map(d => d.id)
+        }
+        const [a, b] = int.filterValues
+        return data.value
+            .filter(d => d[int.filterAttr] >= a && d[int.filterAttr] <= b)
+            .map(d => d.id)
+    })
     const dataTime = ref(0)
     const columns = ref([])
     const ctypes = ref([])
@@ -157,11 +190,16 @@ import ColorLegend from './vis/ColorLegend.vue';
         types: [],
         fromLens: false,
 
+        filterAttr: null,
+        filterValues: null,
+        filterType: null,
+
         showAttrMap: null,
         attrLensPos: {},
         historyScales: {}
     })
 
+    let historyUpdated = false
     const history = reactive(new Map())
     const historyData = computed(() => {
         const list = []
@@ -173,6 +211,10 @@ import ColorLegend from './vis/ColorLegend.vue';
     const colorIndex = ref(0)
     const colorColumn = ref(datasetColor.value)
     const colorOverride = ref("")
+    const colorType = computed(() => {
+        const idx = columns.value.indexOf(chosenColorAttr.value)
+        return idx >= 0 ? ctypes.value[idx] : null
+    })
 
     const chosenColorAttr = computed(() => {
         if (colorOverride.value.length > 0) {
@@ -218,15 +260,22 @@ import ColorLegend from './vis/ColorLegend.vue';
     }
 
     function saveHistory() {
+        if (!historyUpdated) return
         snapshots.value.push({
             time: Date.now(),
             dataset: app.dataset,
             lens: lensType.value,
             reference: colorIndex.value,
             positions: int.attrLensPos,
+            filter: {
+                attr: int.filterAttr,
+                type: int.filterType,
+                values: int.filterValues,
+            },
             data: historyData.value,
         })
         history.clear()
+        historyUpdated = false
         int.attrLensPos = {}
         columns.value.forEach(c => int.attrLensPos[c] = [])
         data.value.forEach(d => columns.value.forEach(c => d.visited[c] = 0))
@@ -246,6 +295,50 @@ import ColorLegend from './vis/ColorLegend.vue';
         colorIndex.value = idx
         colorColumn.value = DM.lensColumns[activeLens.value][colorIndex.value].name
     }
+
+    function setFilter(values) {
+        if (values) {
+            const attr = chosenColorAttr.value
+            int.filterType = colorType.value
+            switch(colorType.value) {
+                case DATA_TYPES.ORDINAL:
+                    if (int.filterAttr !== attr) {
+                        int.filterAttr = attr
+                        int.filterValues = [values]
+                    } else  {
+                        const idx = int.filterValues.indexOf(values)
+                        if (idx >= 0) {
+                            if (int.filterValues.length === 1) {
+                                int.filterValues = null
+                            } else {
+                                int.filterValues.splice(idx, 1)
+                            }
+                        } else {
+                            int.filterValues.push(values)
+                        }
+                        int.filterAttr = int.filterValues !== null ? attr : null
+                    }
+                    break;
+                case DATA_TYPES.SEQUENTIAL:
+                    if (int.filterAttr !== attr) {
+                        int.filterAttr = attr
+                        int.filterValues = [values]
+                    } else  {
+                        int.filterValues = int.filterValues[0] === values[0] && int.filterValues[1] === values[1] ? null : values
+                        int.filterAttr = int.filterValues !== null ? attr : null
+                    }
+                    break;
+            }
+        } else {
+            int.filterValues = null
+            int.filterAttr = null
+            int.filterType = null
+        }
+        lensTime.value = Date.now()
+        showTime.value = Date.now()
+        DM.computeFilterStats(dataF.value)
+    }
+
     function toggleShowAttr(name) {
         int.showAttrMap = int.showAttrMap === name ? null : name
         showTime.value = Date.now()
@@ -301,6 +394,7 @@ import ColorLegend from './vis/ColorLegend.vue';
                         const val = (history.get(n) || 0) + 1
                         history.set(n, val)
                         int.historyScales[n].domain([0, Math.max(val, int.historyScales[n].domain()[1])])
+                        historyUpdated = true
 
                         if (lensX !== null && lensY !== null) {
                             int.attrLensPos[n].push({
@@ -378,6 +472,7 @@ import ColorLegend from './vis/ColorLegend.vue';
         int.attrLensPos = {}
         int.historyScales = {}
         history.clear()
+        historyUpdated = false
         colorIndex.value = 0
         colorColumn.value = app.datasetColor
 
@@ -430,7 +525,6 @@ import ColorLegend from './vis/ColorLegend.vue';
             const [mx, my] = d3.pointer(event, document.body)
             const elem = document.elementFromPoint(mx, my)
             if (!elem || !elem.classList.contains("scatter")) return
-            event.preventDefault()
             lensRadius.value = Math.max(
                 5,
                 Math.min(
@@ -439,6 +533,7 @@ import ColorLegend from './vis/ColorLegend.vue';
                 )
             )
             int.lenses.forEach((l, i) => l.radius = lensRadius.value * (i+1))
+            return false
         })
         window.addEventListener("keyup", function(event) {
             switch(event.code) {

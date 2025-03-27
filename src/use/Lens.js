@@ -33,7 +33,7 @@ export class Lens {
             const vals = dataToNumbers(data, c, types[i])
             const vd = deviation(vals)
             const v = Math.sqrt(mean(vals) / (data.length-1))
-            const diffs = [Math.abs(DM.stats[c].deviation-v)].concat(reference.map(d => {
+            const diffs = [Math.abs(DM.filterStats[c].deviation-v)].concat(reference.map(d => {
                 const it = d.find(dd => dd.name === c)
                 return it ? Math.abs(it.value-v) : null
             })).filter(d => d !== null)
