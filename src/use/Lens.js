@@ -1,5 +1,6 @@
-import { DATA_TYPES } from "@/stores/app";
-import { deviation, group, variance } from "d3";
+import { deviation, maxIndex, mean, minIndex } from "d3";
+import { dataToNumbers } from "./util";
+import DM from "./data-manager";
 
 let _ID = 1;
 
@@ -15,6 +16,7 @@ export class Lens {
         this.id = _ID++
         this.radius = radius
         this.type = type;
+        this.numResults = 0
     }
 
     static getLensName(type) {
@@ -25,31 +27,34 @@ export class Lens {
         }
     }
 
-    apply(data, columns, types) {
+    apply(data, columns, types, reference=[]) {
         const values = []
         columns.forEach((c, i) => {
-            let vals;
-            switch (types[i]) {
-                case DATA_TYPES.SEQUENTIAL:
-                    vals = data.map(d => d[c])
-                    break;
-                case DATA_TYPES.ORDINAL:
-                    const g = group(data, d => d[c])
-                    const n = Array.from(g.keys())
-                    vals = data.map(d => n.indexOf(d[d[c]]))
-                    break
-            }
-
-            const v = deviation(vals)
-            values.push({ name: c, value: v })
+            const vals = dataToNumbers(data, c, types[i])
+            const vd = deviation(vals)
+            const v = Math.sqrt(mean(vals) / (data.length-1))
+            const diffs = [Math.abs(DM.stats[c].deviation-v)].concat(reference.map(d => {
+                const it = d.find(dd => dd.name === c)
+                return it ? Math.abs(it.value-v) : null
+            })).filter(d => d !== null)
+            values.push({
+                name: c,
+                value: vd,
+                diff: diffs
+            })
         })
 
+        let mi;
         if (this.type === LENS_TYPE.FREQUENT) {
-            values.sort((a, b) => a.value - b.value)
+            values.sort((a, b) => a.diff[0] - b.diff[0])
+            mi = [minIndex(values, d => d.value), 0].concat(reference.map((_, i) => minIndex(values, d => d.diff[i+1])))
         } else {
-            values.sort((a, b) => b.value - a.value)
+            values.sort((a, b) => b.diff[0] - a.diff[0])
+            mi = [maxIndex(values, d => d.value), 0].concat(reference.map((_, i) => maxIndex(values, d => d.diff[i+1])))
         }
 
-        return values
+        const miSet = new Set(mi.filter(i => i >= 0))
+        this.numResults = miSet.size
+        return Array.from(miSet.values()).map(i => values[i]).concat(values.filter((_, i) => !miSet.has(i)))
     }
 }

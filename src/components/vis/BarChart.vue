@@ -11,6 +11,10 @@
             type: Array,
             required: true
         },
+        selected: {
+            type: Array,
+            default: () => ([])
+        },
         title: {
             type: String,
             required: false
@@ -38,7 +42,13 @@
             type: String,
             default: "darkgreen"
         },
+        selectable: {
+            type: Boolean,
+            default: false
+        }
     })
+
+    const emit = defineEmits(["click", "right-click"])
 
     const el = ref(null)
 
@@ -61,6 +71,8 @@
             .domain([0, d3.max(props.data, getY)])
             .range([props.height-5-off, 5])
 
+        const set = new Set(props.selected)
+
         svg.append("g")
             .selectAll("rect")
             .data(props.data)
@@ -70,10 +82,32 @@
             .attr("width", x.bandwidth())
             .attr("height", d => y(0) - y(getY(d)))
             .attr("fill", d => props.colorAttr ? getC(d) : props.fillColor)
+            .attr("opacity", d => set.size > 0 && !set.has(d.x) ? 0.5 : 1)
+            .style("cursor", props.selectable ? "pointer" : null)
+            .on("click", (_event, d) => {
+                emit("click", d)
+            })
+            .on("contextmenu", (event, d) => {
+                event.preventDefault()
+                emit("right-click", d)
+            })
 
         svg.append("g")
             .attr("transform", `translate(0,${props.height-off})`)
             .call(d3.axisBottom(x))
+            .selectAll(".tick text")
+            .text(d => {
+                const t = (""+d).replaceAll("_", " ")
+                return t.length*5 > x.bandwidth() ? t.slice(0, Math.floor(x.bandwidth() / 5))+'..' : t
+            })
+            .style("cursor", props.selectable ? "pointer" : null)
+            .on("click", (_event, d) => {
+                emit("click", { x: d, y: 0 })
+            })
+            .on("contextmenu", (event, d) => {
+                event.preventDefault()
+                emit("right-click", { x: d, y: 0 })
+            })
     }
 
     onMounted(draw)

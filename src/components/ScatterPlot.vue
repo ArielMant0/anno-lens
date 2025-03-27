@@ -1,14 +1,15 @@
 <template>
     <div style="position: relative; border: 1px solid grey;">
-        <canvas ref="el" :width="width" :height="height" @pointermove="onMove" @click="onClick" @pointerleave="onMove"></canvas>
+        <canvas ref="el" class="scatter" :width="width" :height="height" @pointermove="onMove" @click="onClick" @pointerleave="onMove"></canvas>
         <svg ref="overlay" class="overlay" :width="width" :height="height"></svg>
     </div>
 </template>
 
 <script setup>
+    import * as d3 from 'd3'
     import { DATA_TYPES } from '@/stores/app'
-import * as d3 from 'd3'
-import { watch } from 'vue'
+    import { watch } from 'vue'
+    import { getAttr } from '@/use/util'
 
     const props = defineProps({
         data: {
@@ -17,11 +18,11 @@ import { watch } from 'vue'
         },
         time: {
             type: Number,
-            required: true
+            required: false
         },
         update: {
             type: Number,
-            required: true
+            required: false
         },
         width: {
             type: Number,
@@ -40,6 +41,10 @@ import { watch } from 'vue'
             default: "y"
         },
         colorAttr: {
+            type: String,
+            required: false
+        },
+        opacityAttr: {
             type: String,
             required: false
         },
@@ -69,7 +74,11 @@ import { watch } from 'vue'
         searchRadius: {
             type: Number,
             default: 20,
-        }
+        },
+        fixedLens: {
+            type: Boolean,
+            default: false
+        },
     })
 
     const emit = defineEmits(["move", "hover", "click", "right-click"])
@@ -78,19 +87,21 @@ import { watch } from 'vue'
     const overlay = ref(null)
 
     let tree;
-    let ctx, frame = null;
-    let x, y, colors;
-    let xUnit, yUnit;
-    let lensX = 0, lensY = 0;
+    let ctx;
+    let x, y, colors, opacities;
+    let lensX = props.width * 0.5, lensY = props.height * 0.5;
 
-    const getX = d => d[props.xAttr]
-    const getY = d => d[props.yAttr]
-    const getC = d => props.colorAttr ? d[props.colorAttr] : "darkgreen"
+    const getX = d => getAttr(d, props.xAttr)
+    const getY = d => getAttr(d, props.yAttr)
+    const getC = d => props.colorAttr ? getAttr(d, props.colorAttr) : "darkgreen"
+    const getO = d => props.opacityAttr ? getAttr(d, props.opacityAttr) : 1
     const getColor = d => colors ? colors(getC(d)) : "darkgreen"
+    const getOpacity = d => opacities ? opacities(getO(d)) : 1
 
     function draw() {
         ctx.clearRect(0, 0, props.width, props.height)
         props.data.forEach(d => {
+            ctx.globalAlpha = getOpacity(d)
             ctx.beginPath()
             const c = getColor(d)
             ctx.fillStyle = c
@@ -123,12 +134,12 @@ import { watch } from 'vue'
         const svg = d3.select(overlay.value)
 
         svg.selectAll(".lens")
-            .data(d3.range(0, props.numLens))
+            .data(props.showLens ? d3.range(0, props.numLens) : [])
             .join("path")
             .classed("lens", true)
             .attr("transform", `translate(${lensX},${lensY})`)
             .attr("d", d => d3.arc()({
-                innerRadius: props.searchRadius * d,
+                innerRadius: 0,
                 outerRadius: props.searchRadius * (d + 1),
                 startAngle: 0,
                 endAngle: Math.PI * 2
@@ -141,37 +152,38 @@ import { watch } from 'vue'
 
     function getLensData(mx, my) {
         const res = []
-        let prev = new Set()
+        // let prev = new Set()
         for (let i = 1; i <= props.numLens; ++i) {
             const ids = findInCirlce(mx, my, props.searchRadius*i)
-            res.push(ids.filter(id => !prev.has(id)))
-            prev = new Set(ids)
+            res.push(ids)
+            // res.push(ids.filter(id => !prev.has(id)))
+            // prev = new Set(ids)
         }
         return res
     }
 
     function updateLens() {
-        emit("hover", getLensData(lensX, lensY))
+        emit("hover", getLensData(lensX, lensY), lensX, lensY)
         if (props.showLens) {
             drawLens()
         }
     }
 
     function onMove(event) {
+        if (props.fixedLens) return
         const [mx, my] = d3.pointer(event, el.value)
-        emit("hover", getLensData(mx, my))
+        emit("hover", getLensData(mx, my), mx, my)
         lensX = mx;
         lensY = my
-        if (props.showLens) {
-            drawLens()
-        }
+        drawLens()
     }
     function onClick(event) {
         const [mx, my] = d3.pointer(event, el.value)
         const res = getLensData(mx, my)
-        if (res.length > 0) {
-            emit("click", res)
-        }
+        emit("click", res, mx, my)
+        lensX = mx;
+        lensY = my
+        drawLens()
     }
 
     function makeColorScale() {
@@ -195,6 +207,14 @@ import { watch } from 'vue'
         } else {
             colors = null;
         }
+
+        if (props.opacityAttr) {
+            opacities = d3.scaleLinear()
+                .domain(d3.extent(props.data, getO))
+                .range([0.01, 1])
+        } else {
+            opacities = null
+        }
     }
 
     function init() {
@@ -204,13 +224,9 @@ import { watch } from 'vue'
             .domain(d3.extent(props.data, getX))
             .range([off, props.width - off])
 
-        xUnit = x.copy().range([0, 1])
-
         y = d3.scaleLinear()
             .domain(d3.extent(props.data, getY))
             .range([props.height - off, off])
-
-        yUnit = y.copy().range([1, 0])
 
         tree = d3.quadtree()
             .x(d => x(getX(d)))
@@ -222,13 +238,18 @@ import { watch } from 'vue'
         makeColorScale()
 
         draw()
+
+        drawLens()
     }
 
     onMounted(init)
 
     watch(() => props.searchRadius, updateLens)
     watch(() => ([props.showLens, props.activeLens, props.numLens]), drawLens, { deep: true })
-    watch(() => ([props.colorAttr, props.colorScale, props.colorType]), makeColorScale, { deep: true })
+    watch(() => ([props.colorAttr, props.colorScale, props.colorType]), function() {
+        makeColorScale()
+        draw()
+    }, { deep: true })
     watch(() => props.time, init)
     watch(() => props.update, function() {
         makeColorScale()

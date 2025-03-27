@@ -24,3 +24,11 @@
 
   const { dataset } = storeToRefs(app)
 </script>
+
+<style>
+.text-dots {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+</style>
