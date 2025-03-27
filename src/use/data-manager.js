@@ -76,7 +76,6 @@ class DataManager {
                 }
             })
         }
-        console.log(this.filterStats)
     }
 
     setLensData(data=[]) {

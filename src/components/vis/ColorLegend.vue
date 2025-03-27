@@ -22,12 +22,14 @@
         height: {
             type: Number,
             default: 300
-        }
+        },
     })
 
     const emit = defineEmits(["brush", "click"])
 
     const el = ref(null)
+
+    let x, rects, brushG, brush, brushVals;
 
     function ramp(color, n=256) {
         const canvas = document.createElement("canvas");
@@ -42,7 +44,6 @@
     }
 
     function draw() {
-        let x, rects, brushG, brush;
 
         const margin = 10;
         const w = Math.max(10, Math.floor(props.width * 0.25))
@@ -66,6 +67,7 @@
                     if (sourceEvent) {
                         const vals = selection ? selection.map(d => tmp(d)) : null
                         vals.sort()
+                        brushVals = vals.slice()
                         emit("brush", vals)
                     }
                 })
@@ -106,22 +108,32 @@
                     .on("click", function(_e, d) { emit("click", d) })
         }
 
-        if (props.selected.length > 0) {
-            if (props.scale.interpolator) {
-                brushG.call(brush.move, props.selected.map(x));
-            } else {
-                console.log(props.selected)
-                rects.attr("stroke", d => props.selected.includes(d) ? "black" : null)
-            }
-        }
-
         svg.append("g")
             .attr("transform", `translate(${w + margin})`)
             .call(d3.axisRight(x).ticks(Math.floor(props.height / 25)))
             .call(g => g.select(".domain").remove())
+
+        highlight()
+    }
+
+    function highlight() {
+        const v = props.selected
+        if (props.scale.interpolator) {
+            if (v && v.length > 0) {
+                if (!brushVals || brushVals[0] !== v[0] || brushVals[1] !== v[1]) {
+                    brushVals = v.slice()
+                    brushG.call(brush.move, v.map(x));
+                }
+            } else {
+                brushVals = null
+                brushG.call(brush.move, null);
+            }
+        } else {
+            rects.attr("stroke", d => v && v.includes(d) ? "black" : null)
+        }
     }
 
     onMounted(draw)
 
-    watch(props, draw, { deep: true })
+    watch(() => props.selected, highlight)
 </script>

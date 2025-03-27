@@ -92,12 +92,12 @@
                     </div>
 
                     <div style="margin-top: 25px;">
-                        <ColorLegend
+                        <ColorLegend :key="chosenColorAttr"
                             :scale="int.scales[chosenColorAttr]"
                             :selected="chosenColorAttr === int.filterAttr ? int.filterValues : []"
+                            :height="h"
                             @click="setFilter"
-                            @brush="setFilter"
-                            :height="h" />
+                            @brush="setFilter"/>
                     </div>
 
                     <div style="margin-top: 25px;" :style="{ opacity: int.showAttrMap ? 0.25 : 1 }">
@@ -297,10 +297,10 @@ import { it } from 'vuetify/locale';
     }
 
     function setFilter(values) {
-        if (values) {
+        if (values !== null) {
             const attr = chosenColorAttr.value
             int.filterType = colorType.value
-            switch(colorType.value) {
+            switch(int.filterType) {
                 case DATA_TYPES.ORDINAL:
                     if (int.filterAttr !== attr) {
                         int.filterAttr = attr
@@ -322,7 +322,7 @@ import { it } from 'vuetify/locale';
                 case DATA_TYPES.SEQUENTIAL:
                     if (int.filterAttr !== attr) {
                         int.filterAttr = attr
-                        int.filterValues = [values]
+                        int.filterValues = values
                     } else  {
                         int.filterValues = int.filterValues[0] === values[0] && int.filterValues[1] === values[1] ? null : values
                         int.filterAttr = int.filterValues !== null ? attr : null
@@ -334,9 +334,9 @@ import { it } from 'vuetify/locale';
             int.filterAttr = null
             int.filterType = null
         }
-        lensTime.value = Date.now()
-        showTime.value = Date.now()
+
         DM.computeFilterStats(dataF.value)
+        applyLens()
     }
 
     function toggleShowAttr(name) {
