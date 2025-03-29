@@ -1,44 +1,52 @@
 <template>
-    <div style="min-height: 80vh;" class="d-flex flex-column align-center justify-start">
-        <div v-if="data.length > 0" class="mt-2">
-            <div style="text-align: center;">
-                <div>
-                    <div class="d-flex align-end">
-                        <div class="d-flex flex-column mr-2">
-                            <v-btn v-for="(t, i) in LENS_TYPES" :key="'l_'+t"
-                                density="comfortable"
-                                class="mb-1"
-                                :variant="t === lensType ? 'flat' : 'outlined'"
-                                :color="Lens.getLensColor(t)"
-                                @click="setLensType(t)">
-                                {{ Lens.getLensName(t) }} ({{ KEYS[i] }})
-                            </v-btn>
-                        </div>
+    <div style="min-height: 80vh; max-width: 100vw;" class="d-flex flex-column align-center justify-start pa-4">
+        <div v-if="data.length > 0" class="mt-2" style="max-width: 100%">
+            <div style="text-align: center;" class="d-flex flex-column align-center">
 
-                        <BarChart :data="historyData"
-                            :width="w-150"
-                            @click="d => toggleShowAttr(d.x)"
-                            :selected="int.showAttrMap ? [int.showAttrMap] : []"
-                            selectable/>
+                <div class="d-flex align-center justify-center mb-4" style="max-width: 80%;">
+                    <div class="d-flex flex-column">
+                        <v-btn v-for="(t, i) in LENS_TYPES" :key="'l_'+t"
+                            class="mb-1"
+                            :variant="t === lensType ? 'flat' : 'outlined'"
+                            :color="Lens.getLensColor(t)"
+                            @click="setLensType(t)">
+                            {{ Lens.getLensName(t) }} ({{ KEYS[i] }})
+                        </v-btn>
+                    </div>
 
-                        <div>
+                    <div class="ml-4" style="max-width: 70%;">
+                        <div v-if="ready" style="max-width: 100%;">
                             <v-text-field v-model="searchCol"
                                 density="compact"
                                 variant="outlined"
+                                style="min-width: 500px;"
                                 clearable
+                                hide-details
+                                hide-spin-buttons
                                 class="mb-1"
                                 label="search for column"/>
-                            <div class="d-flex flex-wrap align-center ml-2" style="max-width: 600px; max-height: 150px; overflow-y: auto;">
+
+                            <div style="max-width: 100%; max-height: 3.3em; overflow-x: auto; text-align: left;">
                                 <v-chip v-for="c in columMatches"
                                     class="text-caption mr-1 mb-1"
-                                    :color="colorOverride === c ? 'primary' : 'default'"
+                                    :color="chosenColorAttr === c ? 'primary' : 'default'"
                                     @click="toggleColorOverride(c)"
                                     density="compact">
                                     {{ c.replaceAll('_', ' ') }}
                                 </v-chip>
                             </div>
                         </div>
+                        <div v-else style="min-width: 500px; max-width: 100%;">
+                            <div class="mb-2">calculating feature maps</div>
+                            <v-progress-circular indeterminate></v-progress-circular>
+                        </div>
                     </div>
+
+                    <!-- <BarChart :data="historyData"
+                        :width="w-150"
+                        @click="d => toggleShowAttr(d.x)"
+                        :selected="int.showAttrMap ? [int.showAttrMap] : []"
+                        selectable/> -->
 
                 </div>
 
@@ -79,7 +87,16 @@
                         </div>
 
                         <div style="position: relative;">
+                            <FeatureMap v-if="ready"
+                                :column="chosenColorAttr"
+                                :hide="int.filterAttr"
+                                :mode="refMode"
+                                :lens-type="lensType"
+                                :width="w"
+                                :height="h"/>
+
                             <ScatterPlot
+                                style="position: absolute; top: 0; left: 0;"
                                 :data="data"
                                 :selected="dataF"
                                 :time="dataTime"
@@ -105,7 +122,8 @@
                     </div>
 
                     <div style="margin-top: 25px;">
-                        <ColorLegend :key="chosenColorAttr"
+                        <ColorLegend v-if="int.scales[chosenColorAttr]"
+                            :key="chosenColorAttr"
                             :scale="int.scales[chosenColorAttr]"
                             :selected="chosenColorAttr === int.filterAttr ? int.filterValues : []"
                             :height="h"
@@ -121,25 +139,28 @@
                                 <v-icon v-else-if="i === 2">mdi-circle-medium</v-icon>
                                 <v-icon v-else>mdi-circle</v-icon>
                             </div>
-                            <div v-for="mode in ['local', 'global']" class="d-flex align-center mb-1">
+                            <div v-for="mode in ['global', 'local']" class="d-flex align-center mb-1">
                                 <div style="font-size: 12px; text-orientation: upright; writing-mode: vertical-lr;">{{ mode }}</div>
-                                <LensResults v-for="k in numDetails" :key="'det_'+i+'_'+mode+'_'+k"
-                                    class="mr-1"
-                                    :selected="i === activeLens+1 && colorIndex === k-1 && refMode === mode"
-                                    :disabled="int.lenses[i-1].numResults[refMode] < i"
-                                    :lens="i-1"
-                                    :index="k-1"
-                                    :mode="mode"
-                                    :time="lensTime"
-                                    :width="150"
-                                    :height="75"/>
+                                <div v-for="k in activeDetails" :key="'det_'+i+'_'+mode+'_'+k" class="text-caption">
+                                    <div style="text-align: center;">{{ k+1 }}</div>
+                                    <LensResults
+                                        class="mr-1"
+                                        :selected="i === activeLens+1 && colorIndex === k && refMode === mode"
+                                        :disabled="int.lenses[i-1].numResults[refMode] < i"
+                                        :lens="i-1"
+                                        :index="k"
+                                        :mode="mode"
+                                        :time="lensTime"
+                                        :width="150"
+                                        :height="75"/>
+                                    </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="mt-8" style="width: 100%;">
+            <!-- <div class="mt-8 d-flex flex-column align-center" style="width: 100%;">
                 <h4>Snapshots</h4>
                 <div v-for="(s, i) in snapshots" :key="'snap_'+i" class="d-flex align-center">
                     <div class="ml-2 mr-2 text-caption" style="width: 300px;">
@@ -149,26 +170,29 @@
                     </div>
                     <BarChart :data="s.data" :width="w"/>
                 </div>
-            </div>
+            </div> -->
         </div>
     </div>
 </template>
 
 <script setup>
     import * as d3 from 'd3'
-    import ScatterPlot from './ScatterPlot.vue'
+    import ScatterPlot from './vis/ScatterPlot.vue'
     import { storeToRefs } from 'pinia'
     import { DATA_TYPES, useApp } from '@/stores/app';
     import { Lens, LENS_TYPE, LENS_TYPES } from '@/use/Lens';
-    import { computed, reactive } from 'vue';
+    import { computed, reactive, toRaw } from 'vue';
     import LensResults from './LensResults.vue';
     import BarChart from './vis/BarChart.vue';
     import DM from '@/use/data-manager';
     import ColorLegend from './vis/ColorLegend.vue';
     import FilterDesc from './FilterDesc.vue';
     import { getAttr, getDataType, makeColorScale } from '@/use/util';
+    import FeatureMap from './vis/FeatureMap.vue';
+    import { useTheme } from 'vuetify';
 
     const app = useApp()
+    const theme = useTheme()
 
     const { datasetX, datasetY, datasetColor } = storeToRefs(app)
 
@@ -182,8 +206,8 @@
     const under = ref(null)
     const over = ref(null)
 
-    const w = ref(800)
-    const h = ref(500)
+    const w = ref(600)
+    const h = ref(600)
 
     const data = ref([])
     const dataF = computed(() => {
@@ -203,13 +227,14 @@
     const dataTime = ref(0)
     const columns = ref([])
     const ctypes = ref([])
+    const topFeatures = ref([])
 
     const columMatches = computed(() => {
         if (!searchCol.value || searchCol.value.length === 0) {
-            return columns.value
+            return topFeatures.value
         }
         const regex = new RegExp(searchCol.value, "gi")
-        return columns.value.filter(d => regex.test(d))
+        return topFeatures.value.filter(d => regex.test(d))
     })
 
     const showTime = ref(0)
@@ -239,7 +264,9 @@
     const snapshots = ref([])
     const annotations = ref([])
 
-    const refMode = ref("local")
+    const ready = ref(false)
+
+    const refMode = ref("global")
     const colorIndex = ref(0)
     const colorColumn = ref(datasetColor.value)
     const colorOverride = ref("")
@@ -249,20 +276,35 @@
     })
 
     const chosenColorAttr = computed(() => {
-        if (colorOverride.value.length > 0) {
-            return colorOverride.value
+        if (int.fromLens) {
+            return colorColumn.value
         }
-        return int.showAttrMap ? int.showAttrMap : colorColumn.value
+        if (int.showAttrMap) {
+            return int.showAttrMap
+        }
+        return colorOverride.value ? colorOverride.value : datasetColor.value
     })
 
     const moveLens = ref(true)
 
     const lensTime = ref(0)
     const lensType = ref(LENS_TYPE.RARE)
-    const numLens = ref(2)
-    const numDetails = ref(3)
-    const activeLens = ref(numLens.value-1)
-    const lensRadius = ref(20)
+    const numLens = ref(1)
+    const numDetails = reactive({
+        local: 3,
+        global: 3
+    })
+    const activeDetails = computed(() => {
+        if (colorIndex.value > 0) {
+            const s = colorIndex.value - 1
+            return d3.range(s, Math.min(s + 3, numDetails[refMode.value]))
+        } else {
+            return d3.range(0, Math.min(3, numDetails[refMode.value]))
+        }
+    })
+
+    const activeLens = ref(0)
+    const lensRadius = ref(35)
 
     const KEYS = ["Q", "W"]
 
@@ -302,17 +344,18 @@
         saveHistory()
         lensType.value = t;
         int.lenses.forEach(l => l.type = t)
+        topFeatures.value = DM.getBestFeatures(lensType.value, refMode.value)
         applyLens()
     }
     function setColorIndex(i) {
-        const idx = Math.min(i, 5)
-        colorIndex.value = idx
-        colorColumn.value = DM.lensResults[activeLens.value][refMode.value][idx].name
+        colorIndex.value = i
+        colorColumn.value = DM.lensResults[activeLens.value][refMode.value][i].name
     }
     function setRefMode(mode="local") {
         const m = mode === "local" || mode === "global" ? mode : "local"
         if (m !== refMode.value) {
             saveHistory()
+            topFeatures.value = DM.getBestFeatures(lensType.value, m)
             refMode.value = m
         }
     }
@@ -444,17 +487,14 @@
             results = int.lenses.map((d, i) => {
                 if (lensData[i].length > 0) {
                     return d.apply(lensData[i], columns.value, ctypes.value)
-                    // prev = res
-                    // return res
                 } else {
-                    // prev = null
                     return []
                 }
             })
 
             const now = Date.now()
             results.forEach((res, i) => {
-                if (i === activeLens.value) {
+                if (res.length > 0 && i === activeLens.value) {
                     const j = colorIndex.value
                     const mode = refMode.value
                     if (j < res[mode].length) {
@@ -471,15 +511,6 @@
                                 time: now,
                                 radius: int.lenses[activeLens.value].radius
                             })
-
-                            if (colorIndex.value > 1) {
-                                    int.attrLensPos[n].push({
-                                    x: lensX,
-                                    y: lensY,
-                                    time: now,
-                                    radius: int.lenses[colorIndex.value-2].radius
-                                })
-                            }
                         }
                     }
                 }
@@ -488,7 +519,7 @@
             int.fromLens = false
         }
         DM.setLensResults(results)
-        if (int.fromLens) {
+        if (int.fromLens && results[activeLens.value][refMode.value].length > 0) {
             if (colorIndex.value >= results[activeLens.value][refMode.value].length) {
                 colorIndex.value = results[activeLens.value][refMode.value].length-1
             }
@@ -497,6 +528,15 @@
         } else {
             colorColumn.value = datasetColor.value
         }
+
+        if (results[activeLens.value] !== undefined) {
+            numDetails.local = results[activeLens.value].local.length
+            numDetails.global = results[activeLens.value].global.length
+        } else {
+            numDetails.local = 3
+            numDetails.global = 3
+        }
+
         lensTime.value = Date.now()
         highlightAnnotations()
     }
@@ -525,6 +565,7 @@
 
     async function init() {
         data.value = []
+        topFeatures.value = []
         int.scales = {}
         int.lenses = []
         int.fromLens = false
@@ -536,6 +577,8 @@
         colorIndex.value = 0
         colorColumn.value = app.datasetColor
         annotations.value = []
+
+        ready.value = false
 
         lensX = null;
         lensY = null;
@@ -571,10 +614,11 @@
             int.lenses.push(new Lens(lensRadius.value*i, lensType.value))
         }
 
+
         const ct = [], scales = {}
         columns.value.forEach(c => {
             ct.push(getDataType(points[0], c))
-            scales[c] = makeColorScale(points, c, ct.at(-1))
+            scales[c] = makeColorScale(points, c, ct.at(-1), theme.current.value.colors.primary)
             int.historyScales[c] = d3.scaleSequential(d3.interpolateOrRd).domain([0, 1])
             int.attrLensPos[c] = []
         })
@@ -588,9 +632,16 @@
             columns.value.forEach(c => d.visited[c] = 0)
         })
 
-        DM.setData(points, columns.value, ct)
+        DM.setData(points, toRaw(columns.value), ct, "x", "y", w.value, h.value)
+
         data.value = points
         dataTime.value = Date.now()
+
+        DM.computeFeatureMaps(lensRadius.value, 10, () => {
+            topFeatures.value = DM.getBestFeatures(lensType.value, refMode.value)
+            colorOverride.value = topFeatures.value[0]
+            ready.value = true
+        })
     }
 
     onMounted(function() {
@@ -610,19 +661,24 @@
         })
         window.addEventListener("keyup", function(event) {
             switch(event.code) {
+                case "ArrowLeft":
+                    if (colorIndex.value > 0) {
+                        setColorIndex(colorIndex.value - 1)
+                    }
+                    break;
+                case "ArrowRight":
+                    if (colorIndex.value < numDetails[refMode.value]-1) {
+                        setColorIndex(colorIndex.value + 1)
+                    }
+                    break;
+
                 case "Digit1":
                 case "Digit2":
                 case "Digit3":
-                case "Digit4":
-                case "Digit5":
                     const num = Number.parseInt(event.code.at(-1)) - 1
-                    if (event.shiftKey) {
-                        if (num < numLens.value && num !== activeLens.value) {
-                            activeLens.value = num
-                            setColorIndex(colorIndex.value)
-                        }
-                    } else if (num !== colorIndex.value && num < activeLens.value + 2){
-                        setColorIndex(num)
+                    if (num < numLens.value && num !== activeLens.value) {
+                        activeLens.value = num
+                        setColorIndex(colorIndex.value)
                     }
                     break
                 case "KeyL":
@@ -636,7 +692,9 @@
                     }
                     break
                 case "KeyA":
-                    annotate()
+                    if (event.ctrlKey) {
+                        annotate()
+                    }
                     break
                 default:
                     const i = KEYS.findIndex(d => "Key"+d === event.code)

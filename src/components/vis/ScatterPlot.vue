@@ -9,7 +9,7 @@
     import * as d3 from 'd3'
     import { DATA_TYPES } from '@/stores/app'
     import { watch } from 'vue'
-    import { getAttr } from '@/use/util'
+    import { findInCirlce, getAttr } from '@/use/util'
 
     const props = defineProps({
         data: {
@@ -120,24 +120,6 @@
         drawLens()
     }
 
-    function findInCirlce(px, py, r) {
-        const result = [], radius2 = r * r
-        tree.visit(function(node, x1, y1, x2, y2) {
-            if (node.length) {
-                return x1 >= px + r || y1 >= py + r || x2 < px - r || y2 < py - r;
-            }
-
-            const dx = +tree._x.call(null, node.data) - px,
-                dy = +tree._y.call(null, node.data) - py;
-
-            if (dx * dx + dy * dy < radius2) {
-                do { result.push(node.data.id); } while (node = node.next);
-            }
-        });
-
-        return result;
-    }
-
     function drawLens() {
         const svg = d3.select(overlay.value)
 
@@ -162,7 +144,7 @@
         const res = []
         // let prev = new Set()
         for (let i = 1; i <= props.numLens; ++i) {
-            const ids = findInCirlce(mx, my, props.searchRadius*i)
+            const ids = findInCirlce(tree, mx, my, props.searchRadius*i).map(d => d.id)
             res.push(ids)
             // res.push(ids.filter(id => !prev.has(id)))
             // prev = new Set(ids)
@@ -208,7 +190,7 @@
                     vals.sort()
                     break;
                 case DATA_TYPES.SEQUENTIAL:
-                    scale = d3.scaleSequential(d3.interpolateTurbo)
+                    scale = d3.scaleSequential(d3.interpolatePlasma)
                     vals = d3.extent(props.data, getC)
                     break;
             }

@@ -1,6 +1,7 @@
 import { DATA_TYPES, useApp } from "@/stores/app";
-import { deviation, extent, group, interpolateTurbo, mean, scaleOrdinal, scaleQuantile, scaleSequential, schemeBlues, schemeCategory10, schemeOrRd } from "d3";
+import { deviation, extent, group, interpolatePlasma, mean, scaleOrdinal, scaleQuantile, scaleSequential, schemeBlues, schemeCategory10, schemeOrRd } from "d3";
 import DM from "./data-manager";
+import { useTheme } from "vuetify";
 
 export function getDataType(d, name) {
     const app = useApp()
@@ -52,10 +53,10 @@ export function dataToNumbers(data, column, type) {
     return vals
 }
 
-export function makeColorScale(data, column, type) {
+export function makeColorScale(data, column, type, primary="blue") {
     switch(type) {
         case DATA_TYPES.BOOLEAN: {
-            return scaleOrdinal(["lightgrey", "black"]).domain([false, true]).unknown("red")
+            return scaleOrdinal(["lightgrey", primary]).domain([false, true]).unknown("red")
         }
         case DATA_TYPES.INTEGER: {
             const tmp = extent(data, d => getAttr(d, column))
@@ -69,7 +70,7 @@ export function makeColorScale(data, column, type) {
         //     return scaleQuantile(tmp, schemeOrRd[6]).unknown("black")
         // }
         case DATA_TYPES.SEQUENTIAL:
-            return scaleSequential(interpolateTurbo)
+            return scaleSequential(interpolatePlasma)
                 .unknown("grey")
                 .domain(extent(data, d => getAttr(d, column)))
         default:
@@ -114,12 +115,32 @@ export function calcDeviation(data, column, type) {
     if (type === DATA_TYPES.BOOLEAN) {
         const count = vals.reduce((acc, v) => acc + (v ? 1 : 0), 0)
         vd = count ===  0 ? NaN : 1 - count / vals.length
-        gl = count ===  0 ? NaN : count /  DM.filterStats[column].count + 0.1 * count / vals.length
+        gl = count ===  0 ? NaN : count /  DM.filterStats[column].count // + 0.1 * count / vals.length
     } else {
         vd = deviation(vals)
-        const v = Math.sqrt(mean(vals) / (data.length-1))
+        const m = mean(vals)
+        const v = vals.reduce((acc, d) => acc + Math.sqrt(d-m), 0) / (vals.length-1)
         gl = Math.abs(DM.filterStats[column].value - v)
     }
 
     return [vd, gl]
+}
+
+
+export function findInCirlce(tree, px, py, r) {
+    const result = [], radius2 = r * r
+    tree.visit(function(node, x1, y1, x2, y2) {
+        if (node.length) {
+            return x1 >= px + r || y1 >= py + r || x2 < px - r || y2 < py - r;
+        }
+
+        const dx = +tree._x.call(null, node.data) - px,
+            dy = +tree._y.call(null, node.data) - py;
+
+        if (dx * dx + dy * dy < radius2) {
+            do { result.push(node.data); } while (node = node.next);
+        }
+    });
+
+    return result;
 }
