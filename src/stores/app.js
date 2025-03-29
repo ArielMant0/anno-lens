@@ -4,6 +4,10 @@ import { defineStore } from 'pinia'
 export const DATA_TYPES = Object.freeze({
     SEQUENTIAL: 1,
     ORDINAL: 2,
+    INTEGER: 3,
+    QUANTILE: 4,
+    BOOLEAN: 5,
+    // SET: 6
 })
 
 export const DATASETS = [
@@ -14,7 +18,15 @@ export const DATASETS = [
         y: "y",
         color: "Species",
         type: DATA_TYPES.ORDINAL,
-        ignore: []
+        ignore: [],
+    },{
+        name: "Games Tagging",
+        file: "games.dr",
+        x: "x",
+        y: "y",
+        color: "enact violence",
+        type: DATA_TYPES.ORDINAL,
+        ignore: ["name", "cluster"],
     },{
         name: "Heart Disease",
         file: "heart_disease_uci.dr",
@@ -44,15 +56,15 @@ export const DATASETS = [
 
 export const useApp = defineStore('app', {
     state: () => ({
-        dataset: "iris.dr",
-        datasetObj: DATASETS[0],
+        dataset: "games.dr",
+        datasetObj: DATASETS[1],
 
         dataTime: 0,
         lensTime: 0,
     }),
 
     getters: {
-        datasetColor: state => state.datasetObj.color,
+        datasetColor: state => state.datasetObj.colorAttr ? state.datasetObj.colorAttr : state.datasetObj.color,
         datasetColorType: state => state.datasetObj.type,
         datasetX: state => state.datasetObj.x,
         datasetY: state => state.datasetObj.y,

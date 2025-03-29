@@ -8,7 +8,8 @@
                             <v-btn v-for="(t, i) in LENS_TYPES" :key="'l_'+t"
                                 density="comfortable"
                                 class="mb-1"
-                                :color="lensType === t ? 'primary' : 'default'"
+                                :variant="t === lensType ? 'flat' : 'outlined'"
+                                :color="Lens.getLensColor(t)"
                                 @click="setLensType(t)">
                                 {{ Lens.getLensName(t) }} ({{ KEYS[i] }})
                             </v-btn>
@@ -20,14 +21,22 @@
                             :selected="int.showAttrMap ? [int.showAttrMap] : []"
                             selectable/>
 
-                        <div class="d-flex flex-wrap align-center ml-2" style="max-width: 600px">
-                            <v-chip v-for="c in columns"
-                                class="text-caption mr-1 mb-1"
-                                :color="colorOverride === c ? 'primary' : 'default'"
-                                @click="toggleColorOverride(c)"
-                                density="compact">
-                                {{ c.replaceAll('_', ' ') }}
-                            </v-chip>
+                        <div>
+                            <v-text-field v-model="searchCol"
+                                density="compact"
+                                variant="outlined"
+                                clearable
+                                class="mb-1"
+                                label="search for column"/>
+                            <div class="d-flex flex-wrap align-center ml-2" style="max-width: 600px; max-height: 150px; overflow-y: auto;">
+                                <v-chip v-for="c in columMatches"
+                                    class="text-caption mr-1 mb-1"
+                                    :color="colorOverride === c ? 'primary' : 'default'"
+                                    @click="toggleColorOverride(c)"
+                                    density="compact">
+                                    {{ c.replaceAll('_', ' ') }}
+                                </v-chip>
+                            </div>
                         </div>
                     </div>
 
@@ -35,9 +44,9 @@
 
                 <div class="d-flex mt-2">
                     <div v-if="int.showAttrMap" class="mr-2">
-                        <div :style="{ width: w+'px' }">Attribute Map: {{ int.showAttrMap }}, Color: {{ chosenColorAttr }}</div>
+                        <div :style="{ width: w+'px' }">Attribute Map: {{ int.showAttrMap }}, Color: <b>{{ chosenColorAttr }}</b></div>
                         <div style="position: relative;">
-                            <svg ref="over" :width="w" :height="h"></svg>
+                            <svg ref="under" :width="w" :height="h"></svg>
                             <ScatterPlot
                                 style="position: absolute; top: 0; left: 0;"
                                 :data="data"
@@ -65,29 +74,33 @@
                                 :data="int.filterValues"
                                 :name="int.filterAttr"
                                 @clear="setFilter(null)"
-                                :ordinal="int.filterType === DATA_TYPES.ORDINAL"
+                                :ordinal="int.filterType === DATA_TYPES.ORDINAL || int.filterType === DATA_TYPES.BOOLEAN"
                                 :scale="int.scales[int.filterAttr]"/>
                         </div>
 
-                        <ScatterPlot
-                            :data="data"
-                            :selected="dataF"
-                            :time="dataTime"
-                            :update="lensTime"
-                            :x-attr="datasetX"
-                            :y-attr="datasetY"
-                            :color-attr="chosenColorAttr"
-                            :color-scale="int.scales[chosenColorAttr]"
-                            :radius="3"
-                            :search-radius="lensRadius"
-                            :width="w"
-                            :height="h"
-                            show-lens
-                            :num-lens="numLens"
-                            :active-lens="activeLens"
-                            :fixed-lens="!moveLens"
-                            @hover="onHover"
-                            @click="onClick"/>
+                        <div style="position: relative;">
+                            <ScatterPlot
+                                :data="data"
+                                :selected="dataF"
+                                :time="dataTime"
+                                :update="lensTime"
+                                :x-attr="datasetX"
+                                :y-attr="datasetY"
+                                :color-attr="chosenColorAttr"
+                                :color-scale="int.scales[chosenColorAttr]"
+                                :radius="3"
+                                :search-radius="lensRadius"
+                                :width="w"
+                                :height="h"
+                                show-lens
+                                :num-lens="numLens"
+                                :active-lens="activeLens"
+                                :fixed-lens="!moveLens"
+                                @hover="onHover"
+                                @click="onClick"/>
+
+                            <svg ref="over" :width="w" :height="h" style="position: absolute; top: 0; left: 0; pointer-events: none;"></svg>
+                        </div>
 
                     </div>
 
@@ -101,15 +114,22 @@
                     </div>
 
                     <div style="margin-top: 25px;" :style="{ opacity: int.showAttrMap ? 0.25 : 1 }">
-                        <div v-for="i in numLens" :key="'det_'+i" class="mb-2 d-flex align-center">
-                            <div v-for="j in i+1" :key="'v_'+i+'_'+j">
-                                <div style="font-size: 10px;">Reference: {{ getLensResultLabel(j-1) }}</div>
-                                <LensResults
+                        <div v-for="i in numLens" class="mb-8">
+                            <div class="mb-1 text-caption d-flex align-center justify-center">
+                                <span>Lens {{ i }}</span>
+                                <v-icon v-if="i === 1">mdi-circle-small</v-icon>
+                                <v-icon v-else-if="i === 2">mdi-circle-medium</v-icon>
+                                <v-icon v-else>mdi-circle</v-icon>
+                            </div>
+                            <div v-for="mode in ['local', 'global']" class="d-flex align-center mb-1">
+                                <div style="font-size: 12px; text-orientation: upright; writing-mode: vertical-lr;">{{ mode }}</div>
+                                <LensResults v-for="k in numDetails" :key="'det_'+i+'_'+mode+'_'+k"
                                     class="mr-1"
-                                    :selected="i === activeLens+1 && colorIndex === j-1"
-                                    :disabled="int.lenses[i-1].numResults < i-1"
+                                    :selected="i === activeLens+1 && colorIndex === k-1 && refMode === mode"
+                                    :disabled="int.lenses[i-1].numResults[refMode] < i"
                                     :lens="i-1"
-                                    :index="j-1"
+                                    :index="k-1"
+                                    :mode="mode"
                                     :time="lensTime"
                                     :width="150"
                                     :height="75"/>
@@ -125,7 +145,7 @@
                     <div class="ml-2 mr-2 text-caption" style="width: 300px;">
                         <div><b>Dataset:</b> {{ s.dataset }}</div>
                         <div><b>Lens:</b> {{ Lens.getLensName(s.lens) }}</div>
-                        <div><b>Reference:</b> {{ getLensResultLabel(s.reference) }}</div>
+                        <div><b>Reference:</b> {{ s.reference }}</div>
                     </div>
                     <BarChart :data="s.data" :width="w"/>
                 </div>
@@ -145,8 +165,8 @@
     import BarChart from './vis/BarChart.vue';
     import DM from '@/use/data-manager';
     import ColorLegend from './vis/ColorLegend.vue';
-import FilterDesc from './FilterDesc.vue';
-import { it } from 'vuetify/locale';
+    import FilterDesc from './FilterDesc.vue';
+    import { getAttr, getDataType, makeColorScale } from '@/use/util';
 
     const app = useApp()
 
@@ -159,6 +179,7 @@ import { it } from 'vuetify/locale';
         }
     })
 
+    const under = ref(null)
     const over = ref(null)
 
     const w = ref(800)
@@ -167,20 +188,29 @@ import { it } from 'vuetify/locale';
     const data = ref([])
     const dataF = computed(() => {
         if (int.filterAttr === null) return []
-        if (int.filterType === DATA_TYPES.ORDINAL) {
+        if (int.filterType === DATA_TYPES.ORDINAL || int.filterType === DATA_TYPES.BOOLEAN) {
             const v = int.filterValues
             return data.value
-                .filter(d => v.includes(d[int.filterAttr]))
+                .filter(d => v.includes(getAttr(d, int.filterAttr)))
                 .map(d => d.id)
         }
         const [a, b] = int.filterValues
         return data.value
-            .filter(d => d[int.filterAttr] >= a && d[int.filterAttr] <= b)
+            .filter(d => getAttr(d, int.filterAttr) >= a && getAttr(d, int.filterAttr) <= b)
             .map(d => d.id)
     })
+    const searchCol = ref("")
     const dataTime = ref(0)
     const columns = ref([])
     const ctypes = ref([])
+
+    const columMatches = computed(() => {
+        if (!searchCol.value || searchCol.value.length === 0) {
+            return columns.value
+        }
+        const regex = new RegExp(searchCol.value, "gi")
+        return columns.value.filter(d => regex.test(d))
+    })
 
     const showTime = ref(0)
     const int = reactive({
@@ -207,7 +237,9 @@ import { it } from 'vuetify/locale';
         return list
     })
     const snapshots = ref([])
+    const annotations = ref([])
 
+    const refMode = ref("local")
     const colorIndex = ref(0)
     const colorColumn = ref(datasetColor.value)
     const colorOverride = ref("")
@@ -228,32 +260,16 @@ import { it } from 'vuetify/locale';
     const lensTime = ref(0)
     const lensType = ref(LENS_TYPE.RARE)
     const numLens = ref(2)
+    const numDetails = ref(3)
     const activeLens = ref(numLens.value-1)
     const lensRadius = ref(20)
 
-    const KEYS = ["Q", "W", "E"]
+    const KEYS = ["Q", "W"]
 
     let lensX = null;
     let lensY = null;
 
-    function getDataType(d) {
-        switch (typeof d) {
-            default:
-            case 'number':
-                return DATA_TYPES.SEQUENTIAL
-            case 'string':
-                return DATA_TYPES.ORDINAL
-        }
-    }
-    function getLensResultLabel(jindex) {
-        if (jindex === 0) {
-            return "Local"
-        } else if (jindex === 1) {
-            return "Global"
-        } else {
-            return `Lens ${jindex-1}`
-        }
-    }
+
     function toggleColorOverride(name) {
         colorOverride.value = colorOverride.value !== name ? name : ""
         lensTime.value = Date.now()
@@ -265,7 +281,8 @@ import { it } from 'vuetify/locale';
             time: Date.now(),
             dataset: app.dataset,
             lens: lensType.value,
-            reference: colorIndex.value,
+            index: colorIndex.value,
+            mode: refMode.value,
             positions: int.attrLensPos,
             filter: {
                 attr: int.filterAttr,
@@ -288,12 +305,61 @@ import { it } from 'vuetify/locale';
         applyLens()
     }
     function setColorIndex(i) {
-        const idx = Math.min(i, activeLens.value+1)
-        if (idx !== colorIndex.value) {
-            saveHistory()
-        }
+        const idx = Math.min(i, 5)
         colorIndex.value = idx
-        colorColumn.value = DM.lensColumns[activeLens.value][colorIndex.value].name
+        colorColumn.value = DM.lensResults[activeLens.value][refMode.value][idx].name
+    }
+    function setRefMode(mode="local") {
+        const m = mode === "local" || mode === "global" ? mode : "local"
+        if (m !== refMode.value) {
+            saveHistory()
+            refMode.value = m
+        }
+    }
+    function annotate() {
+        annotations.value.push({
+            x: lensX,
+            y: lensY,
+            mode: refMode.value,
+            lensType: lensType.value,
+            column: colorColumn.value,
+        })
+        drawAnnotations()
+    }
+    function drawAnnotations() {
+        const svg = d3.select(over.value)
+        svg.selectAll("*").remove()
+
+        const g = svg.selectAll("g.anno")
+            .data(annotations.value)
+            .join("g")
+            .classed("anno", true)
+            .attr("font-size", 10)
+
+        const getW = d => d.column.length * 5 + 10
+
+        g.append("rect")
+            .attr("x", d => d.x - getW(d) * 0.5)
+            .attr("y", d => d.y - 7)
+            .attr("width", d => getW(d))
+            .attr("height", 20)
+            .attr("fill", "grey")
+            .attr("stroke", d => Lens.getLensColor(d.lensType))
+            .attr("fill-opacity", 0.5)
+
+        g.append("text")
+            .attr("x", d => d.x)
+            .attr("y", d => d.y + 6)
+            .attr("text-anchor", "middle")
+            .text(d => d.column)
+    }
+    function highlightAnnotations() {
+        const svg = d3.select(over.value)
+
+        const any = annotations.value.some(d => d.column === chosenColorAttr.value)
+
+        svg.selectAll("g.anno rect")
+            .attr("opacity", d => !any || d.column === chosenColorAttr.value ? 1 : 0.25)
     }
 
     function setFilter(values) {
@@ -301,6 +367,7 @@ import { it } from 'vuetify/locale';
             const attr = chosenColorAttr.value
             int.filterType = colorType.value
             switch(int.filterType) {
+                case DATA_TYPES.BOOLEAN:
                 case DATA_TYPES.ORDINAL:
                     if (int.filterAttr !== attr) {
                         int.filterAttr = attr
@@ -345,7 +412,7 @@ import { it } from 'vuetify/locale';
         setTimeout(drawPositions, 100)
     }
     function drawPositions() {
-        const svg = d3.select(over.value)
+        const svg = d3.select(under.value)
         const data = int.showAttrMap && int.attrLensPos[int.showAttrMap] ?
             int.attrLensPos[int.showAttrMap] :
             []
@@ -359,7 +426,7 @@ import { it } from 'vuetify/locale';
             .attr("r", 10)
             .attr("fill-opacity", 0.01)
             .attr("fill", "grey")
-            .attr("stroke-opacity", 0.1)
+            .attr("stroke-opacity", 0.05)
             .attr("stroke", "grey")
             .transition()
             .duration(500)
@@ -370,27 +437,28 @@ import { it } from 'vuetify/locale';
         const lensData = DM.lensData
         if (lensData.length === 0) return
 
-        let cols = [], types = []
+        let results = []
         if (lensData.some(d => d.length > 0)) {
-            let prev = null
+            // let prev = null
             int.fromLens = lensData[activeLens.value].length > 0
-            cols = int.lenses.map((d, i) => {
+            results = int.lenses.map((d, i) => {
                 if (lensData[i].length > 0) {
-                    const res = d.apply(lensData[i], columns.value, ctypes.value, prev ? [prev] : [])
-                    prev = res
-                    return res
+                    return d.apply(lensData[i], columns.value, ctypes.value)
+                    // prev = res
+                    // return res
                 } else {
-                    prev = null
+                    // prev = null
                     return []
                 }
             })
 
             const now = Date.now()
-            cols.forEach((c, i) => {
-                if (c.length > 0) {
-                    if (i === activeLens.value) {
-                        const j = colorIndex.value
-                        const n = c[j].name
+            results.forEach((res, i) => {
+                if (i === activeLens.value) {
+                    const j = colorIndex.value
+                    const mode = refMode.value
+                    if (j < res[mode].length) {
+                        const n = res[mode][j].name
                         const val = (history.get(n) || 0) + 1
                         history.set(n, val)
                         int.historyScales[n].domain([0, Math.max(val, int.historyScales[n].domain()[1])])
@@ -414,18 +482,23 @@ import { it } from 'vuetify/locale';
                             }
                         }
                     }
-                    types.push(c.map(d => getDataType(data.value[0][d.name])))
-                } else {
-                    types.push(null)
                 }
             })
         } else {
             int.fromLens = false
         }
-        colorColumn.value = int.fromLens ? cols[activeLens.value][colorIndex.value].name : datasetColor.value
-        DM.setLensColumns(cols)
-        DM.setLensTypes(types)
+        DM.setLensResults(results)
+        if (int.fromLens) {
+            if (colorIndex.value >= results[activeLens.value][refMode.value].length) {
+                colorIndex.value = results[activeLens.value][refMode.value].length-1
+            }
+            colorColumn.value = results[activeLens.value][refMode.value][colorIndex.value].name
+
+        } else {
+            colorColumn.value = datasetColor.value
+        }
         lensTime.value = Date.now()
+        highlightAnnotations()
     }
 
     function onHover(points, lx, ly) {
@@ -448,20 +521,7 @@ import { it } from 'vuetify/locale';
         lensY = ly;
     }
 
-    function makeScale(data, column, type) {
-        switch(type) {
-            case DATA_TYPES.SEQUENTIAL:
-                return d3.scaleSequential(d3.interpolateTurbo)
-                    .unknown("grey")
-                    .domain(d3.extent(data, d => d[column]))
-            default:
-            case DATA_TYPES.ORDINAL:
-                const tmp = d3.group(data, d => d[column])
-                const dom = Array.from(tmp.keys())
-                dom.sort()
-                return d3.scaleOrdinal(d3.schemeCategory10).domain(dom).unknown("black")
-        }
-    }
+
 
     async function init() {
         data.value = []
@@ -475,18 +535,33 @@ import { it } from 'vuetify/locale';
         historyUpdated = false
         colorIndex.value = 0
         colorColumn.value = app.datasetColor
+        annotations.value = []
 
         lensX = null;
         lensY = null;
 
         DM.setData()
         DM.setLensData()
+        DM.setLensResults()
 
         const points = await d3.csv(`data/${props.dataset}.csv`, d3.autoType)
+
         columns.value = points.columns.filter(d => {
             const n = d.toLowerCase()
             return n !== "id" && n !== "x" && n !== "y" && !app.datasetObj.ignore.includes(n)
         })
+
+        if (app.datasetObj.parse) {
+            points.forEach(d => {
+                columns.value.forEach(c => {
+                    if (app.datasetObj.parse[c]) {
+                        const s = d[c].replaceAll("'", '"')
+                        d[c] = app.datasetObj.parse[c](s)
+                    }
+                })
+            })
+        }
+
         // set id if not part of dataset
         if (!points[0]["id"]) {
             points.forEach((d, i) => d.id = i)
@@ -498,13 +573,11 @@ import { it } from 'vuetify/locale';
 
         const ct = [], scales = {}
         columns.value.forEach(c => {
-            ct.push(getDataType(points[0][c]))
-            scales[c] = makeScale(points, c, ct.at(-1))
+            ct.push(getDataType(points[0], c))
+            scales[c] = makeColorScale(points, c, ct.at(-1))
             int.historyScales[c] = d3.scaleSequential(d3.interpolateOrRd).domain([0, 1])
             int.attrLensPos[c] = []
         })
-        DM.setLensColumns(columns.value.map(d => ({ name: d, value: 0 })))
-        DM.setLensTypes(ct)
         DM.setScales(scales)
 
         int.scales = scales
@@ -551,6 +624,19 @@ import { it } from 'vuetify/locale';
                     } else if (num !== colorIndex.value && num < activeLens.value + 2){
                         setColorIndex(num)
                     }
+                    break
+                case "KeyL":
+                    if (refMode.value !== "local") {
+                        setRefMode("local")
+                    }
+                    break
+                case "KeyG":
+                    if (refMode.value !== "global") {
+                        setRefMode("global")
+                    }
+                    break
+                case "KeyA":
+                    annotate()
                     break
                 default:
                     const i = KEYS.findIndex(d => "Key"+d === event.code)

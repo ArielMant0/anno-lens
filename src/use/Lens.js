@@ -1,5 +1,5 @@
 import { deviation, maxIndex, mean, minIndex } from "d3";
-import { dataToNumbers } from "./util";
+import { calcDeviation, dataToNumbers } from "./util";
 import DM from "./data-manager";
 
 let _ID = 1;
@@ -16,7 +16,7 @@ export class Lens {
         this.id = _ID++
         this.radius = radius
         this.type = type;
-        this.numResults = 0
+        this.numResults = { local: 0, global: 0 }
     }
 
     static getLensName(type) {
@@ -27,34 +27,56 @@ export class Lens {
         }
     }
 
-    apply(data, columns, types, reference=[]) {
-        const values = []
-        columns.forEach((c, i) => {
-            const vals = dataToNumbers(data, c, types[i])
-            const vd = deviation(vals)
-            const v = Math.sqrt(mean(vals) / (data.length-1))
-            const diffs = [Math.abs(DM.filterStats[c].deviation-v)].concat(reference.map(d => {
-                const it = d.find(dd => dd.name === c)
-                return it ? Math.abs(it.value-v) : null
-            })).filter(d => d !== null)
-            values.push({
-                name: c,
-                value: vd,
-                diff: diffs
-            })
-        })
+    static getLensColor(type) {
+        switch(type) {
+            case LENS_TYPE.FREQUENT: return "blue"
+            default:
+            case LENS_TYPE.RARE: return "red"
+        }
+    }
 
-        let mi;
-        if (this.type === LENS_TYPE.FREQUENT) {
-            values.sort((a, b) => a.diff[0] - b.diff[0])
-            mi = [minIndex(values, d => d.value), 0].concat(reference.map((_, i) => minIndex(values, d => d.diff[i+1])))
-        } else {
-            values.sort((a, b) => b.diff[0] - a.diff[0])
-            mi = [maxIndex(values, d => d.value), 0].concat(reference.map((_, i) => maxIndex(values, d => d.diff[i+1])))
+    reset() {
+        this.numResults.local = 0
+        this.numResults.global = 0
+    }
+
+    apply(data, columns, types) {
+        let local = [], global = []
+
+        if (data.length > 0) {
+            columns.forEach((c, i) => {
+                const [l, g] = calcDeviation(data, c, types[i])
+                if (!Number.isNaN(l)) {
+                    local.push(Object.assign({
+                        name: c,
+                        type: types[i],
+                        value : l
+                    }))
+                    global.push(Object.assign({
+                        name: c,
+                        type: types[i],
+                        value : g
+                    }))
+                }
+            })
+            local = local.filter(d => d.value !== undefined)
+            global = global.filter(d => d.value !== undefined)
         }
 
-        const miSet = new Set(mi.filter(i => i >= 0))
-        this.numResults = miSet.size
-        return Array.from(miSet.values()).map(i => values[i]).concat(values.filter((_, i) => !miSet.has(i)))
+        if (this.type === LENS_TYPE.FREQUENT) {
+            local.sort((a, b) => a.value - b.value)
+            global.sort((a, b) => a.value - b.value)
+        } else {
+            local.sort((a, b) => b.value - a.value)
+            global.sort((a, b) => b.value - a.value)
+        }
+
+        this.numResults.local = local.length
+        this.numResults.global = global.length
+
+        return {
+            local: local,
+            global: global,
+        }
     }
 }

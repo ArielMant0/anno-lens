@@ -45,11 +45,13 @@
 
     function draw() {
 
-        const margin = 10;
+        const margin = 10, ticks = props.height / 25;
         const w = Math.max(10, Math.floor(props.width * 0.25))
 
         const svg = d3.select(el.value)
         svg.selectAll("*").remove()
+
+        let tickValues;
 
         // Sequential
         if (props.scale.interpolator) {
@@ -87,6 +89,12 @@
 
             brushG = svg.append("g").call(brush)
 
+            // scaleSequentialQuantile doesn’t implement ticks or tickFormat.
+            if (!x.ticks) {
+                const n = Math.round(ticks + 1);
+                tickValues = d3.range(n).map(i => d3.quantile(props.scale.domain(), i / (n - 1)));
+            }
+
         } else {
             x = d3.scaleBand()
                 .domain(props.scale.domain())
@@ -106,11 +114,12 @@
                     .on("pointerenter", function() { d3.select(this).style("filter", "saturate(3)") })
                     .on("pointerleave", function() { d3.select(this).style("filter", null) })
                     .on("click", function(_e, d) { emit("click", d) })
+
         }
 
         svg.append("g")
             .attr("transform", `translate(${w + margin})`)
-            .call(d3.axisRight(x).ticks(Math.floor(props.height / 25)))
+            .call(d3.axisRight(x).ticks(ticks).tickValues(tickValues))
             .call(g => g.select(".domain").remove())
 
         highlight()

@@ -3,7 +3,8 @@
 </template>
 
 <script setup>
-    import * as d3 from 'd3'
+    import { getAttr } from '@/use/util';
+import * as d3 from 'd3'
     import { onMounted } from 'vue';
 
     const props = defineProps({
@@ -52,9 +53,9 @@
 
     const el = ref(null)
 
-    const getX = d => d[props.xAttr]
-    const getY = d => d[props.yAttr]
-    const getC = d => d[props.colorAttr]
+    const getX = d => getAttr(d, props.xAttr)
+    const getY = d => getAttr(d, props.yAttr)
+    const getC = d => getAttr(d, props.colorAttr)
 
     function draw() {
         const svg = d3.select(el.value)

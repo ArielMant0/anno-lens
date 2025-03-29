@@ -201,6 +201,7 @@
             let scale, vals;
             switch (props.colorType) {
                 default:
+                case DATA_TYPES.BOOLEAN:
                 case DATA_TYPES.ORDINAL:
                     scale = d3.scaleOrdinal(d3.schemeCategory10)
                     vals = Array.from(new Set(props.data.map(getC)).values())
