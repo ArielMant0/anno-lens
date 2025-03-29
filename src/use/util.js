@@ -1,7 +1,6 @@
 import { DATA_TYPES, useApp } from "@/stores/app";
 import { deviation, extent, group, interpolatePlasma, mean, scaleOrdinal, scaleQuantile, scaleSequential, schemeBlues, schemeCategory10, schemeOrRd } from "d3";
 import DM from "./data-manager";
-import { useTheme } from "vuetify";
 
 export function getDataType(d, name) {
     const app = useApp()
@@ -12,8 +11,6 @@ export function getDataType(d, name) {
     switch (typeof v) {
         case "boolean":
             return DATA_TYPES.BOOLEAN
-        // case 'object':
-        //     return DATA_TYPES.SET
         case 'string':
             return DATA_TYPES.ORDINAL
         default:
@@ -28,17 +25,6 @@ export function dataToNumbers(data, column, type) {
         case DATA_TYPES.BOOLEAN:
             vals = data.map(d => getAttr(d, column) === true ? 1 : 0)
             break
-        // case DATA_TYPES.SET:
-        //     vals = data.map(d => getAttr(d, column))
-        //     const it = vals[0][0]
-        //     if (typeof it === "object") {
-        //         if (Array.isArray(it)) {
-        //             vals = vals.map(d => d.map(dd => dd[0]))
-        //         } else {
-        //             vals = vals.map(d => d.map(dd => dd.id))
-        //         }
-        //     }
-        //     break
         case DATA_TYPES.ORDINAL:
             const list = Array.from(new Set(data.map(d => getAttr(d, column))).values())
             const n = new Map(list.map((v, i) => ([v, i])))
@@ -65,10 +51,6 @@ export function makeColorScale(data, column, type, primary="blue") {
         }
         case DATA_TYPES.QUANTILE:
             return scaleQuantile(data.map(d => getAttr(d, column)), schemeOrRd[6]).unknown("black")
-        // case DATA_TYPES.SET: {
-        //     const tmp = data.map(d => getAttr(d, column).length)
-        //     return scaleQuantile(tmp, schemeOrRd[6]).unknown("black")
-        // }
         case DATA_TYPES.SEQUENTIAL:
             return scaleSequential(interpolatePlasma)
                 .unknown("grey")

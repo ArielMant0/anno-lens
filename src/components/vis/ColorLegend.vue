@@ -15,6 +15,18 @@
             type: Array,
             default: () => ([])
         },
+        tickFormat: {
+            type: Function,
+            required: false
+        },
+        tickValues: {
+            type: Function,
+            required: false
+        },
+        numTicks: {
+            type: Number,
+            required: false
+        },
         width: {
             type: Number,
             default: 100
@@ -45,13 +57,13 @@
 
     function draw() {
 
-        const margin = 10, ticks = props.height / 25;
+        const margin = 10, ticks = props.numTicks ? props.numTicks : props.height / 25;
         const w = Math.max(10, Math.floor(props.width * 0.25))
 
         const svg = d3.select(el.value)
         svg.selectAll("*").remove()
 
-        let tickValues;
+        let tickValues = props.tickValues
 
         // Sequential
         if (props.scale.interpolator) {
@@ -119,7 +131,7 @@
 
         svg.append("g")
             .attr("transform", `translate(${w + margin})`)
-            .call(d3.axisRight(x).ticks(ticks).tickValues(tickValues))
+            .call(d3.axisRight(x).ticks(ticks).tickValues(tickValues).tickFormat(props.tickFormat))
             .call(g => g.select(".domain").remove())
 
         highlight()

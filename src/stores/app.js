@@ -57,7 +57,7 @@ export const DATASETS = [
 export const useApp = defineStore('app', {
     state: () => ({
         dataset: "games.dr",
-        datasetObj: DATASETS[1],
+        datasetObj: Object.assign({}, DATASETS[1]),
 
         dataTime: 0,
         lensTime: 0,
@@ -76,6 +76,12 @@ export const useApp = defineStore('app', {
             const it = DATASETS.find(d => d.file === name)
             this.datasetObj = it
             this.dataset = name
+        },
+
+        setColor(name) {
+            if (this.datasetObj) {
+                this.datasetObj.color = name
+            }
         },
 
         updateData() {

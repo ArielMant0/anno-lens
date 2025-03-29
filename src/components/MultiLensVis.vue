@@ -29,18 +29,28 @@
                             <div style="max-width: 100%; max-height: 3.3em; overflow-x: auto; text-align: left;">
                                 <v-chip v-for="c in columMatches"
                                     class="text-caption mr-1 mb-1"
-                                    :color="chosenColorAttr === c ? 'primary' : 'default'"
+                                    :color="colorOverride === c ? 'secondary' : (colorColumn === c ? 'primary' : 'default')"
                                     @click="toggleColorOverride(c)"
                                     density="compact">
                                     {{ c.replaceAll('_', ' ') }}
                                 </v-chip>
                             </div>
+
+
                         </div>
                         <div v-else style="min-width: 500px; max-width: 100%;">
                             <div class="mb-2">calculating feature maps</div>
                             <v-progress-circular indeterminate></v-progress-circular>
                         </div>
                     </div>
+
+                    <ColorLegend v-if="ready"
+                        :key="'cf_'+lensType"
+                        :tick-format="featureScaleTicks"
+                        :tick-values="[0, 1]"
+                        :num-ticks="2"
+                        :scale="d3.scaleSequential(d3.interpolateGreys)"
+                        :height="100"/>
 
                     <!-- <BarChart :data="historyData"
                         :width="w-150"
@@ -270,19 +280,25 @@
     const colorIndex = ref(0)
     const colorColumn = ref(datasetColor.value)
     const colorOverride = ref("")
+
     const colorType = computed(() => {
         const idx = columns.value.indexOf(chosenColorAttr.value)
         return idx >= 0 ? ctypes.value[idx] : null
     })
 
     const chosenColorAttr = computed(() => {
+        if (colorOverride.value.length > 0) {
+            return colorOverride.value
+        }
+
         if (int.fromLens) {
             return colorColumn.value
         }
         if (int.showAttrMap) {
             return int.showAttrMap
         }
-        return colorOverride.value ? colorOverride.value : datasetColor.value
+
+        return datasetColor.value
     })
 
     const moveLens = ref(true)
@@ -311,6 +327,15 @@
     let lensX = null;
     let lensY = null;
 
+
+    const featureScaleTicks = computed(() => {
+        return d => {
+            if (d < 1) {
+                return lensType.value === LENS_TYPE.FREQUENT ? "rare" : "frequent"
+            }
+            return lensType.value === LENS_TYPE.FREQUENT ? "frequent" : "rare"
+        }
+    })
 
     function toggleColorOverride(name) {
         colorOverride.value = colorOverride.value !== name ? name : ""
@@ -345,6 +370,7 @@
         lensType.value = t;
         int.lenses.forEach(l => l.type = t)
         topFeatures.value = DM.getBestFeatures(lensType.value, refMode.value)
+        app.setColor(topFeatures.value[0])
         applyLens()
     }
     function setColorIndex(i) {
@@ -356,6 +382,7 @@
         if (m !== refMode.value) {
             saveHistory()
             topFeatures.value = DM.getBestFeatures(lensType.value, m)
+            app.setColor(topFeatures.value[0])
             refMode.value = m
         }
     }
@@ -614,7 +641,6 @@
             int.lenses.push(new Lens(lensRadius.value*i, lensType.value))
         }
 
-
         const ct = [], scales = {}
         columns.value.forEach(c => {
             ct.push(getDataType(points[0], c))
@@ -639,7 +665,7 @@
 
         DM.computeFeatureMaps(lensRadius.value, 10, () => {
             topFeatures.value = DM.getBestFeatures(lensType.value, refMode.value)
-            colorOverride.value = topFeatures.value[0]
+            app.setColor(topFeatures.value[0])
             ready.value = true
         })
     }
@@ -692,7 +718,7 @@
                     }
                     break
                 case "KeyA":
-                    if (event.ctrlKey) {
+                    if (event.shiftKey) {
                         annotate()
                     }
                     break

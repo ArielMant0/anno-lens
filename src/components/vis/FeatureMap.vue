@@ -86,8 +86,12 @@
             .thresholds(30)
             (points)
 
+        let ex = d3.extent(contours, d => d.value)
+        if (props.lensType === LENS_TYPE.FREQUENT) {
+            ex = ex.reverse()
+        }
         const colors = d3.scaleSequential(d3.interpolateGreys)
-            .domain(d3.extent(contours, d => d.value))
+            .domain(ex)
             // .domain(props.lensType === LENS_TYPE.RARE ? [0, 0.1] : [0.1, 0])
 
         const path = d3.geoPath().context(ctx)
