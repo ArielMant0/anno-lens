@@ -36,7 +36,7 @@ export function dataToNumbers(data, column, type) {
             vals = data.map(d => getAttr(d, column))
             break
     }
-    return vals
+    return vals.filter(d => Number.isFinite(d) && !Number.isNaN(d))
 }
 
 export function makeColorScale(data, column, type, primary="blue") {
@@ -98,11 +98,20 @@ export function calcDeviation(data, column, type) {
         const count = vals.reduce((acc, v) => acc + (v ? 1 : 0), 0)
         vd = count ===  0 ? NaN : 1 - count / vals.length
         gl = count ===  0 ? NaN : count /  DM.filterStats[column].count // + 0.1 * count / vals.length
+    } else if (type === DATA_TYPES.ORDINAL) {
+        const count = group(vals)
+        let vd = 0, gl = 0
+        count.forEach((list, name) => {
+            vd += (1 - list.length) / vals.length
+            gl += list.length / DM.filterStats[column].count[name]
+        })
+        vd = vd / count.size
+        gl = gl / DM.filterStats[column].bins.length
     } else {
-        vd = deviation(vals)
+        vd = deviation(vals) / DM.filterStats[column].max
         const m = mean(vals)
-        const v = vals.reduce((acc, d) => acc + Math.sqrt(d-m), 0) / (vals.length-1)
-        gl = Math.abs(DM.filterStats[column].value - v)
+        // const v = vals.reduce((acc, d) => acc + Math.sqrt((d-m)**2), 0) / (vals.length-1)
+        gl = Math.abs(DM.filterStats[column].mean - m) / DM.filterStats[column].max
     }
 
     return [vd, gl]
@@ -126,3 +135,16 @@ export function findInCirlce(tree, px, py, r) {
 
     return result;
 }
+
+export function circleIntersect(x0, y0, r0, x1, y1, r1) {
+    return Math.hypot(x0 - x1, y0 - y1) <= r0 + r1;
+}
+
+export function deg2rad(degree) {
+    return degree * Math.PI / 180
+}
+
+export function rad2deg(radian) {
+    return radian * 180 / Math.PI
+}
+

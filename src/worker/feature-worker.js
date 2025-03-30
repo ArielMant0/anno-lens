@@ -1,4 +1,4 @@
-import { extent, quadtree, scaleLinear } from "d3";
+import { extent, group, quadtree, scaleLinear, mean, deviation } from "d3";
 
 const DATA_TYPES = Object.freeze({
     SEQUENTIAL: 1,
@@ -22,17 +22,6 @@ onmessage = (e) => {
     );
 };
 
-function mean(data) {
-    const f = data.filter(d => Number.isFinite(d) && !Number.isNaN(d))
-    return f.reduce((acc, d) => acc + d, 0) / f.length
-}
-
-function deviation(data) {
-    const f = data.filter(d => Number.isFinite(d) && !Number.isNaN(d))
-    const m = mean(f)
-    return f.reduce((acc, d) => acc + Math.sqrt(d - m), 0) / f.length
-}
-
 function calcDeviation(data, column, type, stats) {
     const vals = dataToNumbers(data, column, type)
     let vd, gl
@@ -40,12 +29,21 @@ function calcDeviation(data, column, type, stats) {
     if (type === DATA_TYPES.BOOLEAN) {
         const count = vals.reduce((acc, v) => acc + (v ? 1 : 0), 0)
         vd = count ===  0 ? NaN : 1 - count / vals.length
-        gl = count ===  0 ? NaN : count /  stats[column].count // + 0.1 * count / vals.length
+        gl = count ===  0 ? NaN : count /  stats[column].count
+    } else if (type === DATA_TYPES.ORDINAL) {
+        const count = group(vals)
+        let vd = 0, gl = 0
+        count.forEach((list, name) => {
+            vd += (1 - list.length) / vals.length
+            gl += list.length / stats[column].count[name]
+        })
+        vd = vd / count.size
+        gl = gl / stats[column].bins.length
     } else {
-        vd = deviation(vals)
+        vd = deviation(vals) / stats[column].max
         const m = mean(vals)
-        const v = vals.reduce((acc, d) => acc + Math.sqrt(d - m), 0) / (vals.length-1)
-        gl = Math.abs(stats[column].value - v)
+        // const v = vals.reduce((acc, d) => acc + Math.sqrt((d-m)**2), 0) / (vals.length-1)
+        gl = Math.abs(stats[column].mean - m) / stats[column].max
     }
 
     return [vd, gl]
@@ -114,6 +112,7 @@ function calc(columns, types, sourcedata, stats, width, height, radius, size) {
     const m = Math.floor(height / size)
 
     const maps = {}
+    const lenses = {}
 
     const x = scaleLinear()
         .domain(extent(sourcedata, d => d.x))
@@ -137,11 +136,16 @@ function calc(columns, types, sourcedata, stats, width, height, radius, size) {
         let minLocal = Number.MAX_VALUE, maxLocal = Number.MIN_VALUE
         let minGlobal = Number.MAX_VALUE, maxGlobal = Number.MIN_VALUE
 
+        const lensValues = []
+
         for (let i = 0; i < n; ++i) {
             for (let j = 0; j < m; ++j) {
                 const data = findInCirlce(tree, i*size, j*size, radius)
+                if (data.length === 0) continue
+
                 const [l, g] = calcDeviation(data, c, types[k], stats)
                 if (!Number.isNaN(l) && Number.isFinite(l)) {
+                    lensValues.push([i*size, j*size, data.length, l, g])
                     data.forEach(d => {
                         const vl = (dl.get(d.id) || 0) + l, vg = (dg.get(d.id) || 0) + g
                         dl.set(d.id, vl)
@@ -173,7 +177,9 @@ function calc(columns, types, sourcedata, stats, width, height, radius, size) {
             globalMax: maxGlobal,
             globalMean: mean(dg.values()),
         }
+
+        lenses[c] = lensValues
     })
 
-    return maps
+    return { maps: maps, lenses: lenses }
 }

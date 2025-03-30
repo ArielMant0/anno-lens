@@ -49,7 +49,7 @@
                         :tick-format="featureScaleTicks"
                         :tick-values="[0, 1]"
                         :num-ticks="2"
-                        :scale="d3.scaleSequential(d3.interpolateGreys)"
+                        :scale="featureScale"
                         :height="100"/>
 
                     <!-- <BarChart :data="historyData"
@@ -121,8 +121,11 @@
                                 :height="h"
                                 show-lens
                                 :num-lens="numLens"
+                                :lens-labels="activeLensLabels"
+                                :active-lens-label="chosenColorAttr"
                                 :active-lens="activeLens"
                                 :fixed-lens="!moveLens"
+                                :highlight-color="theme.current.value.colors.primary"
                                 @hover="onHover"
                                 @click="onClick"/>
 
@@ -197,7 +200,7 @@
     import DM from '@/use/data-manager';
     import ColorLegend from './vis/ColorLegend.vue';
     import FilterDesc from './FilterDesc.vue';
-    import { getAttr, getDataType, makeColorScale } from '@/use/util';
+    import { deg2rad, getAttr, getDataType, makeColorScale } from '@/use/util';
     import FeatureMap from './vis/FeatureMap.vue';
     import { useTheme } from 'vuetify';
 
@@ -216,8 +219,8 @@
     const under = ref(null)
     const over = ref(null)
 
-    const w = ref(600)
-    const h = ref(600)
+    const w = ref(800)
+    const h = ref(800)
 
     const data = ref([])
     const dataF = computed(() => {
@@ -252,7 +255,7 @@
         scales: {},
         lenses: [],
         columns: [],
-        types: [],
+        otherColumns: [],
         fromLens: false,
 
         filterAttr: null,
@@ -272,7 +275,6 @@
         return list
     })
     const snapshots = ref([])
-    const annotations = ref([])
 
     const ready = ref(false)
 
@@ -303,6 +305,8 @@
 
     const moveLens = ref(true)
 
+    const lensSuggest = ref([])
+
     const lensTime = ref(0)
     const lensType = ref(LENS_TYPE.RARE)
     const numLens = ref(1)
@@ -319,6 +323,23 @@
         }
     })
 
+    const activeLensLabels = computed(() => {
+        if (int.columns.length === 0) {
+            return []
+        }
+        return activeDetails.value
+            .map(i => int.columns[i])
+            .filter(d => d !== undefined)
+    })
+    const otherLensLabels = computed(() => {
+        if (int.otherColumns.length === 0) {
+            return []
+        }
+        return activeDetails.value
+            .map(i => int.otherColumns[i])
+            .filter(d => d !== undefined)
+    })
+
     const activeLens = ref(0)
     const lensRadius = ref(35)
 
@@ -327,7 +348,13 @@
     let lensX = null;
     let lensY = null;
 
-
+    const featureScale = computed(() => {
+        if (lensType.value === LENS_TYPE.FREQUENT) {
+            // return d3.scaleSequential(d3.interpolateGreys)
+            return d3.scaleSequential(t => d3.interpolateGreys(1-t))
+        }
+        return d3.scaleSequential(d3.interpolateGreys)
+    })
     const featureScaleTicks = computed(() => {
         return d => {
             if (d < 1) {
@@ -386,25 +413,84 @@
             refMode.value = m
         }
     }
+
+    function drawLensSuggestions() {
+        const svg = d3.select(over.value)
+        svg.selectAll(".lens").remove()
+
+        svg.selectAll(".lens")
+            .data(lensSuggest.value)
+            .join("circle")
+            .classed("lens", true)
+            .attr("cx", d => d[0] + 5)
+            .attr("cy", d => d[1] + 5)
+            .attr("r", lensRadius.value)
+            .attr("stroke", "red")
+            // .attr("stroke", theme.current.value.colors.secondary)
+            .attr("stroke-width", 2)
+            .attr("fill", "none")
+
+        svg.selectAll(".lens-label").remove()
+
+        if (lensSuggest.value.length === 0) return
+
+        const degrees = [225, 270, 315].map(deg2rad)
+        const r = lensRadius.value + 5
+        const dx = lensSuggest.value[0][0]
+        const dy = lensSuggest.value[0][1]
+        const color = theme.current.value.colors.primary
+
+        const g = svg.selectAll(".lens-label")
+            .data(int.otherColumns)
+            .join("g")
+            .classed("lens-label", true)
+            .attr("font-size", 12)
+            .attr("transform", (_d, i) => `translate(${dx + r * Math.sin(degrees[i])},${dy + r * Math.cos(degrees[i])})`)
+
+        g.append("rect")
+            .attr("x", d => -d.length * 6 - 5)
+            .attr("y", -10)
+            .attr("width", d => d.length * 6 + 5)
+            .attr("height", 20)
+            .attr("fill", d => d === chosenColorAttr.value ? color : "white")
+            .attr("fill-opacity", 0.5)
+            .attr("stroke", "black")
+
+        g.append("text")
+            .attr("x", -5)
+            .attr("y", 4)
+            .attr("text-anchor", "end")
+            .attr("stroke", "white")
+            .attr("stroke-width", 3)
+            .attr("fill", "black")
+            .attr("paint-order", "stroke")
+            .text(d => d)
+    }
+
+
     function annotate() {
-        annotations.value.push({
-            x: lensX,
-            y: lensY,
-            mode: refMode.value,
-            lensType: lensType.value,
-            column: colorColumn.value,
-        })
+        DM.annotate(
+            lensX,
+            lensY,
+            lensRadius.value,
+            colorColumn.value,
+            refMode.value,
+            lensType.value,
+            activeLens.value
+        )
         drawAnnotations()
     }
     function drawAnnotations() {
         const svg = d3.select(over.value)
-        svg.selectAll("*").remove()
+        svg.selectAll(".anno").remove()
 
+        const anno = DM.getAnnotations()
         const g = svg.selectAll("g.anno")
-            .data(annotations.value)
+            .data(anno)
             .join("g")
             .classed("anno", true)
             .attr("font-size", 10)
+            .attr("opacity", d => d.column === chosenColorAttr.value ? 1 : 0.25)
 
         const getW = d => d.column.length * 5 + 10
 
@@ -413,7 +499,7 @@
             .attr("y", d => d.y - 7)
             .attr("width", d => getW(d))
             .attr("height", 20)
-            .attr("fill", "grey")
+            .attr("fill", "white")
             .attr("stroke", d => Lens.getLensColor(d.lensType))
             .attr("fill-opacity", 0.5)
 
@@ -426,10 +512,8 @@
     function highlightAnnotations() {
         const svg = d3.select(over.value)
 
-        const any = annotations.value.some(d => d.column === chosenColorAttr.value)
-
-        svg.selectAll("g.anno rect")
-            .attr("opacity", d => !any || d.column === chosenColorAttr.value ? 1 : 0.25)
+        svg.selectAll("g.anno")
+            .attr("opacity", d => d.column === chosenColorAttr.value ? 1 : 0.25)
     }
 
     function setFilter(values) {
@@ -546,14 +630,34 @@
             int.fromLens = false
         }
         DM.setLensResults(results)
+
         if (int.fromLens && results[activeLens.value][refMode.value].length > 0) {
             if (colorIndex.value >= results[activeLens.value][refMode.value].length) {
                 colorIndex.value = results[activeLens.value][refMode.value].length-1
             }
             colorColumn.value = results[activeLens.value][refMode.value][colorIndex.value].name
-
+            int.columns = results[activeLens.value][refMode.value].map(d => d.name)
+            lensSuggest.value = DM.getMatchingLenses(
+                lensX, lensY, lensRadius.value,
+                activeLens.value, refMode.value, colorIndex.value
+            )
+            if (lensSuggest.value.length > 0) {
+                const otherLensData = DM.findDataInCircle(
+                    lensSuggest.value[0][0],
+                    lensSuggest.value[0][1],
+                    lensRadius.value
+                )
+                int.otherColumns = new Lens(lensType.value)
+                    .apply(otherLensData, columns.value, ctypes.value)[refMode.value]
+                    .map(d => d.name)
+            } else {
+                int.otherColumns = []
+            }
         } else {
             colorColumn.value = datasetColor.value
+            int.columns = []
+            int.otherColumns = []
+            lensSuggest.value = []
         }
 
         if (results[activeLens.value] !== undefined) {
@@ -565,6 +669,7 @@
         }
 
         lensTime.value = Date.now()
+        drawLensSuggestions()
         highlightAnnotations()
     }
 
@@ -588,13 +693,13 @@
         lensY = ly;
     }
 
-
-
     async function init() {
         data.value = []
         topFeatures.value = []
         int.scales = {}
         int.lenses = []
+        int.columns = []
+        int.otherColumns = []
         int.fromLens = false
         int.showAttrMap = null
         int.attrLensPos = {}
@@ -603,16 +708,13 @@
         historyUpdated = false
         colorIndex.value = 0
         colorColumn.value = app.datasetColor
-        annotations.value = []
 
         ready.value = false
 
         lensX = null;
         lensY = null;
 
-        DM.setData()
-        DM.setLensData()
-        DM.setLensResults()
+        DM.reset()
 
         const points = await d3.csv(`data/${props.dataset}.csv`, d3.autoType)
 
@@ -663,6 +765,11 @@
         data.value = points
         dataTime.value = Date.now()
 
+        refreshFeatureMaps()
+    }
+
+    function refreshFeatureMaps() {
+        ready.value = false
         DM.computeFeatureMaps(lensRadius.value, 10, () => {
             topFeatures.value = DM.getBestFeatures(lensType.value, refMode.value)
             app.setColor(topFeatures.value[0])
@@ -683,9 +790,10 @@
                 )
             )
             int.lenses.forEach((l, i) => l.radius = lensRadius.value * (i+1))
+            refreshFeatureMaps()
             return false
         })
-        window.addEventListener("keyup", function(event) {
+        window.addEventListener("keydown", function(event) {
             switch(event.code) {
                 case "ArrowLeft":
                     if (colorIndex.value > 0) {
@@ -697,7 +805,10 @@
                         setColorIndex(colorIndex.value + 1)
                     }
                     break;
-
+            }
+        })
+        window.addEventListener("keyup", function(event) {
+            switch(event.code) {
                 case "Digit1":
                 case "Digit2":
                 case "Digit3":

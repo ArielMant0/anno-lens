@@ -9,7 +9,7 @@
     import * as d3 from 'd3'
     import { DATA_TYPES } from '@/stores/app'
     import { watch } from 'vue'
-    import { findInCirlce, getAttr } from '@/use/util'
+    import { deg2rad, findInCirlce, getAttr } from '@/use/util'
 
     const props = defineProps({
         data: {
@@ -75,6 +75,14 @@
             type: Number,
             default: 0,
         },
+        lensLabels: {
+            type: Array,
+            default: () => ([]),
+        },
+        activeLensLabel: {
+            type: String,
+            default: "",
+        },
         searchRadius: {
             type: Number,
             default: 20,
@@ -83,6 +91,10 @@
             type: Boolean,
             default: false
         },
+        highlightColor: {
+            type: String,
+            default: "blue"
+        }
     })
 
     const emit = defineEmits(["move", "hover", "click", "right-click"])
@@ -122,6 +134,7 @@
 
     function drawLens() {
         const svg = d3.select(overlay.value)
+        svg.selectAll("*").remove()
 
         svg.selectAll(".lens")
             .data(props.showLens ? d3.range(0, props.numLens) : [])
@@ -138,6 +151,43 @@
             .attr("fill-opacity", 0.25)
             .attr("stroke", "black")
             .attr("stroke-width", 2)
+
+        const degrees = [135, 90, 45].map(deg2rad)
+        const r = props.searchRadius + 5
+        const dx = lensX
+        const dy = lensY
+
+        const g = svg.selectAll(".lens-label")
+            .data(props.showLens ?
+                props.lensLabels.map(d => ({
+                    id: d,
+                    text: d.length >= 15 ? d.slice(0, 15)+'..' : d
+                })) :
+                []
+            )
+            .join("g")
+            .classed("lens-label", true)
+            .attr("font-size", 12)
+            .attr("transform", (_, i) => `translate(${dx + r * Math.sin(degrees[i])},${dy + r * Math.cos(degrees[i])})`)
+
+        g.append("rect")
+            .attr("x", 0)
+            .attr("y", -10)
+            .attr("width", d => d.text.length * 6 + 5)
+            .attr("height", 20)
+            .attr("fill", d => d.id === props.activeLensLabel ? props.highlightColor : "white")
+            .attr("fill-opacity", 0.5)
+            .attr("stroke", "black")
+
+        g.append("text")
+            .attr("x", 5)
+            .attr("y", 4)
+            .attr("text-anchor", "start")
+            .attr("stroke", "white")
+            .attr("stroke-width", 3)
+            .attr("fill", "black")
+            .attr("paint-order", "stroke")
+            .text(d => d.text)
     }
 
     function getLensData(mx, my) {
@@ -241,7 +291,7 @@
     onMounted(init)
 
     watch(() => props.searchRadius, updateLens)
-    watch(() => ([props.showLens, props.activeLens, props.numLens]), drawLens, { deep: true })
+    watch(() => ([props.showLens, props.activeLens, props.numLens, props.lensLabels]), drawLens, { deep: true })
     watch(() => ([props.colorAttr, props.colorScale, props.colorType]), function() {
         makeColorScale()
         updateSelected()

@@ -20,7 +20,7 @@
             required: false
         },
         tickValues: {
-            type: Function,
+            type: Array,
             required: false
         },
         numTicks: {

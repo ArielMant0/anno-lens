@@ -83,24 +83,28 @@
             .weight(d => d[2])
             .size([props.width, props.height])
             .bandwidth(30)
-            .thresholds(30)
+            .thresholds(16)
             (points)
 
         let ex = d3.extent(contours, d => d.value)
         if (props.lensType === LENS_TYPE.FREQUENT) {
             ex = ex.reverse()
         }
-        const colors = d3.scaleSequential(d3.interpolateGreys)
-            .domain(ex)
+        const tScale = d3.scaleLinear().domain(ex).range([0, 1])
+        const colors = d3.scaleSequential(d3.interpolateGreys).domain([0, 1])
             // .domain(props.lensType === LENS_TYPE.RARE ? [0, 0.1] : [0.1, 0])
 
         const path = d3.geoPath().context(ctx)
 
         contours.forEach(d => {
             ctx.beginPath()
-            ctx.fillStyle = colors(d.value)
+            const cs = d3.color(colors(1-tScale(d.value)))
+            cs.opacity = 0.05
+            ctx.strokeStyle = cs.formatRgb()
+            ctx.fillStyle = colors(tScale(d.value))
             path(d)
             ctx.fill()
+            ctx.stroke()
         })
     }
 

@@ -1,6 +1,6 @@
 import { DATA_TYPES, useApp } from "@/stores/app"
-import { bin, deviation, min, max, mean, median, quadtree, scaleLinear, extent } from "d3"
-import { calcDeviation, dataToNumbers, findInCirlce, getAttr } from "./util"
+import { bin, deviation, min, max, mean, median, quadtree, scaleLinear, extent, group } from "d3"
+import { circleIntersect, dataToNumbers, findInCirlce, getAttr } from "./util"
 import { LENS_TYPE } from "./Lens"
 
 import MyWorker from '@/worker/feature-worker?worker'
@@ -8,7 +8,8 @@ import MyWorker from '@/worker/feature-worker?worker'
 function calcStats(data, c, filterType) {
     const ord = filterType === DATA_TYPES.ORDINAL || filterType === DATA_TYPES.BOOLEAN
     const vals = dataToNumbers(data, c, filterType)
-    let value = deviation(vals)
+    let maxVal = max(vals)
+    let value = deviation(vals) / maxVal
 
     let unique = [], count = 0;
     if (ord) {
@@ -17,7 +18,13 @@ function calcStats(data, c, filterType) {
             count = vals.reduce((acc, v) => acc + (v ? 1 : 0), 0)
             value = count === 0 || count === vals.length ? 0 : 1 - count / vals.length
         } else {
-            unique = Array.from(new Set(data.map(d => getAttr(d, c))))
+            const gr = group(data, d => getAttr(d, c))
+            count = {}
+            gr.forEach((list, name) => {
+                count[name] = list.length
+                unique.push(name)
+            })
+            unique.sort()
         }
         unique.sort()
     } else {
@@ -26,7 +33,7 @@ function calcStats(data, c, filterType) {
     }
     return {
         min: min(vals),
-        max: max(vals),
+        max: maxVal,
         bins: unique,
         count: count,
         mean: mean(vals),
@@ -38,20 +45,31 @@ function calcStats(data, c, filterType) {
 class DataManager {
 
     constructor() {
+        this.reset()
+    }
+
+    reset() {
+        this.tree = null
         this.data = []
         this.columns = []
         this.types = []
+        this.scales = {}
+
         this.stats = {}
         this.filterStats = {}
+
         this.lensData = []
         this.lensResults = []
-        this.scales = {}
-        this.tree = null
+
         this.width = 0
         this.height = 0
         this.xAttr = ""
         this.yAttr = ""
         this.featureMaps = null
+        this.lensMaps = null
+
+        this.annotations = []
+        this.annoTree = null
     }
 
     setData(data=[], columns=[], types=[], xAttr="x", yAttr="y", width=500, height=500) {
@@ -94,13 +112,13 @@ class DataManager {
         // set map upon completion
         myWorker.onmessage = e => {
             console.log("received message from worker")
-            this.featureMaps = e.data
+            this.featureMaps = e.data.maps
+            this.lensMaps = e.data.lenses
             if (callback) {
                 callback(this.featureMaps)
             }
         }
-
-
+        // compute feature maps in web worker
         myWorker.postMessage({
             columns: this.columns,
             types: this.types,
@@ -111,59 +129,6 @@ class DataManager {
             radius: radius,
             size: size,
         })
-
-        // const n = Math.floor(this.width / size)
-        // const m = Math.floor(this.height / size)
-
-        // const maps = {}
-
-        // // calculate a map for each feature
-        // // (local vs. global, rare vs. frequent)
-        // this.columns.forEach((c, k) => {
-
-        //     const dl = new Map(), dg = new Map()
-        //     const dc = new Map()
-        //     let minLocal = Number.MAX_VALUE, maxLocal = Number.MIN_VALUE
-        //     let minGlobal = Number.MAX_VALUE, maxGlobal = Number.MIN_VALUE
-
-        //     for (let i = 0; i < n; ++i) {
-        //         for (let j = 0; j < m; ++j) {
-        //             const data = findInCirlce(this.tree, i*size, j*size, radius)
-        //             const [l, g] = calcDeviation(data, c, this.types[k])
-        //             if (!Number.isNaN(l) && Number.isFinite(l)) {
-        //                 data.forEach(d => {
-        //                     const vl = (dl.get(d.id) || 0) + l, vg = (dg.get(d.id) || 0) + g
-        //                     dl.set(d.id, vl)
-        //                     dg.set(d.id, vg)
-        //                     dc.set(d.id, (dc.get(d.id) || 0) + 1)
-        //                     // remember min/max values
-        //                     minLocal = Math.min(vl, minLocal)
-        //                     maxLocal = Math.max(vl, maxLocal)
-        //                     minGlobal = Math.min(vg, minGlobal)
-        //                     maxGlobal = Math.max(vg, maxGlobal)
-        //                 })
-        //             }
-        //         }
-        //     }
-
-        //     // normalize
-        //     dc.forEach((count, id) => {
-        //         dl.set(id, dl.get(id) / count)
-        //         dg.set(id, dg.get(id) / count)
-        //     })
-
-        //     maps[c] = {
-        //         local: dl,
-        //         global: dg,
-        //         localMin: minLocal,
-        //         localMax: maxLocal,
-        //         localMean: mean(dl.values()),
-        //         globalMin: minGlobal,
-        //         globalMax: maxGlobal,
-        //         globalMean: mean(dg.values()),
-        //     }
-        // })
-
     }
 
     computeFilterStats(ids) {
@@ -177,12 +142,39 @@ class DataManager {
     }
 
     getBestFeatures(lensType, mode) {
+        if (!this.featureMaps) return []
         const cols = this.columns.slice()
         cols.sort((a, b) => this.featureMaps[a][mode+'Mean'] - this.featureMaps[b][mode+'Mean'])
         if (lensType === LENS_TYPE.RARE) {
             cols.reverse()
         }
         return cols
+    }
+
+    getMatchingLenses(x, y, r, lensIndex, mode, columnIndex) {
+        if (!this.lensMaps || !this.lensResults[lensIndex]) return []
+        // get lens result
+        const col = this.lensResults[lensIndex][mode][columnIndex]
+        const n = col.name, v = col.value;
+        // return if there are no other lenses (doubt)
+        if (!this.lensMaps[n] || this.lensMaps[n].length === 0) return []
+        let lenses = this.lensMaps[n].filter(d => !circleIntersect(x, y, r, d[0], d[1], r))
+        const vidx = mode === "local" ? 3 : 4
+        const size = this.lensData[lensIndex].length
+        lenses = lenses.filter(d => Math.abs(d[vidx]-v) < DM.filterStats[n].value)
+        if (lenses.length === 0) return []
+
+        lenses
+            .sort((a, b) => {
+                const vdiff = Math.abs(a[vidx]-v) - Math.abs(b[vidx]-v)
+                return vdiff !== 0 ? vdiff : Math.abs(a[2]-size) - Math.abs(b[2]-size)
+            })
+
+        return [lenses[0]] //lenses.slice(0, 5)
+    }
+
+    findDataInCircle(x, y, radius) {
+        return findInCirlce(this.tree, x, y, radius)
     }
 
     setLensData(data=[]) {
@@ -205,6 +197,29 @@ class DataManager {
 
     getLensData(index) {
         return this.lensData[index]
+    }
+
+    annotate(x, y, radius, column, mode, lensType, lensIndex=0) {
+        if (this.annoTree === null) {
+            this.annoTree = quadtree()
+                .x(d => d.x)
+                .y(d => d.y)
+                .extent([[0, 0], [this.width, this.height]])
+        }
+
+        this.annoTree.add({
+            x: x,
+            y: y,
+            radius: radius,
+            mode: mode,
+            lensType: lensType,
+            column: column,
+            ids: this.lensData[lensIndex].slice()
+        })
+    }
+
+    getAnnotations() {
+        return this.annoTree ? this.annoTree.data() : []
     }
 }
 

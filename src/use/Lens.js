@@ -1,6 +1,4 @@
-import { deviation, maxIndex, mean, minIndex } from "d3";
-import { calcDeviation, dataToNumbers } from "./util";
-import DM from "./data-manager";
+import { calcDeviation } from "./util";
 
 let _ID = 1;
 
@@ -12,9 +10,8 @@ export const LENS_TYPES = Object.values(LENS_TYPE)
 
 export class Lens {
 
-    constructor(radius=50, type=LENS_TYPE.RARE) {
+    constructor(type=LENS_TYPE.RARE) {
         this.id = _ID++
-        this.radius = radius
         this.type = type;
         this.numResults = { local: 0, global: 0 }
     }
@@ -46,12 +43,14 @@ export class Lens {
         if (data.length > 0) {
             columns.forEach((c, i) => {
                 const [l, g] = calcDeviation(data, c, types[i])
-                if (!Number.isNaN(l)) {
+                if (!Number.isNaN(l) && Number.isFinite(l)) {
                     local.push(Object.assign({
                         name: c,
                         type: types[i],
                         value : l
                     }))
+                }
+                if (!Number.isNaN(g) && Number.isFinite(g)) {
                     global.push(Object.assign({
                         name: c,
                         type: types[i],
@@ -64,11 +63,39 @@ export class Lens {
         }
 
         if (this.type === LENS_TYPE.FREQUENT) {
-            local.sort((a, b) => a.value - b.value)
-            global.sort((a, b) => a.value - b.value)
+            local.sort((a, b) => {
+                const diff = a.value - b.value
+                if (diff !== 0) return diff
+                // if the value is the same, sort by global rarity
+                const ga = global.find(d => d.name === a.name)
+                const gb = global.find(d => d.name === b.name)
+                return gb.value - ga.value
+            })
+            global.sort((a, b) => {
+                const diff = a.value - b.value
+                if (diff !== 0) return diff
+                // if the value is the same, sort by local rarity
+                const la = local.find(d => d.name === a.name)
+                const lb = local.find(d => d.name === b.name)
+                return lb.value - la.value
+            })
         } else {
-            local.sort((a, b) => b.value - a.value)
-            global.sort((a, b) => b.value - a.value)
+            local.sort((a, b) => {
+                const diff = b.value - a.value
+                if (diff !== 0) return diff
+                // if the value is the same, sort by global frequency
+                const ga = global.find(d => d.name === a.name)
+                const gb = global.find(d => d.name === b.name)
+                return ga.value - gb.value
+            })
+            global.sort((a, b) => {
+                const diff = b.value - a.value
+                if (diff !== 0) return diff
+                // if the value is the same, sort by local frequency
+                const la = local.find(d => d.name === a.name)
+                const lb = local.find(d => d.name === b.name)
+                return la.value - lb.value
+            })
         }
 
         this.numResults.local = local.length
