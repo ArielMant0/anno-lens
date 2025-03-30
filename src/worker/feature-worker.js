@@ -1,12 +1,5 @@
+import { DATA_TYPES } from "@/stores/app";
 import { extent, group, quadtree, scaleLinear, mean, deviation } from "d3";
-
-const DATA_TYPES = Object.freeze({
-    SEQUENTIAL: 1,
-    ORDINAL: 2,
-    INTEGER: 3,
-    QUANTILE: 4,
-    BOOLEAN: 5,
-})
 
 onmessage = (e) => {
     console.log("Message received from main script");
@@ -30,7 +23,7 @@ function calcDeviation(data, column, type, stats) {
         const count = vals.reduce((acc, v) => acc + (v ? 1 : 0), 0)
         vd = count ===  0 ? NaN : 1 - count / vals.length
         gl = count ===  0 ? NaN : count /  stats[column].count
-    } else if (type === DATA_TYPES.ORDINAL) {
+    } else if (type === DATA_TYPES.ORDINAL || type === DATA_TYPES.ORDINAL) {
         const count = group(vals)
         let vd = 0, gl = 0
         count.forEach((list, name) => {

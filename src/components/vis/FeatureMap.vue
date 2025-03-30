@@ -74,7 +74,7 @@
             .range([props.height, 0])
 
         const points = DM.data
-            .filter(d => map.has(getAttr(d, props.idAttr)))
+            .filter(d => (DM.filterIds.size === 0 || DM.filterIds.has(getAttr(d, props.idAttr))) && map.has(getAttr(d, props.idAttr)))
             .map(d => ([getAttr(d, props.xAttr), getAttr(d, props.yAttr), map.get(getAttr(d, props.idAttr))]))
 
         const contours = d3.contourDensity()
@@ -87,9 +87,9 @@
             (points)
 
         let ex = d3.extent(contours, d => d.value)
-        if (props.lensType === LENS_TYPE.FREQUENT) {
-            ex = ex.reverse()
-        }
+        // if (props.lensType === LENS_TYPE.FREQUENT) {
+        //     ex = ex.reverse()
+        // }
         const tScale = d3.scaleLinear().domain(ex).range([0, 1])
         const colors = d3.scaleSequential(d3.interpolateGreys).domain([0, 1])
             // .domain(props.lensType === LENS_TYPE.RARE ? [0, 0.1] : [0.1, 0])

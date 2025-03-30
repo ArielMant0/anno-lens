@@ -234,13 +234,18 @@
             switch (props.colorType) {
                 default:
                 case DATA_TYPES.BOOLEAN:
-                case DATA_TYPES.ORDINAL:
-                    scale = d3.scaleOrdinal(d3.schemeCategory10)
+                case DATA_TYPES.NOMINAL:
+                    scale = d3.scaleOrdinal(d3.schemeCategory10).unknown("black")
                     vals = Array.from(new Set(props.data.map(getC)).values())
-                    vals.sort()
+                    vals.sort((a, b) => a-b)
+                    break
+                case DATA_TYPES.ORDINAL:
+                    scale = d3.scaleOrdinal(d3.schemeBlues[9]).unknown("black")
+                    vals = Array.from(new Set(props.data.map(getC)).values())
+                    vals.sort((a, b) => a-b)
                     break;
                 case DATA_TYPES.SEQUENTIAL:
-                    scale = d3.scaleSequential(d3.interpolatePlasma)
+                    scale = d3.scaleSequential(d3.interpolatePlasma).unknown("black")
                     vals = d3.extent(props.data, getC)
                     break;
             }

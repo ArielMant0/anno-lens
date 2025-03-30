@@ -12,7 +12,7 @@ export function getDataType(d, name) {
         case "boolean":
             return DATA_TYPES.BOOLEAN
         case 'string':
-            return DATA_TYPES.ORDINAL
+            return DATA_TYPES.NOMINAL
         default:
         case 'number':
             return DATA_TYPES.SEQUENTIAL
@@ -25,6 +25,7 @@ export function dataToNumbers(data, column, type) {
         case DATA_TYPES.BOOLEAN:
             vals = data.map(d => getAttr(d, column) === true ? 1 : 0)
             break
+        case DATA_TYPES.NOMINAL:
         case DATA_TYPES.ORDINAL:
             const list = Array.from(new Set(data.map(d => getAttr(d, column))).values())
             const n = new Map(list.map((v, i) => ([v, i])))
@@ -46,7 +47,7 @@ export function makeColorScale(data, column, type, primary="blue") {
         }
         case DATA_TYPES.INTEGER: {
             const tmp = extent(data, d => getAttr(d, column))
-            tmp.sort()
+            tmp.sort((a, b) => a-b)
             return scaleOrdinal(schemeBlues).domain(tmp).unknown("black")
         }
         case DATA_TYPES.QUANTILE:
@@ -55,11 +56,17 @@ export function makeColorScale(data, column, type, primary="blue") {
             return scaleSequential(interpolatePlasma)
                 .unknown("grey")
                 .domain(extent(data, d => getAttr(d, column)))
-        default:
         case DATA_TYPES.ORDINAL: {
             const tmp = group(data, d => getAttr(d, column))
             const dom = Array.from(tmp.keys())
-            dom.sort()
+            dom.sort((a, b) => a-b)
+            return scaleOrdinal(schemeBlues[9]).domain(dom).unknown("black")
+        }
+        default:
+        case DATA_TYPES.NOMINAL: {
+            const tmp = group(data, d => getAttr(d, column))
+            const dom = Array.from(tmp.keys())
+            dom.sort((a, b) => a-b)
             return scaleOrdinal(schemeCategory10).domain(dom).unknown("black")
         }
     }
@@ -98,7 +105,7 @@ export function calcDeviation(data, column, type) {
         const count = vals.reduce((acc, v) => acc + (v ? 1 : 0), 0)
         vd = count ===  0 ? NaN : 1 - count / vals.length
         gl = count ===  0 ? NaN : count /  DM.filterStats[column].count // + 0.1 * count / vals.length
-    } else if (type === DATA_TYPES.ORDINAL) {
+    } else if (type === DATA_TYPES.ORDINAL || type === DATA_TYPES.ORDINAL) {
         const count = group(vals)
         let vd = 0, gl = 0
         count.forEach((list, name) => {

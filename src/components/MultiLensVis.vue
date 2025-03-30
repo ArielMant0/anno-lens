@@ -92,7 +92,7 @@
                                 :data="int.filterValues"
                                 :name="int.filterAttr"
                                 @clear="setFilter(null)"
-                                :ordinal="int.filterType === DATA_TYPES.ORDINAL || int.filterType === DATA_TYPES.BOOLEAN"
+                                :ordinal="int.filterType === DATA_TYPES.ORDINAL || int.filterType === DATA_TYPES.NOMINAL || int.filterType === DATA_TYPES.BOOLEAN"
                                 :scale="int.scales[int.filterAttr]"/>
                         </div>
 
@@ -106,6 +106,7 @@
                                 :height="h"/>
 
                             <ScatterPlot
+                                id="scatter-main"
                                 style="position: absolute; top: 0; left: 0;"
                                 :data="data"
                                 :selected="dataF"
@@ -173,6 +174,12 @@
                 </div>
             </div>
 
+            <AnnotationOverlay
+                target-id="scatter-main"
+                :selected="chosenColorAttr"
+                :time="annoTime"
+                :active="!moveLens"/>
+
             <!-- <div class="mt-8 d-flex flex-column align-center" style="width: 100%;">
                 <h4>Snapshots</h4>
                 <div v-for="(s, i) in snapshots" :key="'snap_'+i" class="d-flex align-center">
@@ -203,6 +210,7 @@
     import { deg2rad, getAttr, getDataType, makeColorScale } from '@/use/util';
     import FeatureMap from './vis/FeatureMap.vue';
     import { useTheme } from 'vuetify';
+    import AnnotationOverlay from './AnnotationOverlay.vue';
 
     const app = useApp()
     const theme = useTheme()
@@ -225,7 +233,7 @@
     const data = ref([])
     const dataF = computed(() => {
         if (int.filterAttr === null) return []
-        if (int.filterType === DATA_TYPES.ORDINAL || int.filterType === DATA_TYPES.BOOLEAN) {
+        if (int.filterType === DATA_TYPES.ORDINAL || DATA_TYPES.NOMINAL || int.filterType === DATA_TYPES.BOOLEAN) {
             const v = int.filterValues
             return data.value
                 .filter(d => v.includes(getAttr(d, int.filterAttr)))
@@ -307,6 +315,7 @@
 
     const lensSuggest = ref([])
 
+    const annoTime = ref(0)
     const lensTime = ref(0)
     const lensType = ref(LENS_TYPE.RARE)
     const numLens = ref(1)
@@ -441,7 +450,7 @@
         const color = theme.current.value.colors.primary
 
         const g = svg.selectAll(".lens-label")
-            .data(int.otherColumns)
+            .data(otherLensLabels.value)
             .join("g")
             .classed("lens-label", true)
             .attr("font-size", 12)
@@ -473,12 +482,12 @@
             lensX,
             lensY,
             lensRadius.value,
-            colorColumn.value,
+            colorIndex.value,
             refMode.value,
             lensType.value,
             activeLens.value
         )
-        drawAnnotations()
+        annoTime.value = Date.now()
     }
     function drawAnnotations() {
         const svg = d3.select(over.value)
@@ -522,6 +531,7 @@
             int.filterType = colorType.value
             switch(int.filterType) {
                 case DATA_TYPES.BOOLEAN:
+                case DATA_TYPES.NOMINAL:
                 case DATA_TYPES.ORDINAL:
                     if (int.filterAttr !== attr) {
                         int.filterAttr = attr
@@ -670,7 +680,7 @@
 
         lensTime.value = Date.now()
         drawLensSuggestions()
-        highlightAnnotations()
+        // highlightAnnotations()
     }
 
     function onHover(points, lx, ly) {
@@ -764,6 +774,7 @@
 
         data.value = points
         dataTime.value = Date.now()
+        annoTime.value = Date.now()
 
         refreshFeatureMaps()
     }
@@ -779,6 +790,7 @@
 
     onMounted(function() {
         window.addEventListener("wheel", function(event) {
+            if (!event.ctrlKey) return
             const [mx, my] = d3.pointer(event, document.body)
             const elem = document.elementFromPoint(mx, my)
             if (!elem || !elem.classList.contains("scatter")) return
@@ -818,11 +830,13 @@
                         setColorIndex(colorIndex.value)
                     }
                     break
+                case "ArrowDown":
                 case "KeyL":
                     if (refMode.value !== "local") {
                         setRefMode("local")
                     }
                     break
+                case "ArrowUp":
                 case "KeyG":
                     if (refMode.value !== "global") {
                         setRefMode("global")

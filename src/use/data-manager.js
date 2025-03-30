@@ -3,10 +3,12 @@ import { bin, deviation, min, max, mean, median, quadtree, scaleLinear, extent, 
 import { circleIntersect, dataToNumbers, findInCirlce, getAttr } from "./util"
 import { LENS_TYPE } from "./Lens"
 
+let _ANNO_ID = 1;
+
 import MyWorker from '@/worker/feature-worker?worker'
 
 function calcStats(data, c, filterType) {
-    const ord = filterType === DATA_TYPES.ORDINAL || filterType === DATA_TYPES.BOOLEAN
+    const ord = filterType === DATA_TYPES.ORDINAL || filterType === DATA_TYPES.NOMINAL || filterType === DATA_TYPES.BOOLEAN
     const vals = dataToNumbers(data, c, filterType)
     let maxVal = max(vals)
     let value = deviation(vals) / maxVal
@@ -24,9 +26,8 @@ function calcStats(data, c, filterType) {
                 count[name] = list.length
                 unique.push(name)
             })
-            unique.sort()
+            unique.sort((a, b) => a-b)
         }
-        unique.sort()
     } else {
         const tmp = bin().thresholds(5)(vals)
         unique = tmp.map(d => d.x0).concat(tmp.at(-1).x1)
@@ -57,6 +58,7 @@ class DataManager {
 
         this.stats = {}
         this.filterStats = {}
+        this.filterIds = new Set()
 
         this.lensData = []
         this.lensResults = []
@@ -132,11 +134,11 @@ class DataManager {
     }
 
     computeFilterStats(ids) {
+        this.filterIds = new Set(ids)
         if (ids.length === 0) {
             this.filterStats = this.stats
         } else {
-            const set = new Set(ids)
-            const data = this.data.filter(d => set.has(d.id))
+            const data = this.data.filter(d => this.filterIds.has(d.id))
             this.columns.forEach((c, i) => this.filterStats[c] = calcStats(data, c, this.types[i]))
         }
     }
@@ -199,7 +201,7 @@ class DataManager {
         return this.lensData[index]
     }
 
-    annotate(x, y, radius, column, mode, lensType, lensIndex=0) {
+    annotate(x, y, radius, columnIndex, mode, lensType, lensIndex=0) {
         if (this.annoTree === null) {
             this.annoTree = quadtree()
                 .x(d => d.x)
@@ -207,13 +209,17 @@ class DataManager {
                 .extent([[0, 0], [this.width, this.height]])
         }
 
+        const refVal = this.lensResults[lensIndex][mode][columnIndex].value
+        const cols = this.lensResults[lensIndex][mode].filter(d => d.value === refVal)
+
         this.annoTree.add({
+            id: _ANNO_ID++,
             x: x,
             y: y,
             radius: radius,
             mode: mode,
             lensType: lensType,
-            column: column,
+            columns: cols,
             ids: this.lensData[lensIndex].slice()
         })
     }

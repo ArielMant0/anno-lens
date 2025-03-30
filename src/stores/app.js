@@ -4,10 +4,11 @@ import { defineStore } from 'pinia'
 export const DATA_TYPES = Object.freeze({
     SEQUENTIAL: 1,
     ORDINAL: 2,
-    INTEGER: 3,
-    QUANTILE: 4,
-    BOOLEAN: 5,
-    // SET: 6
+    NOMINAL: 3,
+    INTEGER: 4,
+    QUANTILE: 5,
+    BOOLEAN: 6,
+    // SET: 7
 })
 
 export const DATASETS = [
@@ -17,7 +18,7 @@ export const DATASETS = [
         x: "x",
         y: "y",
         color: "Species",
-        type: DATA_TYPES.ORDINAL,
+        type: DATA_TYPES.NOMINAL,
         ignore: [],
     },{
         name: "Games Tagging",
@@ -25,7 +26,7 @@ export const DATASETS = [
         x: "x",
         y: "y",
         color: "enact violence",
-        type: DATA_TYPES.ORDINAL,
+        type: DATA_TYPES.NOMINAL,
         ignore: ["name", "cluster"],
     },{
         name: "Heart Disease",
@@ -33,7 +34,7 @@ export const DATASETS = [
         x: "x",
         y: "y",
         color: "sex",
-        type: DATA_TYPES.ORDINAL,
+        type: DATA_TYPES.NOMINAL,
         ignore: []
     },{
         name: "Anxiety Depression",
@@ -41,8 +42,21 @@ export const DATASETS = [
         x: "x",
         y: "y",
         color: "Gender",
-        type: DATA_TYPES.ORDINAL,
-        ignore: []
+        type: DATA_TYPES.NOMINAL,
+        ignore: [],
+        types: {
+            Social_Support_Score: DATA_TYPES.ORDINAL,
+            Anxiety_Score: DATA_TYPES.ORDINAL,
+            Therapy: DATA_TYPES.NOMINAL,
+            Meditation: DATA_TYPES.NOMINAL,
+            Financial_Stress: DATA_TYPES.ORDINAL,
+            Work_Stress: DATA_TYPES.ORDINAL,
+            Self_Esteem_Score: DATA_TYPES.ORDINAL,
+            Life_Satisfaction_Score: DATA_TYPES.ORDINAL,
+            Loneliness_Score: DATA_TYPES.ORDINAL,
+            Chronic_Illnesses: DATA_TYPES.NOMINAL,
+            Family_History_Mental_Illness: DATA_TYPES.NOMINAL
+        }
     },{
         name: "Cereal",
         file: "cereal.dr",

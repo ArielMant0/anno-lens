@@ -99,6 +99,7 @@
 
         switch(type) {
             case DATA_TYPES.BOOLEAN:
+            case DATA_TYPES.NOMINAL:
             case DATA_TYPES.ORDINAL: {
                 const tmp = d3.group(data, d => getAttr(d, column))
                 const list = []
@@ -106,6 +107,7 @@
                     const values = tmp.get(c)
                     list.push({ x: c, y: values ? values.length : 0, color: scale(c) })
                 })
+                list.sort((a, b) => a.x - b.x)
                 derived.value = list
             } break
             // case DATA_TYPES.SET: {
