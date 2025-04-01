@@ -1,6 +1,6 @@
 import { DATA_TYPES, useApp } from "@/stores/app"
 import { bin, deviation, min, max, mean, median, quadtree, scaleLinear, extent, group } from "d3"
-import { circleIntersect, dataToNumbers, findInCirlce, getAttr } from "./util"
+import { circleIntersect, dataToNumbers, findInCircle, getAttr } from "./util"
 import { LENS_TYPE } from "./Lens"
 
 let _ANNO_ID = 1;
@@ -13,30 +13,36 @@ function calcStats(data, c, filterType) {
     let maxVal = max(vals)
     let value = deviation(vals) / maxVal
 
-    let unique = [], count = 0;
+    let unique = [], count = 0, countRel = 0
     if (ord) {
         if (filterType === DATA_TYPES.BOOLEAN) {
             unique = [false, true]
             count = vals.reduce((acc, v) => acc + (v ? 1 : 0), 0)
-            value = count === 0 || count === vals.length ? 0 : 1 - count / vals.length
+            countRel = count / vals.length
+            value = count === 0 || count === vals.length ? 0 : 1 - countRel
         } else {
             const gr = group(data, d => getAttr(d, c))
             count = {}
+            countRel = {}
             gr.forEach((list, name) => {
                 count[name] = list.length
+                countRel[name] = list.length / vals.length
                 unique.push(name)
             })
             unique.sort((a, b) => a-b)
         }
     } else {
         const tmp = bin().thresholds(5)(vals)
-        unique = tmp.map(d => d.x0).concat(tmp.at(-1).x1)
+        unique = tmp.map(d => d.x0) //.concat(tmp.at(-1).x1)
+        count = tmp.map(d => d.length)
+        countRel = tmp.map(d => d.length / vals.length)
     }
     return {
         min: min(vals),
         max: maxVal,
         bins: unique,
         count: count,
+        countRel: countRel,
         mean: mean(vals),
         median: median(vals),
         value: value,
@@ -55,6 +61,7 @@ class DataManager {
         this.columns = []
         this.types = []
         this.scales = {}
+        this.getters = null
 
         this.stats = {}
         this.filterStats = {}
@@ -72,6 +79,10 @@ class DataManager {
 
         this.annotations = []
         this.annoTree = null
+    }
+
+    setDataset(dsobj) {
+        this.getters = dsobj.getters
     }
 
     setData(data=[], columns=[], types=[], xAttr="x", yAttr="y", width=500, height=500) {
@@ -105,6 +116,13 @@ class DataManager {
         // mark as updated
         const app = useApp()
         app.updateData()
+    }
+
+    getData(filter=true) {
+        if (filter && this.filterIds.size > 0) {
+            return this.data.filter(d => this.filterIds.has(d))
+        }
+        return this.data
     }
 
     computeFeatureMaps(radius, size=10, callback=null) {
@@ -176,7 +194,7 @@ class DataManager {
     }
 
     findDataInCircle(x, y, radius) {
-        return findInCirlce(this.tree, x, y, radius)
+        return findInCircle(this.tree, x, y, radius)
     }
 
     setLensData(data=[]) {

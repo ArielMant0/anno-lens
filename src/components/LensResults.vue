@@ -12,6 +12,7 @@
                 x-attr="x"
                 y-attr="y"
                 color-attr="color"
+                :y-domain="domain"
                 :width="width"
                 :height="height" />
         </div>
@@ -67,6 +68,7 @@
     })
 
     const derived = ref([])
+    const domain = ref([])
     const columnName = ref("")
     const columnType = ref(-1)
     const columnValue = ref(0)
@@ -78,6 +80,7 @@
             columnType.value = -1
             columnValue.value = 0
             derived.value = []
+            domain.value = []
             return
         }
 
@@ -88,6 +91,7 @@
             columnType.value = -1
             columnValue.value = 0
             derived.value = []
+            domain.value = []
             return
         }
 
@@ -105,9 +109,10 @@
                 const list = []
                 DM.filterStats[column].bins.map(c => {
                     const values = tmp.get(c)
-                    list.push({ x: c, y: values ? values.length : 0, color: scale(c) })
+                    list.push({ x: c, y: values ? values.length / data.length : 0, color: scale(c) })
                 })
                 list.sort((a, b) => a.x - b.x)
+                domain.value = [0, 1]
                 derived.value = list
             } break
             // case DATA_TYPES.SET: {
@@ -124,13 +129,14 @@
             default:
             case DATA_TYPES.SEQUENTIAL: {
                 const tmp = d3.bin()
-                    .thresholds(5)
+                    .thresholds(DM.filterStats[column].bins.length)
                     .domain([DM.filterStats[column].min, DM.filterStats[column].max])
                     .value(d => getAttr(d, column))
                     (data)
 
                 const list = []
-                tmp.forEach(d => list.push({ x: d.x0, y: d.length, color: scale(d.x0) }))
+                tmp.forEach(d => list.push({ x: d.x0, y: d.length / data.length, color: scale(d.x0) }))
+                domain.value = [0, 1]
                 derived.value = list
             }
 

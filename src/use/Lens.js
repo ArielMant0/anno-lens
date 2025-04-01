@@ -1,3 +1,4 @@
+import DM from "./data-manager";
 import { calcDeviation } from "./util";
 
 let _ID = 1;
@@ -41,8 +42,9 @@ export class Lens {
         let local = [], global = []
 
         if (data.length > 0) {
+            const none = this.type === LENS_TYPE.FREQUENT ? 1 : 0
             columns.forEach((c, i) => {
-                const [l, g] = calcDeviation(data, c, types[i])
+                const [l, g] = calcDeviation(data, c, types[i], DM.filterStats, none)
                 if (!Number.isNaN(l) && Number.isFinite(l)) {
                     local.push(Object.assign({
                         name: c,

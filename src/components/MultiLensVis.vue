@@ -146,6 +146,16 @@
                     </div>
 
                     <div style="margin-top: 25px;" :style="{ opacity: int.showAttrMap ? 0.25 : 1 }">
+                        <div class="d-flex align-center">
+                            <div style="font-size: 12px; text-align: center; text-orientation: upright; writing-mode: vertical-lr;">all data</div>
+                            <GlobalDistributions
+                                :lens="activeLens"
+                                :indices="activeDetails"
+                                :mode="refMode"
+                                :time="lensTime"
+                                :width="150"
+                                :height="75"/>
+                        </div>
                         <div v-for="i in numLens" class="mb-8">
                             <div class="mb-1 text-caption d-flex align-center justify-center">
                                 <span>Lens {{ i }}</span>
@@ -153,21 +163,21 @@
                                 <v-icon v-else-if="i === 2">mdi-circle-medium</v-icon>
                                 <v-icon v-else>mdi-circle</v-icon>
                             </div>
-                            <div v-for="mode in ['global', 'local']" class="d-flex align-center mb-1">
-                                <div style="font-size: 12px; text-orientation: upright; writing-mode: vertical-lr;">{{ mode }}</div>
-                                <div v-for="k in activeDetails" :key="'det_'+i+'_'+mode+'_'+k" class="text-caption">
+                            <div class="d-flex align-center">
+                                <div style="font-size: 12px; text-align: center; text-orientation: upright; writing-mode: vertical-lr;">{{ refMode }}</div>
+                                <div v-for="k in activeDetails" :key="'det_'+i+'_'+refMode+'_'+k" class="text-caption">
                                     <div style="text-align: center;">{{ k+1 }}</div>
                                     <LensResults
                                         class="mr-1"
-                                        :selected="i === activeLens+1 && colorIndex === k && refMode === mode"
+                                        :selected="i === activeLens+1 && colorIndex === k"
                                         :disabled="int.lenses[i-1].numResults[refMode] < i"
                                         :lens="i-1"
                                         :index="k"
-                                        :mode="mode"
+                                        :mode="refMode"
                                         :time="lensTime"
                                         :width="150"
                                         :height="75"/>
-                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -211,6 +221,7 @@
     import FeatureMap from './vis/FeatureMap.vue';
     import { useTheme } from 'vuetify';
     import AnnotationOverlay from './AnnotationOverlay.vue';
+    import GlobalDistributions from './GlobalDistributions.vue';
 
     const app = useApp()
     const theme = useTheme()
@@ -365,12 +376,10 @@
         return d3.scaleSequential(d3.interpolateGreys)
     })
     const featureScaleTicks = computed(() => {
-        return d => {
-            if (d < 1) {
-                return lensType.value === LENS_TYPE.FREQUENT ? "rare" : "frequent"
-            }
-            return lensType.value === LENS_TYPE.FREQUENT ? "frequent" : "rare"
+        if (lensType.value === LENS_TYPE.FREQUENT) {
+            return d => d < 1 ? "less frequent" : "more frequent"
         }
+            return d => d < 1 ? "less rare" : "more rare"
     })
 
     function toggleColorOverride(name) {
@@ -770,6 +779,7 @@
             columns.value.forEach(c => d.visited[c] = 0)
         })
 
+        DM.setDataset(app.datasetObj)
         DM.setData(points, toRaw(columns.value), ct, "x", "y", w.value, h.value)
 
         data.value = points

@@ -80,7 +80,7 @@
         const contours = d3.contourDensity()
             .x(d => x(d[0]))
             .y(d => y(d[1]))
-            .weight(d => d[2])
+            .weight(d => props.lensType === LENS_TYPE.FREQUENT ? 1 - d[2] : d[2])
             .size([props.width, props.height])
             .bandwidth(30)
             .thresholds(16)

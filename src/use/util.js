@@ -1,5 +1,5 @@
 import { DATA_TYPES, useApp } from "@/stores/app";
-import { deviation, extent, group, interpolatePlasma, mean, scaleOrdinal, scaleQuantile, scaleSequential, schemeBlues, schemeCategory10, schemeOrRd } from "d3";
+import { bin, deviation, extent, group, interpolatePlasma, mean, scaleOrdinal, scaleQuantile, scaleSequential, schemeBlues, schemeCategory10, schemeOrRd } from "d3";
 import DM from "./data-manager";
 
 export function getDataType(d, name) {
@@ -54,7 +54,7 @@ export function makeColorScale(data, column, type, primary="blue") {
             return scaleQuantile(data.map(d => getAttr(d, column)), schemeOrRd[6]).unknown("black")
         case DATA_TYPES.SEQUENTIAL:
             return scaleSequential(interpolatePlasma)
-                .unknown("grey")
+                .unknown("black")
                 .domain(extent(data, d => getAttr(d, column)))
         case DATA_TYPES.ORDINAL: {
             const tmp = group(data, d => getAttr(d, column))
@@ -75,9 +75,8 @@ export function makeColorScale(data, column, type, primary="blue") {
 export function getAttr(d, name) {
     let acc = name;
 
-    const app = useApp()
-    if (app.datasetObj.getters && app.datasetObj.getters[name]) {
-        acc = app.datasetObj.getters[name]
+    if (DM.getters && DM.getters[name]) {
+        acc = DM.getters[name]
     }
 
     switch (typeof acc) {
@@ -97,35 +96,43 @@ export function getAttr(d, name) {
     }
 }
 
-export function calcDeviation(data, column, type) {
-    const vals = dataToNumbers(data, column, type)
+export function calcDeviation(data, column, type, stats, none=NaN) {
     let vd, gl
 
     if (type === DATA_TYPES.BOOLEAN) {
+        const vals = dataToNumbers(data, column, type)
         const count = vals.reduce((acc, v) => acc + (v ? 1 : 0), 0)
-        vd = count ===  0 ? NaN : 1 - count / vals.length
-        gl = count ===  0 ? NaN : count /  DM.filterStats[column].count // + 0.1 * count / vals.length
-    } else if (type === DATA_TYPES.ORDINAL || type === DATA_TYPES.ORDINAL) {
-        const count = group(vals)
-        let vd = 0, gl = 0
+        vd = count > 0 ? 1 - count / vals.length : none
+        gl = count > 0 ? 1 - Math.abs((count / vals.length) - stats[column].countRel) : none
+        // count / stats[column].count // + 0.1 * count / vals.length
+    } else if (type === DATA_TYPES.ORDINAL || type === DATA_TYPES.NOMINAL) {
+        const count = group(data, d => getAttr(d, column))
+        vd = 0, gl = 0
         count.forEach((list, name) => {
-            vd += (1 - list.length) / vals.length
-            gl += list.length / DM.filterStats[column].count[name]
+            vd += (1 - list.length) / data.length
+            gl += Math.abs((list.length / data.length) - stats[column].countRel[name])
         })
         vd = vd / count.size
-        gl = gl / DM.filterStats[column].bins.length
     } else {
-        vd = deviation(vals) / DM.filterStats[column].max
-        const m = mean(vals)
-        // const v = vals.reduce((acc, d) => acc + Math.sqrt((d-m)**2), 0) / (vals.length-1)
-        gl = Math.abs(DM.filterStats[column].mean - m) / DM.filterStats[column].max
+        const vals = dataToNumbers(data, column, type)
+        vd = deviation(vals) / stats[column].max
+
+        const tmp = bin()
+            .thresholds(stats[column].bins.length)
+            .domain([stats[column].min, stats[column].max])
+            (vals)
+        gl = tmp.reduce((acc, d, i) => {
+            return acc + vals.length > 0 ?
+                Math.abs((d.length / vals.length) - stats[column].countRel[i]) :
+                0
+        }, 0)
     }
 
     return [vd, gl]
 }
 
 
-export function findInCirlce(tree, px, py, r) {
+export function findInCircle(tree, px, py, r) {
     const result = [], radius2 = r * r
     tree.visit(function(node, x1, y1, x2, y2) {
         if (node.length) {

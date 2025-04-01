@@ -9,7 +9,7 @@
     import * as d3 from 'd3'
     import { DATA_TYPES } from '@/stores/app'
     import { watch } from 'vue'
-    import { deg2rad, findInCirlce, getAttr } from '@/use/util'
+    import { deg2rad, findInCircle, getAttr } from '@/use/util'
 
     const props = defineProps({
         data: {
@@ -194,7 +194,7 @@
         const res = []
         // let prev = new Set()
         for (let i = 1; i <= props.numLens; ++i) {
-            const ids = findInCirlce(tree, mx, my, props.searchRadius*i).map(d => d.id)
+            const ids = findInCircle(tree, mx, my, props.searchRadius*i).map(d => d.id)
             res.push(ids)
             // res.push(ids.filter(id => !prev.has(id)))
             // prev = new Set(ids)

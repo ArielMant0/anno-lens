@@ -4,7 +4,7 @@
 
 <script setup>
     import { getAttr } from '@/use/util';
-import * as d3 from 'd3'
+    import * as d3 from 'd3'
     import { onMounted } from 'vue';
 
     const props = defineProps({
@@ -35,6 +35,10 @@ import * as d3 from 'd3'
         yAttr: {
             type: String,
             default: "y"
+        },
+        yDomain: {
+            type: Array,
+            required: false
         },
         colorAttr: {
             type: String,
@@ -69,7 +73,7 @@ import * as d3 from 'd3'
             .paddingInner(0.1)
 
         const y = d3.scaleLinear()
-            .domain([0, d3.max(props.data, getY)])
+            .domain(props.yDomain ? props.yDomain : [0, d3.max(props.data, getY)])
             .range([props.height-5-off, 5])
 
         const set = new Set(props.selected)
