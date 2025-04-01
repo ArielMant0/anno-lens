@@ -1,6 +1,15 @@
 <template>
     <div style="min-height: 80vh; max-width: 100vw;" class="d-flex flex-column align-center justify-start pa-4">
         <div v-if="data.length > 0" class="mt-2" style="max-width: 100%">
+
+            <LensOverlay
+                target="scatter-main"
+                :time="lensTime"
+                :mode="refMode"
+                :index="colorIndex"
+                :selected-column="chosenColorAttr"
+                :indices="[0, 1]"/>
+
             <div style="text-align: center;" class="d-flex flex-column align-center">
 
                 <div class="d-flex align-center justify-center mb-4" style="max-width: 80%;">
@@ -106,6 +115,7 @@
                                 :height="h"/>
 
                             <ScatterPlot
+                                ref="scatter"
                                 id="scatter-main"
                                 style="position: absolute; top: 0; left: 0;"
                                 :data="data"
@@ -120,10 +130,7 @@
                                 :search-radius="lensRadius"
                                 :width="w"
                                 :height="h"
-                                show-lens
                                 :num-lens="numLens"
-                                :lens-labels="activeLensLabels"
-                                :active-lens-label="chosenColorAttr"
                                 :active-lens="activeLens"
                                 :fixed-lens="!moveLens"
                                 :highlight-color="theme.current.value.colors.primary"
@@ -147,38 +154,40 @@
 
                     <div style="margin-top: 25px;" :style="{ opacity: int.showAttrMap ? 0.25 : 1 }">
                         <div class="d-flex align-center">
-                            <div style="font-size: 12px; text-align: center; text-orientation: upright; writing-mode: vertical-lr;">all data</div>
+                            <div class="mr-1" style="font-size: 12px; text-align: center; text-orientation: upright; writing-mode: vertical-lr;">all data</div>
                             <GlobalDistributions
                                 :lens="activeLens"
-                                :indices="activeDetails"
+                                :index="colorIndex"
                                 :mode="refMode"
                                 :time="lensTime"
                                 :width="150"
                                 :height="75"/>
                         </div>
-                        <div v-for="i in numLens" class="mb-8">
-                            <div class="mb-1 text-caption d-flex align-center justify-center">
-                                <span>Lens {{ i }}</span>
-                                <v-icon v-if="i === 1">mdi-circle-small</v-icon>
-                                <v-icon v-else-if="i === 2">mdi-circle-medium</v-icon>
-                                <v-icon v-else>mdi-circle</v-icon>
-                            </div>
-                            <div class="d-flex align-center">
-                                <div style="font-size: 12px; text-align: center; text-orientation: upright; writing-mode: vertical-lr;">{{ refMode }}</div>
-                                <div v-for="k in activeDetails" :key="'det_'+i+'_'+refMode+'_'+k" class="text-caption">
-                                    <div style="text-align: center;">{{ k+1 }}</div>
-                                    <LensResults
-                                        class="mr-1"
-                                        :selected="i === activeLens+1 && colorIndex === k"
-                                        :disabled="int.lenses[i-1].numResults[refMode] < i"
-                                        :lens="i-1"
-                                        :index="k"
-                                        :mode="refMode"
-                                        :time="lensTime"
-                                        :width="150"
-                                        :height="75"/>
-                                </div>
-                            </div>
+                        <v-divider class="mt-4 mb-4"></v-divider>
+                        <div class="d-flex align-center">
+                            <v-icon color="red" size="small" class="mr-1">mdi-circle-outline</v-icon>
+                            <LensResults
+                                :lens="activeLens"
+                                :index="colorIndex"
+                                :selected="colorColumn"
+                                :mode="refMode"
+                                :time="lensTime"
+                                @go-left="setColorIndex(colorIndex-1)"
+                                @go-right="setColorIndex(colorIndex+1)"
+                                :width="150"
+                                :height="75"/>
+                        </div>
+                        <div class="d-flex align-center mt-4">
+                            <v-icon color="black" size="small" class="mr-1">mdi-circle-outline</v-icon>
+                            <LensResults
+                                :lens="suggestLens"
+                                :index="colorIndex"
+                                :mode="refMode"
+                                :time="lensTime"
+                                @go-left="setColorIndex(colorIndex-1)"
+                                @go-right="setColorIndex(colorIndex+1)"
+                                :width="150"
+                                :height="75"/>
                         </div>
                     </div>
                 </div>
@@ -222,6 +231,7 @@
     import { useTheme } from 'vuetify';
     import AnnotationOverlay from './AnnotationOverlay.vue';
     import GlobalDistributions from './GlobalDistributions.vue';
+    import LensOverlay from './LensOverlay.vue';
 
     const app = useApp()
     const theme = useTheme()
@@ -237,6 +247,7 @@
 
     const under = ref(null)
     const over = ref(null)
+    const scatter = ref(null)
 
     const w = ref(800)
     const h = ref(800)
@@ -272,9 +283,7 @@
     const showTime = ref(0)
     const int = reactive({
         scales: {},
-        lenses: [],
         columns: [],
-        otherColumns: [],
         fromLens: false,
 
         filterAttr: null,
@@ -334,39 +343,12 @@
         local: 3,
         global: 3
     })
-    const activeDetails = computed(() => {
-        if (colorIndex.value > 0) {
-            const s = colorIndex.value - 1
-            return d3.range(s, Math.min(s + 3, numDetails[refMode.value]))
-        } else {
-            return d3.range(0, Math.min(3, numDetails[refMode.value]))
-        }
-    })
-
-    const activeLensLabels = computed(() => {
-        if (int.columns.length === 0) {
-            return []
-        }
-        return activeDetails.value
-            .map(i => int.columns[i])
-            .filter(d => d !== undefined)
-    })
-    const otherLensLabels = computed(() => {
-        if (int.otherColumns.length === 0) {
-            return []
-        }
-        return activeDetails.value
-            .map(i => int.otherColumns[i])
-            .filter(d => d !== undefined)
-    })
 
     const activeLens = ref(0)
+    const suggestLens = ref(1)
     const lensRadius = ref(35)
 
     const KEYS = ["Q", "W"]
-
-    let lensX = null;
-    let lensY = null;
 
     const featureScale = computed(() => {
         if (lensType.value === LENS_TYPE.FREQUENT) {
@@ -419,8 +401,11 @@
         applyLens()
     }
     function setColorIndex(i) {
-        colorIndex.value = i
-        colorColumn.value = DM.lensResults[activeLens.value][refMode.value][i].name
+        const lens = DM.getLens(activeLens.value)
+        if (i >= 0 && i < lens.numResults[refMode.value]) {
+            colorIndex.value = i
+            colorColumn.value = lens.getResultColumn(refMode.value, i)
+        }
     }
     function setRefMode(mode="local") {
         const m = mode === "local" || mode === "global" ? mode : "local"
@@ -432,106 +417,14 @@
         }
     }
 
-    function drawLensSuggestions() {
-        const svg = d3.select(over.value)
-        svg.selectAll(".lens").remove()
-
-        svg.selectAll(".lens")
-            .data(lensSuggest.value)
-            .join("circle")
-            .classed("lens", true)
-            .attr("cx", d => d[0] + 5)
-            .attr("cy", d => d[1] + 5)
-            .attr("r", lensRadius.value)
-            .attr("stroke", "red")
-            // .attr("stroke", theme.current.value.colors.secondary)
-            .attr("stroke-width", 2)
-            .attr("fill", "none")
-
-        svg.selectAll(".lens-label").remove()
-
-        if (lensSuggest.value.length === 0) return
-
-        const degrees = [225, 270, 315].map(deg2rad)
-        const r = lensRadius.value + 5
-        const dx = lensSuggest.value[0][0]
-        const dy = lensSuggest.value[0][1]
-        const color = theme.current.value.colors.primary
-
-        const g = svg.selectAll(".lens-label")
-            .data(otherLensLabels.value)
-            .join("g")
-            .classed("lens-label", true)
-            .attr("font-size", 12)
-            .attr("transform", (_d, i) => `translate(${dx + r * Math.sin(degrees[i])},${dy + r * Math.cos(degrees[i])})`)
-
-        g.append("rect")
-            .attr("x", d => -d.length * 6 - 5)
-            .attr("y", -10)
-            .attr("width", d => d.length * 6 + 5)
-            .attr("height", 20)
-            .attr("fill", d => d === chosenColorAttr.value ? color : "white")
-            .attr("fill-opacity", 0.5)
-            .attr("stroke", "black")
-
-        g.append("text")
-            .attr("x", -5)
-            .attr("y", 4)
-            .attr("text-anchor", "end")
-            .attr("stroke", "white")
-            .attr("stroke-width", 3)
-            .attr("fill", "black")
-            .attr("paint-order", "stroke")
-            .text(d => d)
-    }
-
-
     function annotate() {
         DM.annotate(
-            lensX,
-            lensY,
+            activeLens.value,
             lensRadius.value,
             colorIndex.value,
             refMode.value,
-            lensType.value,
-            activeLens.value
         )
         annoTime.value = Date.now()
-    }
-    function drawAnnotations() {
-        const svg = d3.select(over.value)
-        svg.selectAll(".anno").remove()
-
-        const anno = DM.getAnnotations()
-        const g = svg.selectAll("g.anno")
-            .data(anno)
-            .join("g")
-            .classed("anno", true)
-            .attr("font-size", 10)
-            .attr("opacity", d => d.column === chosenColorAttr.value ? 1 : 0.25)
-
-        const getW = d => d.column.length * 5 + 10
-
-        g.append("rect")
-            .attr("x", d => d.x - getW(d) * 0.5)
-            .attr("y", d => d.y - 7)
-            .attr("width", d => getW(d))
-            .attr("height", 20)
-            .attr("fill", "white")
-            .attr("stroke", d => Lens.getLensColor(d.lensType))
-            .attr("fill-opacity", 0.5)
-
-        g.append("text")
-            .attr("x", d => d.x)
-            .attr("y", d => d.y + 6)
-            .attr("text-anchor", "middle")
-            .text(d => d.column)
-    }
-    function highlightAnnotations() {
-        const svg = d3.select(over.value)
-
-        svg.selectAll("g.anno")
-            .attr("opacity", d => d.column === chosenColorAttr.value ? 1 : 0.25)
     }
 
     function setFilter(values) {
@@ -579,11 +472,6 @@
         applyLens()
     }
 
-    function toggleShowAttr(name) {
-        int.showAttrMap = int.showAttrMap === name ? null : name
-        showTime.value = Date.now()
-        setTimeout(drawPositions, 100)
-    }
     function drawPositions() {
         const svg = d3.select(under.value)
         const data = int.showAttrMap && int.attrLensPos[int.showAttrMap] ?
@@ -607,116 +495,98 @@
     }
 
     function applyLens() {
-        const lensData = DM.lensData
-        if (lensData.length === 0) return
+        if (DM.lenses.length === 0) return
 
-        let results = []
-        if (lensData.some(d => d.length > 0)) {
-            // let prev = null
-            int.fromLens = lensData[activeLens.value].length > 0
-            results = int.lenses.map((d, i) => {
-                if (lensData[i].length > 0) {
-                    return d.apply(lensData[i], columns.value, ctypes.value)
-                } else {
-                    return []
-                }
-            })
+        int.fromLens = DM.getLensResults(activeLens.value, refMode.value).length > 0
 
+        if (int.fromLens) {
             const now = Date.now()
-            results.forEach((res, i) => {
-                if (res.length > 0 && i === activeLens.value) {
-                    const j = colorIndex.value
-                    const mode = refMode.value
-                    if (j < res[mode].length) {
-                        const n = res[mode][j].name
-                        const val = (history.get(n) || 0) + 1
-                        history.set(n, val)
-                        int.historyScales[n].domain([0, Math.max(val, int.historyScales[n].domain()[1])])
-                        historyUpdated = true
+            const lens = DM.getLens(activeLens.value)
 
-                        if (lensX !== null && lensY !== null) {
-                            int.attrLensPos[n].push({
-                                x: lensX,
-                                y: lensY,
-                                time: now,
-                                radius: int.lenses[activeLens.value].radius
-                            })
-                        }
-                    }
-                }
-            })
-        } else {
-            int.fromLens = false
-        }
-        DM.setLensResults(results)
+            const n = lens.getResultColumn(refMode.value, colorIndex.value)
+            const val = (history.get(n) || 0) + 1
 
-        if (int.fromLens && results[activeLens.value][refMode.value].length > 0) {
-            if (colorIndex.value >= results[activeLens.value][refMode.value].length) {
-                colorIndex.value = results[activeLens.value][refMode.value].length-1
+            int.historyScales[n].domain([0, Math.max(val, int.historyScales[n].domain()[1])])
+            historyUpdated = true
+
+            if (lens.x !== null && lens.y !== null) {
+                int.attrLensPos[n].push({
+                    x: lens.x,
+                    y: lens.y,
+                    time: now,
+                    radius: lensRadius.value
+                })
             }
-            colorColumn.value = results[activeLens.value][refMode.value][colorIndex.value].name
-            int.columns = results[activeLens.value][refMode.value].map(d => d.name)
-            lensSuggest.value = DM.getMatchingLenses(
-                lensX, lensY, lensRadius.value,
-                activeLens.value, refMode.value, colorIndex.value
-            )
-            if (lensSuggest.value.length > 0) {
-                const otherLensData = DM.findDataInCircle(
-                    lensSuggest.value[0][0],
-                    lensSuggest.value[0][1],
-                    lensRadius.value
-                )
-                int.otherColumns = new Lens(lensType.value)
-                    .apply(otherLensData, columns.value, ctypes.value)[refMode.value]
-                    .map(d => d.name)
-            } else {
-                int.otherColumns = []
+
+            const results = lens.getResult(refMode.value)
+            if (colorIndex.value >= results.length) {
+                colorIndex.value = 0
             }
+            colorColumn.value = lens.getResultColumn(refMode.value, colorIndex.value)
+
+            numDetails.local = lens.numResults.local
+            numDetails.global = lens.numResults.global
         } else {
             colorColumn.value = datasetColor.value
-            int.columns = []
-            int.otherColumns = []
-            lensSuggest.value = []
-        }
-
-        if (results[activeLens.value] !== undefined) {
-            numDetails.local = results[activeLens.value].local.length
-            numDetails.global = results[activeLens.value].global.length
-        } else {
+            DM.clearLens(suggestLens.value)
             numDetails.local = 3
             numDetails.global = 3
         }
 
         lensTime.value = Date.now()
-        drawLensSuggestions()
+        // drawLensSuggestions()
         // highlightAnnotations()
     }
 
-    function onHover(points, lx, ly) {
-        DM.setLensData(points.map(list => {
+    function updateLens(points, lx, ly) {
+
+        const fd = DM.getData()
+
+        points.forEach(list => {
             const ids = new Set(list)
-            return data.value.filter(d => {
+            const subset = fd.filter(d => {
                 if (ids.has(d.id)) {
                     d.visited[colorColumn.value]++
                 }
                 return ids.has(d.id)
             })
-        }))
-        lensX = lx;
-        lensY = ly;
+            DM.updateLens(activeLens.value, lx, ly, lensRadius.value, subset)
+        })
+
+        if (scatter.value) {
+            const lens = DM.getLens(activeLens.value)
+            const sugg = DM.getMatchingLenses(
+                lens.x, lens.y, lensRadius.value,
+                activeLens.value, refMode.value,
+                colorIndex.value
+            )
+
+            if (sugg.length === 0) {
+                DM.clearLens(suggestLens.value)
+            } else {
+                const list = scatter.value.getLensData(sugg[0][0], sugg[0][1], 1, lensRadius.value)
+                const ids = new Set(list[activeLens.value])
+                const subset = fd.filter(d => ids.has(d.id))
+                DM.updateLens(suggestLens.value, sugg[0][0], sugg[0][1], lensRadius.value, subset)
+            }
+        }
+    }
+
+    function onHover(points, lx, ly) {
+        updateLens(points, lx, ly)
         applyLens()
     }
-    function onClick(_, lx, ly) {
+    function onClick(points, lx, ly) {
         moveLens.value = !moveLens.value;
-        lensX = lx;
-        lensY = ly;
+        updateLens(points, lx, ly)
+        applyLens()
     }
 
     async function init() {
         data.value = []
         topFeatures.value = []
         int.scales = {}
-        int.lenses = []
+        int.mainLens = null
         int.columns = []
         int.otherColumns = []
         int.fromLens = false
@@ -730,13 +600,9 @@
 
         ready.value = false
 
-        lensX = null;
-        lensY = null;
-
         DM.reset()
 
         const points = await d3.csv(`data/${props.dataset}.csv`, d3.autoType)
-
         columns.value = points.columns.filter(d => {
             const n = d.toLowerCase()
             return n !== "id" && n !== "x" && n !== "y" && !app.datasetObj.ignore.includes(n)
@@ -758,9 +624,10 @@
             points.forEach((d, i) => d.id = i)
         }
 
-        for (let i = 1; i <= numLens.value; ++i) {
-            int.lenses.push(new Lens(lensRadius.value*i, lensType.value))
-        }
+        // add primary lens
+        DM.addLens(lensType.value, true)
+        // add secondary lens (for suggestions)
+        DM.addLens(lensType.value, false)
 
         const ct = [], scales = {}
         columns.value.forEach(c => {
@@ -817,11 +684,13 @@
         })
         window.addEventListener("keydown", function(event) {
             switch(event.code) {
+                case "ArrowUp":
                 case "ArrowLeft":
                     if (colorIndex.value > 0) {
                         setColorIndex(colorIndex.value - 1)
                     }
                     break;
+                case "ArrowDown":
                 case "ArrowRight":
                     if (colorIndex.value < numDetails[refMode.value]-1) {
                         setColorIndex(colorIndex.value + 1)
@@ -840,13 +709,11 @@
                         setColorIndex(colorIndex.value)
                     }
                     break
-                case "ArrowDown":
                 case "KeyL":
                     if (refMode.value !== "local") {
                         setRefMode("local")
                     }
                     break
-                case "ArrowUp":
                 case "KeyG":
                     if (refMode.value !== "global") {
                         setRefMode("global")

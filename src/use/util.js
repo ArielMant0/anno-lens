@@ -103,7 +103,7 @@ export function calcDeviation(data, column, type, stats, none=NaN) {
         const vals = dataToNumbers(data, column, type)
         const count = vals.reduce((acc, v) => acc + (v ? 1 : 0), 0)
         vd = count > 0 ? 1 - count / vals.length : none
-        gl = count > 0 ? 1 - Math.abs((count / vals.length) - stats[column].countRel) : none
+        gl = count > 0 ? Math.abs((count / vals.length) - stats[column].countRel) : none
         // count / stats[column].count // + 0.1 * count / vals.length
     } else if (type === DATA_TYPES.ORDINAL || type === DATA_TYPES.NOMINAL) {
         const count = group(data, d => getAttr(d, column))

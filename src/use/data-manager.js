@@ -1,7 +1,7 @@
 import { DATA_TYPES, useApp } from "@/stores/app"
 import { bin, deviation, min, max, mean, median, quadtree, scaleLinear, extent, group } from "d3"
 import { circleIntersect, dataToNumbers, findInCircle, getAttr } from "./util"
-import { LENS_TYPE } from "./Lens"
+import { Lens, LENS_TYPE } from "./Lens"
 
 let _ANNO_ID = 1;
 
@@ -67,8 +67,7 @@ class DataManager {
         this.filterStats = {}
         this.filterIds = new Set()
 
-        this.lensData = []
-        this.lensResults = []
+        this.lenses = []
 
         this.width = 0
         this.height = 0
@@ -79,10 +78,49 @@ class DataManager {
 
         this.annotations = []
         this.annoTree = null
+        _ANNO_ID = 1
     }
 
     setDataset(dsobj) {
         this.getters = dsobj.getters
+    }
+
+    addLens(type=LENS_TYPE.RARE, active=true) {
+        this.lenses.push(new Lens(type, active))
+        return this.lenses.at(-1).id
+    }
+
+    updateLens(index, x, y, r, subset) {
+        if (!this.lenses[index]) return
+        this.lenses[index].apply(x, y, r, subset, this.columns, this.types)
+    }
+
+    clearLens(index) {
+        if (!this.lenses[index]) return
+        this.lenses[index].reset()
+    }
+
+    hasLens(index) {
+        return this.lenses[index] !== undefined
+    }
+
+    hasLensResult(index) {
+        return this.lenses[index].getResultSize() > 0
+    }
+
+    getLens(index) {
+        if (!this.hasLens(index)) return null
+        return this.lenses[index]
+    }
+
+    getLensData(index) {
+        if (!this.hasLens(index)) return []
+        return this.lenses[index].getResultData()
+    }
+
+    getLensResults(index, mode) {
+        if (!this.hasLens(index)) return []
+        return this.lenses[index].getResult(mode)
     }
 
     setData(data=[], columns=[], types=[], xAttr="x", yAttr="y", width=500, height=500) {
@@ -172,15 +210,15 @@ class DataManager {
     }
 
     getMatchingLenses(x, y, r, lensIndex, mode, columnIndex) {
-        if (!this.lensMaps || !this.lensResults[lensIndex]) return []
+        if (!this.lensMaps || !this.lenses[lensIndex]) return []
         // get lens result
-        const col = this.lensResults[lensIndex][mode][columnIndex]
-        const n = col.name, v = col.value;
+        const n = this.lenses[lensIndex].getResultColumn(mode, columnIndex)
+        const v = this.lenses[lensIndex].getResultValue(mode, columnIndex)
         // return if there are no other lenses (doubt)
         if (!this.lensMaps[n] || this.lensMaps[n].length === 0) return []
         let lenses = this.lensMaps[n].filter(d => !circleIntersect(x, y, r, d[0], d[1], r))
         const vidx = mode === "local" ? 3 : 4
-        const size = this.lensData[lensIndex].length
+        const size = this.lenses[lensIndex].getResultSize()
         lenses = lenses.filter(d => Math.abs(d[vidx]-v) < DM.filterStats[n].value)
         if (lenses.length === 0) return []
 
@@ -190,21 +228,11 @@ class DataManager {
                 return vdiff !== 0 ? vdiff : Math.abs(a[2]-size) - Math.abs(b[2]-size)
             })
 
-        return [lenses[0]] //lenses.slice(0, 5)
+        return [lenses[0]]
     }
 
     findDataInCircle(x, y, radius) {
         return findInCircle(this.tree, x, y, radius)
-    }
-
-    setLensData(data=[]) {
-        this.lensData = data
-        const app = useApp()
-        app.updateLensData()
-    }
-
-    setLensResults(results=[]) {
-        this.lensResults = results
     }
 
     setScales(scales={}) {
@@ -215,11 +243,7 @@ class DataManager {
         return this.data.filter(filter)
     }
 
-    getLensData(index) {
-        return this.lensData[index]
-    }
-
-    annotate(x, y, radius, columnIndex, mode, lensType, lensIndex=0) {
+    annotate(index, radius, columnIndex, mode, lensType) {
         if (this.annoTree === null) {
             this.annoTree = quadtree()
                 .x(d => d.x)
@@ -227,18 +251,19 @@ class DataManager {
                 .extent([[0, 0], [this.width, this.height]])
         }
 
-        const refVal = this.lensResults[lensIndex][mode][columnIndex].value
-        const cols = this.lensResults[lensIndex][mode].filter(d => d.value === refVal)
+        const lens = this.getLens(index)
+        const refVal = lens.getResultValue(mode, columnIndex)
+        const cols = lens.getResult(mode).filter(d => d.value === refVal)
 
         this.annoTree.add({
             id: _ANNO_ID++,
-            x: x,
-            y: y,
+            x: lens.x,
+            y: lens.y,
             radius: radius,
             mode: mode,
             lensType: lensType,
             columns: cols,
-            ids: this.lensData[lensIndex].slice()
+            ids: lens.getResultIds()
         })
     }
 

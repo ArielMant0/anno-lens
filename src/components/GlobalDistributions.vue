@@ -1,6 +1,6 @@
 <template>
     <div class="d-flex align-center justify-space-between">
-        <v-card v-for="data in derived" :key="data.columnName" density="compact" :style="{ border: '2px solid white' }">
+        <v-card v-for="data in derived" class="mr-1" :key="data.columnName" density="compact" :style="{ border: '2px solid white' }">
             <div v-if="disabled" :style="{ width: width+'px', height: (height+27)+'px' }" class="d-flex align-center justify-center">
                 <v-icon size="50">mdi-cancel</v-icon>
             </div>
@@ -26,15 +26,11 @@
     import BarChart from './vis/BarChart.vue';
     import { DATA_TYPES } from '@/stores/app';
     import DM from '@/use/data-manager';
-    import { max } from 'd3';
+    import { max, range } from 'd3';
 
     const props = defineProps({
         lens: {
             type: Number,
-            required: true
-        },
-        indices: {
-            type: Array,
             required: true
         },
         mode: {
@@ -44,6 +40,14 @@
         time: {
             type: Number,
             required: true
+        },
+        index: {
+            type: Number,
+            default: 0
+        },
+        size: {
+            type: Number,
+            default: 3
         },
         width: {
             type: Number,
@@ -61,10 +65,18 @@
 
     const derived = ref([])
 
-    function init() {
-        if (!DM.lensResults[props.lens] || !DM.lensResults[props.lens][props.mode]) return
-        const columns = props.indices.map(i => DM.lensResults[props.lens][props.mode][i].name)
+    function getColumnIndices(lens) {
+        if (props.index <= 0) {
+            return range(0, Math.min(props.size, lens.numResults[props.mode]))
+        }
+        return range(props.index-1, Math.min(props.index+props.size-1, lens.numResults[props.mode]))
+    }
 
+    function init() {
+        if (!DM.hasLens(props.lens) || !DM.hasLensResult(props.lens, props.mode)) return
+
+        const lens = DM.getLens(props.lens)
+        const columns = getColumnIndices(lens).map(i => lens.getResultColumn(props.mode, i))
         if (columns.some(c => !DM.filterStats[c])) return
 
         const results = []

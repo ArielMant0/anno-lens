@@ -190,14 +190,11 @@
             .text(d => d.text)
     }
 
-    function getLensData(mx, my) {
+    function getLensData(mx, my, num=props.numLens, radius=props.searchRadius) {
         const res = []
-        // let prev = new Set()
-        for (let i = 1; i <= props.numLens; ++i) {
-            const ids = findInCircle(tree, mx, my, props.searchRadius*i).map(d => d.id)
+        for (let i = 1; i <= num; ++i) {
+            const ids = findInCircle(tree, mx, my, radius*i).map(d => d.id)
             res.push(ids)
-            // res.push(ids.filter(id => !prev.has(id)))
-            // prev = new Set(ids)
         }
         return res
     }
@@ -292,6 +289,8 @@
 
         updateSelected()
     }
+
+    defineExpose({ getLensData })
 
     onMounted(init)
 

@@ -1,22 +1,41 @@
 <template>
-    <v-card :title="props.title" density="compact" :style="{ border: '2px solid ' + (selected ? 'black' : 'white')}">
-        <div v-if="disabled || !columnName" :style="{ width: width+'px', height: (height+27)+'px' }" class="d-flex align-center justify-center">
-            <v-icon size="50">mdi-cancel</v-icon>
+    <div class="d-flex align-center">
+        <v-btn
+            icon="mdi-menu-left"
+            variant="tonal"
+            rounded="sm"
+            :height="height+30"
+            :disabled="index === 0"
+            class="mr-1"
+            @click="emit('go-left')" density="compact"></v-btn>
+        <div class="d-flex align-center">
+            <v-card v-for="data in derived" class="mr-1" density="compact" :style="{ border: '2px solid ' + (selected === data.columnName ? 'black' : 'white')}">
+                <div v-if="disabled || !data.columnName" :style="{ width: width+'px', height: (height+27)+'px' }" class="d-flex align-center justify-center">
+                    <v-icon size="50">mdi-cancel</v-icon>
+                </div>
+                <div v-else>
+                    <div style="text-align: center; vertical-align: middle;" :style="{ maxWidth: width+'px' }" class="text-caption text-dots">
+                        <span style="font-size: 9px;">({{ data.columnValue.toFixed(2) }})</span> {{ data.columnName }}
+                    </div>
+                    <BarChart
+                        :data="data.values"
+                        x-attr="x"
+                        y-attr="y"
+                        color-attr="color"
+                        :y-domain="data.domain"
+                        :width="width"
+                        :height="height" />
+                </div>
+            </v-card>
         </div>
-        <div v-else>
-            <div style="text-align: center; vertical-align: middle;" :style="{ maxWidth: width+'px' }" class="text-caption text-dots">
-                <span style="font-size: 9px;">({{ columnValue.toFixed(2) }})</span> {{ columnName }}
-            </div>
-            <BarChart
-                :data="derived"
-                x-attr="x"
-                y-attr="y"
-                color-attr="color"
-                :y-domain="domain"
-                :width="width"
-                :height="height" />
-        </div>
-    </v-card>
+        <v-btn
+            icon="mdi-menu-right"
+            variant="tonal"
+            rounded="sm"
+            :height="height+30"
+            class="ml-1"
+            @click="emit('go-right')" density="compact"></v-btn>
+    </div>
 </template>
 
 <script setup>
@@ -33,10 +52,6 @@
             type: Number,
             required: true
         },
-        index: {
-            type: Number,
-            required: true
-        },
         mode: {
             type: String,
             required: true
@@ -45,9 +60,17 @@
             type: Number,
             required: true
         },
-        title: {
+        index: {
+            type: Number,
+            default: 0
+        },
+        selected: {
             type: String,
-            required: false
+            default: ""
+        },
+        size: {
+            type: Number,
+            default: 3
         },
         width: {
             type: Number,
@@ -57,90 +80,83 @@
             type: Number,
             default: 100
         },
-        selected: {
-            type: Boolean,
-            default: false
-        },
         disabled: {
             type: Boolean,
             default: false
         }
     })
 
+    const emit = defineEmits(["go-left", "go-right"])
+
     const derived = ref([])
-    const domain = ref([])
-    const columnName = ref("")
-    const columnType = ref(-1)
-    const columnValue = ref(0)
+
+    function getColumnIndices(lens) {
+        if (props.index <= 0) {
+            return d3.range(0, Math.min(props.size, lens.numResults[props.mode]))
+        }
+        return d3.range(props.index-1, Math.min(props.index+props.size-1, lens.numResults[props.mode]))
+    }
 
     function init() {
-        const data = DM.getLensData(props.lens)
-        if (!data || data.length === 0 || props.index >= DM.lensResults[props.lens][props.mode].length) {
-            columnName.value = ""
-            columnType.value = -1
-            columnValue.value = 0
-            derived.value = []
-            domain.value = []
-            return
-        }
 
-        const type = DM.lensResults[props.lens][props.mode][props.index].type
+        if (!DM.hasLens(props.lens) || !DM.hasLensResult(props.lens, props.mode)) return
 
-        if (!DM.lensResults[props.lens][props.mode][props.index] || type === null || type === undefined) {
-            columnName.value = ""
-            columnType.value = -1
-            columnValue.value = 0
-            derived.value = []
-            domain.value = []
-            return
-        }
+        const lens = DM.getLens(props.lens)
+        const indices = getColumnIndices(lens)
+        const columns = indices.map(i => lens.getResultColumn(props.mode, i))
+        if (columns.some(c => !DM.filterStats[c])) return
 
-        const column = DM.lensResults[props.lens][props.mode][props.index].name
-        const scale = DM.scales[column]
-        columnName.value = column
-        columnType.value = type
-        columnValue.value = DM.lensResults[props.lens][props.mode][props.index].value
+        // store results here
+        const results = []
+        // data to calculate things from
+        const data = lens.getResultData()
 
-        switch(type) {
-            case DATA_TYPES.BOOLEAN:
-            case DATA_TYPES.NOMINAL:
-            case DATA_TYPES.ORDINAL: {
-                const tmp = d3.group(data, d => getAttr(d, column))
-                const list = []
-                DM.filterStats[column].bins.map(c => {
-                    const values = tmp.get(c)
-                    list.push({ x: c, y: values ? values.length / data.length : 0, color: scale(c) })
-                })
-                list.sort((a, b) => a.x - b.x)
-                domain.value = [0, 1]
-                derived.value = list
-            } break
-            // case DATA_TYPES.SET: {
-            //     const vals = makeRelativeCounts(dataToNumbers(data, column, type), column)
-            //     const tmp = d3.bin()
-            //         .thresholds(5)
-            //         .domain([DM.filterStats[column].min, DM.filterStats[column].max])
-            //         (vals)
+        columns.forEach((c, i) => {
+            const idx = DM.columns.indexOf(c)
+            const type = DM.types[idx]
+            const scale = DM.scales[c]
 
-            //     const list = []
-            //     tmp.forEach(d => list.push({ x: d.x0, y: d.length, color: scale(d.x0) }))
-            //     derived.value = list
-            // }
-            default:
-            case DATA_TYPES.SEQUENTIAL: {
-                const tmp = d3.bin()
-                    .thresholds(DM.filterStats[column].bins.length)
-                    .domain([DM.filterStats[column].min, DM.filterStats[column].max])
-                    .value(d => getAttr(d, column))
-                    (data)
+            switch(type) {
+                case DATA_TYPES.BOOLEAN:
+                case DATA_TYPES.NOMINAL:
+                case DATA_TYPES.ORDINAL: {
+                    const tmp = d3.group(data, d => getAttr(d, c))
+                    const list = []
+                    DM.filterStats[c].bins.map(c => {
+                        const values = tmp.get(c)
+                        list.push({ x: c, y: values ? values.length / data.length : 0, color: scale(c) })
+                    })
+                    list.sort((a, b) => a.x - b.x)
+                    results.push({
+                        index: indices[i],
+                        columnName: c,
+                        columnValue: lens.getResultValue(props.mode, i),
+                        values: list,
+                        domain: [0, 1]
+                    })
+                } break
+                default:
+                case DATA_TYPES.SEQUENTIAL: {
+                    const tmp = d3.bin()
+                        .thresholds(DM.filterStats[c].bins.length)
+                        .domain([DM.filterStats[c].min, DM.filterStats[c].max])
+                        .value(d => getAttr(d, c))
+                        (data)
 
-                const list = []
-                tmp.forEach(d => list.push({ x: d.x0, y: d.length / data.length, color: scale(d.x0) }))
-                domain.value = [0, 1]
-                derived.value = list
+                    const list = []
+                    tmp.forEach(d => list.push({ x: d.x0, y: d.length / data.length, color: scale(d.x0) }))
+                    results.push({
+                        index: indices[i],
+                        columnName: c,
+                        columnValue: lens.getResultValue(props.mode, i),
+                        values: list,
+                        domain: [0, 1]
+                    })
+                }
             }
+        })
 
-        }
+        derived.value = results
     }
 
     onMounted(init)

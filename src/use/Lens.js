@@ -11,10 +11,17 @@ export const LENS_TYPES = Object.values(LENS_TYPE)
 
 export class Lens {
 
-    constructor(type=LENS_TYPE.RARE) {
+    constructor(type=LENS_TYPE.RARE, active=true) {
         this.id = _ID++
-        this.type = type;
+        this.type = type
+        this.ids = new Set()
+        this.results = { local: [], global: [] }
         this.numResults = { local: 0, global: 0 }
+        this.x = null
+        this.y = null
+        this.radius = null
+        this.color = active ? "red" : "black"
+        this.active = active;
     }
 
     static getLensName(type) {
@@ -34,14 +41,71 @@ export class Lens {
     }
 
     reset() {
+        this.x = null
+        this.y = null
+        this.radius = null
+        this.results.local = []
+        this.results.global = []
         this.numResults.local = 0
         this.numResults.global = 0
     }
 
-    apply(data, columns, types) {
+    isActive() {
+        return this.active
+    }
+
+    getResult(mode="global", index=null) {
+        if (index !== null) {
+            if (!this.results[mode]) return null
+            return this.results[mode][index]
+        } else {
+            return this.results[mode]
+        }
+    }
+
+    _getResultAttr(mode, index, attr) {
+        const r = this.getResult(mode, index)
+        if (!r) return null
+        if (Array.isArray(r)) {
+            return r.map(d => d[attr])
+        }
+        return r[attr]
+    }
+
+    getResultColumn(mode, index) {
+        return this._getResultAttr(mode, index, "name")
+    }
+
+    getResultValue(mode, index) {
+        return this._getResultAttr(mode, index, "value")
+    }
+
+    getResultType(mode, index) {
+        return this._getResultAttr(mode, index, "type")
+    }
+
+    getResultIds() {
+        return Array.from(this.ids.values())
+    }
+
+    getResultData() {
+        const data = DM.getData()
+        return data.filter(d => this.ids.has(d.id))
+    }
+
+    getResultSize() {
+        return this.ids.size
+    }
+
+    apply(x, y, r, data, columns, types) {
         let local = [], global = []
 
+        this.x = x
+        this.y = y
+        this.radius = r;
+
         if (data.length > 0) {
+            this.ids = new Set(data.map(d => d.id))
             const none = this.type === LENS_TYPE.FREQUENT ? 1 : 0
             columns.forEach((c, i) => {
                 const [l, g] = calcDeviation(data, c, types[i], DM.filterStats, none)
@@ -62,6 +126,8 @@ export class Lens {
             })
             local = local.filter(d => d.value !== undefined)
             global = global.filter(d => d.value !== undefined)
+        } else {
+            this.ids.clear()
         }
 
         if (this.type === LENS_TYPE.FREQUENT) {
@@ -103,9 +169,7 @@ export class Lens {
         this.numResults.local = local.length
         this.numResults.global = global.length
 
-        return {
-            local: local,
-            global: global,
-        }
+        this.results.local = local
+        this.results.global = global
     }
 }
