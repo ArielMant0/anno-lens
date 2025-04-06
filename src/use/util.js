@@ -163,3 +163,7 @@ export function rad2deg(radian) {
     return radian * 180 / Math.PI
 }
 
+export function euclidean(x0, y0, x1, y1) {
+    return Math.sqrt((x0 - x1)**2 + (y1 - y0)**2)
+}
+

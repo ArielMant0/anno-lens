@@ -1,6 +1,6 @@
 import { DATA_TYPES, useApp } from "@/stores/app"
 import { bin, deviation, min, max, mean, median, quadtree, scaleLinear, extent, group } from "d3"
-import { circleIntersect, dataToNumbers, findInCircle, getAttr } from "./util"
+import { circleIntersect, dataToNumbers, euclidean, findInCircle, getAttr } from "./util"
 import { Lens, LENS_TYPE } from "./Lens"
 
 let _ANNO_ID = 1;
@@ -254,14 +254,79 @@ class DataManager {
         }
 
         const lens = this.getLens(index)
-        // const refVal = lens.getResultValue(mode, columnIndex)
         const allCols = lens.getResult(mode)
         const start = Math.max(0, columnIndex-1)
         const end = Math.min(allCols.length, start === 0 ? 3 : columnIndex+2)
-        const cols = allCols.slice(start, end) // filter(d => d.value === refVal)
+        const cols = allCols.slice(start, end)
+
+        const annos = this.annoTree.data()
+        const overlap = annos.filter(d => {
+            if (d.lensType !== lensType || d.mode !== mode) return false
+            const set = lens.ids.intersection(new Set(d.ids))
+            return set.size > d.ids.length * 0.5 || set.size > 0.5 * lens.ids.size
+        })
 
         const id = _ANNO_ID++
-        cols.forEach(c => {
+        let addObj;
+
+        // merge annotations
+        if (overlap.length > 0) {
+            const x = mean(overlap.map(d => d.x).concat([lens.x]))
+            const y = mean(overlap.map(d => d.y).concat([lens.y]))
+
+            let mergeCols = cols
+            let colSet = new Set(cols.map(d => d.name))
+            let idSet = new Set(lens.ids)
+
+            overlap.forEach(d => {
+                this.annoTree.remove(d)
+                idSet = idSet.union(new Set(d.ids))
+                d.columns.forEach(c => {
+                    delete this.annoMap[c.name][d.id]
+                    if (colSet.has(c.name)) {
+                        const it = mergeCols.find(dd => dd.name === c.name)
+                        it.value = it.value + c.value
+                        it.count = (it.count || 1) + 1
+                    } else {
+                        mergeCols.push(c)
+                    }
+                })
+            })
+
+            const points = this.data.filter(d => idSet.has(d.id))
+            const r = max(points.map(d => euclidean(x, y, this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr)))))
+
+            // compute average value for merged columns
+            mergeCols.forEach(d => {
+                if (d.count) {
+                    d.value = d.value / d.count
+                }
+            })
+
+            addObj = {
+                id: id,
+                x: x,
+                y: y,
+                radius: r,
+                mode: mode,
+                lensType: lensType,
+                columns: mergeCols,
+                ids: Array.from(idSet.values())
+            }
+        } else {
+            addObj = {
+                id: id,
+                x: lens.x,
+                y: lens.y,
+                radius: radius,
+                mode: mode,
+                lensType: lensType,
+                columns: cols,
+                ids: lens.getResultIds()
+            }
+        }
+
+        addObj.columns.forEach(c => {
             const n = c.name
             if (!this.annoMap[n]) {
                 this.annoMap[n] = {}
@@ -274,16 +339,10 @@ class DataManager {
             }
         })
 
-        this.annoTree.add({
-            id: id,
-            x: lens.x,
-            y: lens.y,
-            radius: radius,
-            mode: mode,
-            lensType: lensType,
-            columns: cols,
-            ids: lens.getResultIds()
-        })
+        if (addObj) {
+            this.annoTree.add(addObj)
+        }
+
     }
 
     getAnnotations() {
@@ -319,21 +378,6 @@ class DataManager {
                 }
             }
         }
-        // this.annoMap.forEach((set, col) => {
-        //     const vals = Array.from(set.values())
-        //     for (let i = 0; i < set.size; ++i) {
-        //         // add new nodes
-        //         if (!added.has(vals[i])) {
-        //             added.add(vals[i])
-        //             const anno = this.annoTree.data().find(d => d.id === vals[i])
-        //             nodes.push({ id: vals[i], name: vals[i], x: anno.x, y: anno.y })
-        //         }
-        //         // add links for all other nodes to this node
-        //         for (let j = i+1; j < set.size; ++j) {
-        //             links.push({ source: vals[i], target: vals[j], value: col })
-        //         }
-        //     }
-        // })
         return { nodes: nodes, links: links }
     }
 }

@@ -423,6 +423,7 @@
             lensRadius.value,
             colorIndex.value,
             refMode.value,
+            lensType.value
         )
         annoTime.value = Date.now()
     }
