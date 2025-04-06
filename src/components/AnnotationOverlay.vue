@@ -1,6 +1,19 @@
 <template>
     <div>
         <Teleport to="body">
+            <canvas ref="annolinks"
+                :width="width"
+                :height="height"
+                class="overlay"
+                :style="{
+                    left: offsetX+'px',
+                    top: offsetY+'px',
+                    pointerEvents: 'none',
+                }">
+            </canvas>
+        </Teleport>
+
+        <Teleport to="body">
             <v-sheet v-for="a in anno"
                 elevation="2"
                 rounded="sm"
@@ -55,12 +68,11 @@
 </template>
 
 <script setup>
-    import { useTooltip } from '@/stores/tooltip';
+    import * as d3 from 'd3'
     import DM from '@/use/data-manager';
-    import { useMouse, useWindowSize } from '@vueuse/core';
+    import { useMouse, useWindowScroll, useWindowSize } from '@vueuse/core';
     import { computed, onMounted, watch } from 'vue';
 
-    const tt = useTooltip()
     const mouse = useMouse()
 
     const props = defineProps({
@@ -86,6 +98,10 @@
         },
     })
 
+    const scroll = useWindowScroll()
+
+    const annolinks = ref(null)
+
     const offsetX = ref(0)
     const offsetY = ref(0)
     const width = ref(0)
@@ -93,6 +109,12 @@
 
     const anno = ref([])
     const open = ref(false)
+
+    let actx;
+    const graph = {
+        nodes: [],
+        links: []
+    }
 
     const wSize = useWindowSize()
 
@@ -119,7 +141,7 @@
         if (!target) return
         const rect = target.getBoundingClientRect()
         offsetX.value = rect.left
-        offsetY.value = rect.top
+        offsetY.value = rect.top + scroll.y.value
         width.value = rect.width
         height.value = rect.height
     }
@@ -131,16 +153,52 @@
         return props.selected === name || hoverName.value === name
     }
 
-    function update() {
-        getCoordinates()
-        anno.value = DM.getAnnotations()
+    function drawLinks() {
+        actx = actx ? actx : annolinks.value.getContext("2d")
+
+        const path = d3.line()
+            .context(actx)
+            .x(d => d[0])
+            .y(d => d[1])
+
+        actx.clearRect(0, 0, width.value, height.value)
+
+        actx.strokeStyle = "black"
+        const scale = d3.scaleQuantile(graph.links.map(d => d.value), d3.range(1, 8))
+
+        actx.globalAlpha = 0.25
+        graph.links.forEach(d => {
+            actx.lineWidth = scale(d.value)
+            actx.beginPath()
+            path(d.coords)
+            actx.stroke()
+        })
     }
 
-    onMounted(update)
+    function update() {
+        getCoordinates()
+        drawLinks()
+    }
+    function init() {
+        getCoordinates()
+        anno.value = DM.getAnnotations()
+        const { nodes, links } = DM.getAnnotationConnections()
+        graph.nodes = nodes
+        graph.links = links
+        graph.links.forEach(d => {
+            const s = graph.nodes.find(n => n.id === d.source)
+            const t = graph.nodes.find(n => n.id === d.target)
+            d.coords = [[s.x, s.y], [t.x, t.y]]
+        })
+        drawLinks()
+    }
 
-    watch(() => ([props.targetId, props.time]), update, { deep: true })
-    watch(() => wSize.width, getCoordinates)
-    watch(() => wSize.height, getCoordinates)
+    onMounted(init)
+
+    watch(() => ([props.targetId, props.time]), init, { deep: true })
+    watch(wSize.width, getCoordinates)
+    watch(wSize.height, getCoordinates)
+    watch(scroll.y, update)
 
 </script>
 

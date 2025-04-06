@@ -106,9 +106,8 @@ export class Lens {
 
         if (data.length > 0) {
             this.ids = new Set(data.map(d => d.id))
-            const none = this.type === LENS_TYPE.FREQUENT ? 1 : 0
             columns.forEach((c, i) => {
-                const [l, g] = calcDeviation(data, c, types[i], DM.filterStats, none)
+                const [l, g] = calcDeviation(data, c, types[i], DM.filterStats)
                 if (!Number.isNaN(l) && Number.isFinite(l)) {
                     local.push(Object.assign({
                         name: c,

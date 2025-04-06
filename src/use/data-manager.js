@@ -52,6 +52,7 @@ function calcStats(data, c, filterType) {
 class DataManager {
 
     constructor() {
+        this.filterIds = new Set()
         this.reset()
     }
 
@@ -65,7 +66,7 @@ class DataManager {
 
         this.stats = {}
         this.filterStats = {}
-        this.filterIds = new Set()
+        this.filterIds.clear()
 
         this.lenses = []
 
@@ -78,6 +79,7 @@ class DataManager {
 
         this.annotations = []
         this.annoTree = null
+        this.annoMap = {}
         _ANNO_ID = 1
     }
 
@@ -252,11 +254,28 @@ class DataManager {
         }
 
         const lens = this.getLens(index)
-        const refVal = lens.getResultValue(mode, columnIndex)
-        const cols = lens.getResult(mode).filter(d => d.value === refVal)
+        // const refVal = lens.getResultValue(mode, columnIndex)
+        const allCols = lens.getResult(mode)
+        const start = Math.max(0, columnIndex-1)
+        const end = Math.min(allCols.length, start === 0 ? 3 : columnIndex+2)
+        const cols = allCols.slice(start, end) // filter(d => d.value === refVal)
+
+        const id = _ANNO_ID++
+        cols.forEach(c => {
+            const n = c.name
+            if (!this.annoMap[n]) {
+                this.annoMap[n] = {}
+            }
+
+            if (this.annoMap[n][id]) {
+                this.annoMap[n][id].push(c.value)
+            } else {
+                this.annoMap[n][id] = [c.value]
+            }
+        })
 
         this.annoTree.add({
-            id: _ANNO_ID++,
+            id: id,
             x: lens.x,
             y: lens.y,
             radius: radius,
@@ -269,6 +288,53 @@ class DataManager {
 
     getAnnotations() {
         return this.annoTree ? this.annoTree.data() : []
+    }
+
+    getAnnotationConnections() {
+        const nodes = []
+        const added = new Set()
+        const links = []
+
+        const annos = this.annoTree ? this.annoTree.data() : []
+
+        for (const name in this.annoMap) {
+            const ids = Object.keys(this.annoMap[name]).map(d => +d)
+            for (let i = 0; i < ids.length; ++i) {
+                const ia = annos.find(d => d.id === ids[i])
+                const iav = ia.columns.find(d => d.name === name)
+                // add new nodes
+                if (!added.has(ids[i])) {
+                    added.add(ids[i])
+                    nodes.push({ id: ids[i], name: ids[i], x: ia.x, y: ia.y })
+                }
+                // add links for all other nodes to this node
+                for (let j = i+1; j < ids.length; ++j) {
+                    const jav = annos.find(d => d.id === ids[j]).columns.find(d => d.name === name)
+                    links.push({
+                        source: ids[i],
+                        target: ids[j],
+                        name: name,
+                        value: iav.value * jav.value
+                    })
+                }
+            }
+        }
+        // this.annoMap.forEach((set, col) => {
+        //     const vals = Array.from(set.values())
+        //     for (let i = 0; i < set.size; ++i) {
+        //         // add new nodes
+        //         if (!added.has(vals[i])) {
+        //             added.add(vals[i])
+        //             const anno = this.annoTree.data().find(d => d.id === vals[i])
+        //             nodes.push({ id: vals[i], name: vals[i], x: anno.x, y: anno.y })
+        //         }
+        //         // add links for all other nodes to this node
+        //         for (let j = i+1; j < set.size; ++j) {
+        //             links.push({ source: vals[i], target: vals[j], value: col })
+        //         }
+        //     }
+        // })
+        return { nodes: nodes, links: links }
     }
 }
 

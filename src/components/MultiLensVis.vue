@@ -395,10 +395,10 @@
     function setLensType(t) {
         saveHistory()
         lensType.value = t;
-        int.lenses.forEach(l => l.type = t)
+        DM.lenses.forEach(l => l.type = t)
+        applyLens()
         topFeatures.value = DM.getBestFeatures(lensType.value, refMode.value)
         app.setColor(topFeatures.value[0])
-        applyLens()
     }
     function setColorIndex(i) {
         const lens = DM.getLens(activeLens.value)
