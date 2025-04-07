@@ -13,6 +13,14 @@ export const DATA_TYPES = Object.freeze({
 
 export const DATASETS = [
     {
+        name: "Games Tagging",
+        file: "games.dr",
+        x: "x",
+        y: "y",
+        color: "enact violence",
+        type: DATA_TYPES.NOMINAL,
+        ignore: ["name", "cluster"],
+    },{
         name: "Iris Flowers",
         file: "iris.dr",
         x: "x",
@@ -21,13 +29,21 @@ export const DATASETS = [
         type: DATA_TYPES.NOMINAL,
         ignore: [],
     },{
-        name: "Games Tagging",
-        file: "games.dr",
+        name: "Raisin",
+        file: "raisin.dr",
         x: "x",
         y: "y",
-        color: "enact violence",
+        color: "Class",
         type: DATA_TYPES.NOMINAL,
-        ignore: ["name", "cluster"],
+        ignore: [],
+    },{
+        name: "IBM Employee Attrition",
+        file: "ibm-employee-attrition-test.dr",
+        x: "x",
+        y: "y",
+        color: "Attrition",
+        type: DATA_TYPES.NOMINAL,
+        ignore: ["Employee ID"],
     },{
         name: "Heart Disease",
         file: "heart_disease_uci.dr",
@@ -71,7 +87,7 @@ export const DATASETS = [
 export const useApp = defineStore('app', {
     state: () => ({
         dataset: "games.dr",
-        datasetObj: Object.assign({}, DATASETS[1]),
+        datasetObj: Object.assign({}, DATASETS[0]),
 
         dataTime: 0,
         lensTime: 0,

@@ -606,7 +606,7 @@
         const points = await d3.csv(`data/${props.dataset}.csv`, d3.autoType)
         columns.value = points.columns.filter(d => {
             const n = d.toLowerCase()
-            return n !== "id" && n !== "x" && n !== "y" && !app.datasetObj.ignore.includes(n)
+            return n !== "id" && n !== "x" && n !== "y" && !app.datasetObj.ignore.includes(d)
         })
 
         if (app.datasetObj.parse) {
