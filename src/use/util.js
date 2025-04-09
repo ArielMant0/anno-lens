@@ -110,7 +110,7 @@ export function calcDeviation(data, column, type, stats, none=NaN) {
         const count = group(data, d => getAttr(d, column))
         vd = 0, gl = 0
         count.forEach((list, name) => {
-            vd += (1 - list.length) / data.length
+            vd += 1 - list.length / data.length
             gl += Math.abs((list.length / data.length) - stats[column].countRel[name])
         })
         vd = vd / count.size
