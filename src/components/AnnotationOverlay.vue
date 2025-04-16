@@ -25,12 +25,7 @@
                     opacity: active || isSelected(a) ? 1 : 0.25,
                     border: '1px solid ' + (isSelected(a) ? 'blue' : 'black')
                 }">
-
-                <div v-if="open">
-                    <div v-for="c in a.columns">{{ c.name }}</div>
-                </div>
-                <div v-else>{{ a.columns.length }}</div>
-
+                <div>{{ a.columns.length }}</div>
             </v-sheet>
         </Teleport>
 
@@ -53,14 +48,16 @@
                         fill="none">
                     </circle>
 
-                    <text
-                        dy="5"
-                        text-anchor="middle"
-                        fill="blue"
-                        stroke="white"
-                        stroke-width="3"
-                        paint-order="stroke"
-                        >{{ l.columns[0].name }}</text>
+                    <g>
+                        <text v-for="(c, i) in l.columns"
+                            :dy="5 + 10 * i"
+                            text-anchor="middle"
+                            fill="blue"
+                            stroke="white"
+                            stroke-width="3"
+                            paint-order="stroke"
+                            >{{ c.name }}</text>
+                    </g>
                 </g>
             </svg>
         </Teleport>

@@ -113,47 +113,14 @@
 
         columns.forEach((c, i) => {
             const idx = DM.columns.indexOf(c)
-            const type = DM.types[idx]
-            const scale = DM.scales[c]
 
-            switch(type) {
-                case DATA_TYPES.BOOLEAN:
-                case DATA_TYPES.NOMINAL:
-                case DATA_TYPES.ORDINAL: {
-                    const tmp = d3.group(data, d => getAttr(d, c))
-                    const list = []
-                    DM.filterStats[c].bins.map(c => {
-                        const values = tmp.get(c)
-                        list.push({ x: c, y: values ? values.length / data.length : 0, color: scale(c) })
-                    })
-                    list.sort((a, b) => a.x - b.x)
-                    results.push({
-                        index: indices[i],
-                        columnName: c,
-                        columnValue: lens.getResultValue(props.mode, i),
-                        values: list,
-                        domain: [0, 1]
-                    })
-                } break
-                default:
-                case DATA_TYPES.SEQUENTIAL: {
-                    const tmp = d3.bin()
-                        .thresholds(DM.filterStats[c].bins.length)
-                        .domain([DM.filterStats[c].min, DM.filterStats[c].max])
-                        .value(d => getAttr(d, c))
-                        (data)
-
-                    const list = []
-                    tmp.forEach(d => list.push({ x: d.x0, y: d.length / data.length, color: scale(d.x0) }))
-                    results.push({
-                        index: indices[i],
-                        columnName: c,
-                        columnValue: lens.getResultValue(props.mode, i),
-                        values: list,
-                        domain: [0, 1]
-                    })
-                }
-            }
+            results.push({
+                index: indices[i],
+                columnName: c,
+                columnValue: lens.getResultValue(props.mode, i),
+                values: lens.getResultHist(props.mode, i),
+                domain: [0, 1]
+            })
         })
 
         derived.value = results

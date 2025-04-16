@@ -254,16 +254,13 @@ class DataManager {
         }
 
         const lens = this.getLens(index)
-        const allCols = lens.getResult(mode)
-        const start = Math.max(0, columnIndex-1)
-        const end = Math.min(allCols.length, start === 0 ? 3 : columnIndex+2)
-        const cols = allCols.slice(start, end)
+        const col = lens.getResult(mode)[columnIndex]
 
         const annos = this.annoTree.data()
         const overlap = annos.filter(d => {
             if (d.lensType !== lensType || d.mode !== mode) return false
             const set = lens.ids.intersection(new Set(d.ids))
-            return set.size > d.ids.length * 0.5 || set.size > 0.5 * lens.ids.size
+            return set.size > d.ids.length * 0.75 || set.size > 0.75 * lens.ids.size
         })
 
         const id = _ANNO_ID++
@@ -274,8 +271,8 @@ class DataManager {
             const x = mean(overlap.map(d => d.x).concat([lens.x]))
             const y = mean(overlap.map(d => d.y).concat([lens.y]))
 
-            let mergeCols = cols
-            let colSet = new Set(cols.map(d => d.name))
+            let mergeCols = [col]
+            let colSet = new Set([col.name])
             let idSet = new Set(lens.ids)
 
             overlap.forEach(d => {
@@ -321,7 +318,7 @@ class DataManager {
                 radius: radius,
                 mode: mode,
                 lensType: lensType,
-                columns: cols,
+                columns: [col],
                 ids: lens.getResultIds()
             }
         }

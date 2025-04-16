@@ -5,6 +5,7 @@
             <LensOverlay
                 target="scatter-main"
                 :time="lensTime"
+                :radius="lensRadius-10"
                 :mode="refMode"
                 :index="colorIndex"
                 :selected-column="chosenColorAttr"

@@ -1,5 +1,7 @@
+import { bin, group } from "d3";
 import DM from "./data-manager";
-import { calcDeviation } from "./util";
+import { calcDeviation, getAttr } from "./util";
+import { DATA_TYPES } from "@/stores/app";
 
 let _ID = 1;
 
@@ -9,6 +11,36 @@ export const LENS_TYPE = Object.freeze({
 })
 export const LENS_TYPES = Object.values(LENS_TYPE)
 
+function calcHistogram(data, column, type) {
+    const scale = DM.scales[column]
+    switch(type) {
+        case DATA_TYPES.BOOLEAN:
+        case DATA_TYPES.NOMINAL:
+        case DATA_TYPES.ORDINAL: {
+            const tmp = group(data, d => getAttr(d, column))
+            const list = []
+            DM.filterStats[column].bins.map(c => {
+                const values = tmp.get(c)
+                list.push({ x: c, y: values ? values.length / data.length : 0, color: scale(c) })
+            })
+            list.sort((a, b) => a.x - b.x)
+            return list
+        }
+        default:
+        case DATA_TYPES.SEQUENTIAL: {
+            const tmp = bin()
+                .thresholds(DM.filterStats[column].bins.length)
+                .domain([DM.filterStats[column].min, DM.filterStats[column].max])
+                .value(d => getAttr(d, column))
+                (data)
+
+            const list = []
+            tmp.forEach(d => list.push({ x: d.x0, y: d.length / data.length, color: scale(d.x0) }))
+            return list
+        }
+    }
+}
+
 export class Lens {
 
     constructor(type=LENS_TYPE.RARE, active=true) {
@@ -17,6 +49,7 @@ export class Lens {
         this.ids = new Set()
         this.results = { local: [], global: [] }
         this.numResults = { local: 0, global: 0 }
+        this.hists = {}
         this.x = null
         this.y = null
         this.radius = null
@@ -43,6 +76,7 @@ export class Lens {
     reset() {
         this.x = null
         this.y = null
+        this.hists = {}
         this.radius = null
         this.results.local = []
         this.results.global = []
@@ -84,6 +118,10 @@ export class Lens {
         return this._getResultAttr(mode, index, "type")
     }
 
+    getResultHist(mode, index) {
+        return this.hists[this.getResultColumn(mode, index)]
+    }
+
     getResultIds() {
         return Array.from(this.ids.values())
     }
@@ -107,19 +145,20 @@ export class Lens {
         if (data.length > 0) {
             this.ids = new Set(data.map(d => d.id))
             columns.forEach((c, i) => {
+                this.hists[c] = calcHistogram(data, c, types[i])
                 const [l, g] = calcDeviation(data, c, types[i], DM.filterStats)
                 if (!Number.isNaN(l) && Number.isFinite(l)) {
                     local.push(Object.assign({
                         name: c,
                         type: types[i],
-                        value : l
+                        value : l,
                     }))
                 }
                 if (!Number.isNaN(g) && Number.isFinite(g)) {
                     global.push(Object.assign({
                         name: c,
                         type: types[i],
-                        value : g
+                        value : g,
                     }))
                 }
             })

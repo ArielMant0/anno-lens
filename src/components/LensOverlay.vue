@@ -14,7 +14,7 @@
     import DM from '@/use/data-manager'
     import { useWindowScroll, useWindowSize } from '@vueuse/core'
     import { onMounted, watch } from 'vue'
-    import { deg2rad } from '@/use/util'
+    import { deg2rad, getAttr } from '@/use/util'
     import { useTheme } from 'vuetify'
 
     const theme = useTheme()
@@ -36,6 +36,14 @@
         mode: {
             type: String,
             required: true
+        },
+        radius: {
+            type: Number,
+            required: true
+        },
+        drawMode: {
+            type: String,
+            default: "chart"
         },
         index: {
             type: Number,
@@ -70,9 +78,10 @@
         const el = document.querySelector("#"+props.target)
         const rect = el.getBoundingClientRect()
         tx = rect.left
-        ty = rect.top + scroll.y.value
+        ty = rect.top //+ scroll.y.value
         tw = rect.width
         th = rect.height
+        // draw lenses
         draw()
     }
 
@@ -103,6 +112,188 @@
             .attr("fill", "none")
             .attr("stroke-width", 2)
 
+        // draw additional vis
+        switch(props.drawMode) {
+            case "scatter":
+                drawScatter(lenses)
+                break
+            case "chart":
+                drawMicroVis(lenses)
+                break
+            default:
+            case "labels":
+                drawLabels(lenses)
+        }
+    }
+
+    function drawScatter(lenses) {
+
+        const svg = d3.select(el.value)
+        let prevRight = false;
+
+        lenses.forEach(l => {
+
+            const ci = getColumnIndices(l)
+            const ldata = ci
+                .map(i => l.getResultColumn(props.mode, i))
+                .filter(d => d !== null)
+
+            if (!ldata || ldata.length === 0) return
+
+            const dx = l.x + tx
+            const dy = l.y + ty
+            const r = l.radius + props.radius + 5
+
+            const onright = !prevRight
+            prevRight = onright
+
+            const degrees = (onright ? [150, 90, 30] : [210, 270, 330]).map(deg2rad)
+
+            ldata.forEach((name, i) => {
+
+                const diffX = r * Math.sin(degrees[i])
+                const diffY = r * Math.cos(degrees[i])
+
+                const g = svg.append("g")
+                    .attr("font-size", 12)
+
+                g.append("circle")
+                    .attr("cx", dx + diffX)
+                    .attr("cy", dy + diffY)
+                    .attr("r", props.radius)
+                    .attr("fill", "white")
+                    .attr("stroke", l.color ? l.color : "black")
+                    .attr("stroke-width", name === props.selectedColumn ? 3 : 2)
+
+                const scale = DM.scales[name]
+                const points = l.getResultData()
+
+                const sf = 1 - (props.radius / l.radius)
+
+                g.append("g")
+                    .selectAll("circle")
+                    .data(points)
+                    .join("circle")
+                    .attr("cx", d => {
+                        const px = DM.x(d.x)
+                        return px + tx + diffX + (l.x - px) * sf
+                    })
+                    .attr("cy", d => {
+                        const py = DM.y(d.y)
+                        return py + ty + diffY + (l.y - py) * sf
+                    })
+                    .attr("r", 3)
+                    .attr("fill", d => scale(getAttr(d, name)))
+                    .attr("stroke", "black")
+
+                g.append("text")
+                    .attr("x", dx+diffX + (onright ? props.radius+5: -props.radius-5))
+                    .attr("y", dy+diffY+4)
+                    .attr("text-anchor", onright ? "start" : "end")
+                    .attr("stroke", "white")
+                    .attr("stroke-width", 3)
+                    .attr("fill", "black")
+                    .attr("paint-order", "stroke")
+                    .attr("font-weight", name === props.selectedColumn ? "bold" : null)
+                    .text(name)
+            })
+        })
+    }
+
+    function drawMicroVis(lenses) {
+        const svg = d3.select(el.value)
+        let prevRight = false;
+
+        lenses.forEach(l => {
+
+            const ci = getColumnIndices(l)
+            const ldata = ci
+                .map(i => l.getResultColumn(props.mode, i))
+                .filter(d => d !== null)
+
+            if (!ldata || ldata.length === 0) return
+
+            const hists = ci.map(i => l.getResultHist(props.mode, i))
+
+            const dx = l.x + tx
+            const dy = l.y + ty
+            const rw = Math.floor(props.radius * 2.5)
+            const rh = Math.floor(rw * 0.5)
+            const r = l.radius + 10
+
+            const onright = !prevRight
+            prevRight = onright
+
+            const degrees = (onright ? [150, 90, 30] : [210, 270, 330]).map(deg2rad)
+
+            ldata.forEach((name, i) => {
+
+                const diffX = r * Math.sin(degrees[i])
+                const diffY = r * Math.cos(degrees[i])
+
+                const g = svg.append("g")
+                    .attr("font-size", 12)
+
+                const offX = dx + diffX + (onright ? 5 : -rw-5)
+                const offY = dy + diffY - rh*0.5
+
+                const sx = d3.scaleBand()
+                    .domain(hists[i].map(d => d.x))
+                    .range([0, rw])
+
+                const sy = d3.scaleLinear()
+                    .domain([0, d3.max(hists[i], d => d.y)])
+                    .range([rh, 0])
+
+                g.append("rect")
+                    .attr("x", offX)
+                    .attr("y", offY)
+                    .attr("width", rw)
+                    .attr("height", rh)
+                    .attr("fill", "white")
+                    .attr("stroke", "none")
+
+                g.append("g")
+                    .selectAll("rect")
+                    .data(hists[i])
+                    .join("rect")
+                    .attr("x", d => offX + sx(d.x))
+                    .attr("y", d => offY + sy(d.y))
+                    .attr("width", sx.bandwidth())
+                    .attr("height", d => sy(0) - sy(d.y))
+                    .attr("fill", d => d.color)
+                    .attr("stroke", "none")
+
+                g.append("rect")
+                    .attr("x", offX)
+                    .attr("y", offY)
+                    .attr("width", rw)
+                    .attr("height", rh)
+                    .attr("fill", "none")
+                    .attr("stroke", l.color ? l.color : "black")
+                    .attr("stroke-width", name === props.selectedColumn ? 2 : 1)
+
+                // g.append("g")
+                //     .attr("transform", `translate(0,${rh-15})`)
+                //     .call(d3.axisBottom(sx))
+
+                g.append("text")
+                    .attr("x", dx+diffX + (onright ? rw+10: -rw-10))
+                    .attr("y", dy+diffY+4)
+                    .attr("text-anchor", onright ? "start" : "end")
+                    .attr("stroke", "white")
+                    .attr("stroke-width", 3)
+                    .attr("fill", "black")
+                    .attr("paint-order", "stroke")
+                    .attr("font-weight", name === props.selectedColumn ? "bold" : null)
+                    .text(name)
+            })
+        })
+    }
+
+    function drawLabels(lenses) {
+
+        const svg = d3.select(el.value)
         const prim = theme.current.value.colors.primary
         const sec = "grey"
 
@@ -117,7 +308,6 @@
                 .filter(d => d !== null)
 
             if (!ldata || ldata.length === 0) return
-
 
             const dx = l.x + tx
             const dy = l.y + ty
@@ -181,7 +371,7 @@
 
 <style scoped>
 .overlay {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
 }
