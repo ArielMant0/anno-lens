@@ -53,6 +53,7 @@ class DataManager {
 
     constructor() {
         this.filterIds = new Set()
+        this.callbacks = { lens: [], anno: [] }
         this.reset()
     }
 
@@ -102,6 +103,17 @@ class DataManager {
         this.lenses[index].reset()
     }
 
+    swapLenses(i, j) {
+        if (!this.lenses[i] || !this.lenses[j]) return
+        const tmp = this.lenses[i]
+        const col = tmp.color
+        this.lenses[i] = this.lenses[j]
+        this.lenses[j] = tmp
+        this.lenses[j].color = this.lenses[i].color
+        this.lenses[i].color = col
+        this.callbacks.lens.forEach(f => f())
+    }
+
     hasLens(index) {
         return this.lenses[index] !== undefined
     }
@@ -110,9 +122,21 @@ class DataManager {
         return this.lenses[index].getResultSize() > 0
     }
 
+    onLens(callback) {
+        this.callbacks.lens.push(callback)
+    }
+
+    onAnnotation(callback) {
+        this.callbacks.anno.push(callback)
+    }
+
     getLens(index) {
         if (!this.hasLens(index)) return null
         return this.lenses[index]
+    }
+
+    getLensIndex(id) {
+        return this.lenses.findIndex(d => d.id === id)
     }
 
     getLensData(index) {
@@ -213,15 +237,20 @@ class DataManager {
 
     getMatchingLenses(x, y, r, lensIndex, mode, columnIndex) {
         if (!this.lensMaps || !this.lenses[lensIndex]) return []
+
+        const lens = this.getLens(lensIndex)
+
         // get lens result
-        const n = this.lenses[lensIndex].getResultColumn(mode, columnIndex)
-        const v = this.lenses[lensIndex].getResultValue(mode, columnIndex)
+        const n = lens.getResultColumn(mode, columnIndex)
+        const v = lens.getResultValue(mode, columnIndex)
         // return if there are no other lenses (doubt)
         if (!this.lensMaps[n] || this.lensMaps[n].length === 0) return []
-        let lenses = this.lensMaps[n].filter(d => !circleIntersect(x, y, r, d[0], d[1], r))
+
         const vidx = mode === "local" ? 3 : 4
         const size = this.lenses[lensIndex].getResultSize()
-        lenses = lenses.filter(d => Math.abs(d[vidx]-v) < DM.filterStats[n].value)
+        const lenses = this.lensMaps[n]
+            .filter(d => !circleIntersect(x, y, r, d[0], d[1], r) && Math.abs(d[vidx]-v) < DM.filterStats[n].value)
+
         if (lenses.length === 0) return []
 
         lenses
@@ -245,7 +274,7 @@ class DataManager {
         return this.data.filter(filter)
     }
 
-    annotate(index, radius, columnIndex, mode, lensType) {
+    annotate(lensIndex, radius, columnIndex, mode, lensType) {
         if (this.annoTree === null) {
             this.annoTree = quadtree()
                 .x(d => d.x)
@@ -253,14 +282,14 @@ class DataManager {
                 .extent([[0, 0], [this.width, this.height]])
         }
 
-        const lens = this.getLens(index)
+        const lens = this.getLens(lensIndex)
         const col = lens.getResult(mode)[columnIndex]
 
         const annos = this.annoTree.data()
         const overlap = annos.filter(d => {
             if (d.lensType !== lensType || d.mode !== mode) return false
             const set = lens.ids.intersection(new Set(d.ids))
-            return set.size > d.ids.length * 0.75 || set.size > 0.75 * lens.ids.size
+            return set.size > d.ids.length * 0.5 || set.size > 0.5 * lens.ids.size
         })
 
         const id = _ANNO_ID++
@@ -271,7 +300,7 @@ class DataManager {
             const x = mean(overlap.map(d => d.x).concat([lens.x]))
             const y = mean(overlap.map(d => d.y).concat([lens.y]))
 
-            let mergeCols = [col]
+            let mergeCols = [{ name: col.name, count: 1 }]
             let colSet = new Set([col.name])
             let idSet = new Set(lens.ids)
 
@@ -282,23 +311,15 @@ class DataManager {
                     delete this.annoMap[c.name][d.id]
                     if (colSet.has(c.name)) {
                         const it = mergeCols.find(dd => dd.name === c.name)
-                        it.value = it.value + c.value
-                        it.count = (it.count || 1) + 1
+                        it.count += c.count
                     } else {
-                        mergeCols.push(c)
+                        mergeCols.push({ name: c.name, count: c.count })
                     }
                 })
             })
 
             const points = this.data.filter(d => idSet.has(d.id))
             const r = max(points.map(d => euclidean(x, y, this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr)))))
-
-            // compute average value for merged columns
-            mergeCols.forEach(d => {
-                if (d.count) {
-                    d.value = d.value / d.count
-                }
-            })
 
             addObj = {
                 id: id,
@@ -318,7 +339,7 @@ class DataManager {
                 radius: radius,
                 mode: mode,
                 lensType: lensType,
-                columns: [col],
+                columns: [{ name: col.name, count: 1 }],
                 ids: lens.getResultIds()
             }
         }
@@ -330,14 +351,15 @@ class DataManager {
             }
 
             if (this.annoMap[n][id]) {
-                this.annoMap[n][id].push(c.value)
+                this.annoMap[n][id].push(c.count)
             } else {
-                this.annoMap[n][id] = [c.value]
+                this.annoMap[n][id] = [c.count]
             }
         })
 
         if (addObj) {
             this.annoTree.add(addObj)
+            this.callbacks.anno.forEach(f => f(addObj))
         }
 
     }
@@ -370,7 +392,7 @@ class DataManager {
                         source: ids[i],
                         target: ids[j],
                         name: name,
-                        value: iav.value * jav.value
+                        value: iav.count + jav.count
                     })
                 }
             }

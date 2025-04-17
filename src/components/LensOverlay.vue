@@ -1,7 +1,8 @@
 <template>
     <Teleport to="body">
         <svg ref="el" class="overlay"
-            :width="width" :height="height"
+            :width="width"
+            :height="height"
             :style="{
                 pointerEvents: active ? 'painted' : 'none'
             }">
@@ -13,7 +14,7 @@
     import * as d3 from 'd3'
     import DM from '@/use/data-manager'
     import { useWindowScroll, useWindowSize } from '@vueuse/core'
-    import { onMounted, watch } from 'vue'
+    import { onMounted, useTemplateRef, watch } from 'vue'
     import { deg2rad, getAttr } from '@/use/util'
     import { useTheme } from 'vuetify'
 
@@ -43,7 +44,7 @@
         },
         drawMode: {
             type: String,
-            default: "chart"
+            default: "scatter"
         },
         index: {
             type: Number,
@@ -59,11 +60,12 @@
         },
     })
 
-    const el = ref(null)
+    const el = useTemplateRef("el")
 
     let tx = 0, ty = 0, tw = 0, th = 0;
 
-    const { width, height } = useWindowSize()
+    const { width } = useWindowSize()
+    const height = ref(100)
 
     const scroll = useWindowScroll()
 
@@ -77,8 +79,9 @@
     function update() {
         const el = document.querySelector("#"+props.target)
         const rect = el.getBoundingClientRect()
+        height.value = rect.top + rect.height + 200
         tx = rect.left
-        ty = rect.top //+ scroll.y.value
+        ty = rect.top
         tw = rect.width
         th = rect.height
         // draw lenses
@@ -242,7 +245,7 @@
                     .range([0, rw])
 
                 const sy = d3.scaleLinear()
-                    .domain([0, d3.max(hists[i], d => d.y)])
+                    .domain([0, 1])
                     .range([rh, 0])
 
                 g.append("rect")

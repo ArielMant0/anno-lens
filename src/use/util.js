@@ -96,6 +96,35 @@ export function getAttr(d, name) {
     }
 }
 
+export function calcHistogram(data, column, type, stats, scale) {
+    switch(type) {
+        case DATA_TYPES.BOOLEAN:
+        case DATA_TYPES.NOMINAL:
+        case DATA_TYPES.ORDINAL: {
+            const tmp = group(data, d => getAttr(d, column))
+            const list = []
+            stats[column].bins.map(c => {
+                const values = tmp.get(c)
+                list.push({ x: c, y: values ? values.length / data.length : 0, color: scale(c) })
+            })
+            list.sort((a, b) => a.x - b.x)
+            return list
+        }
+        default:
+        case DATA_TYPES.SEQUENTIAL: {
+            const tmp = bin()
+                .thresholds(stats[column].bins.length)
+                .domain([stats[column].min, stats[column].max])
+                .value(d => getAttr(d, column))
+                (data)
+
+            const list = []
+            tmp.forEach(d => list.push({ x: d.x0, y: d.length / data.length, color: scale(d.x0) }))
+            return list
+        }
+    }
+}
+
 export function calcDeviation(data, column, type, stats, none=NaN) {
     let vd, gl
 

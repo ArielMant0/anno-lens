@@ -10,6 +10,7 @@
     import { DATA_TYPES } from '@/stores/app'
     import { watch } from 'vue'
     import { deg2rad, findInCircle, getAttr } from '@/use/util'
+import DM from '@/use/data-manager'
 
     const props = defineProps({
         data: {
@@ -67,22 +68,6 @@
             type: Boolean,
             default: false
         },
-        numLens: {
-            type: Number,
-            default: 1,
-        },
-        activeLens: {
-            type: Number,
-            default: 0,
-        },
-        lensLabels: {
-            type: Array,
-            default: () => ([]),
-        },
-        activeLensLabel: {
-            type: String,
-            default: "",
-        },
         searchRadius: {
             type: Number,
             default: 20,
@@ -97,7 +82,7 @@
         }
     })
 
-    const emit = defineEmits(["move", "hover", "click", "right-click"])
+    const emit = defineEmits(["move", "hover", "click", "right-click", "click-lens"])
 
     const el = ref(null)
     const overlay = ref(null)
@@ -105,7 +90,6 @@
     let tree;
     let ctx;
     let x, y, colors, opacities;
-    let lensX = props.width * 0.5, lensY = props.height * 0.5;
 
     let dataIds = new Set()
 
@@ -129,65 +113,24 @@
             ctx.fill()
             ctx.stroke()
         })
-        drawLens()
     }
 
-    function drawLens() {
+    function drawLens(lenses=[]) {
         const svg = d3.select(overlay.value)
         svg.selectAll("*").remove()
 
+        if (!props.fixedLens) return
+
         svg.selectAll(".lens")
-            .data(props.showLens ? d3.range(0, props.numLens) : [])
-            .join("path")
+            .data(lenses)
+            .join("circle")
             .classed("lens", true)
-            .attr("transform", `translate(${lensX},${lensY})`)
-            .attr("d", d => d3.arc()({
-                innerRadius: 0,
-                outerRadius: props.searchRadius * (d + 1),
-                startAngle: 0,
-                endAngle: Math.PI * 2
-            }) )
-            .attr("fill", d => d === props.activeLens ? "grey" : "none")
-            .attr("fill-opacity", 0.25)
-            .attr("stroke", "black")
-            .attr("stroke-width", 2)
-
-        const degrees = [135, 90, 45].map(deg2rad)
-        const r = props.searchRadius + 5
-        const dx = lensX
-        const dy = lensY
-
-        const g = svg.selectAll(".lens-label")
-            .data(props.showLens ?
-                props.lensLabels.map(d => ({
-                    id: d,
-                    text: d.length >= 15 ? d.slice(0, 15)+'..' : d
-                })) :
-                []
-            )
-            .join("g")
-            .classed("lens-label", true)
-            .attr("font-size", 12)
-            .attr("transform", (_, i) => `translate(${dx + r * Math.sin(degrees[i])},${dy + r * Math.cos(degrees[i])})`)
-
-        g.append("rect")
-            .attr("x", 0)
-            .attr("y", -10)
-            .attr("width", d => d.text.length * 6 + 5)
-            .attr("height", 20)
-            .attr("fill", d => d.id === props.activeLensLabel ? props.highlightColor : "white")
-            .attr("fill-opacity", 0.5)
-            .attr("stroke", "black")
-
-        g.append("text")
-            .attr("x", 5)
-            .attr("y", 4)
-            .attr("text-anchor", "start")
-            .attr("stroke", "white")
-            .attr("stroke-width", 3)
-            .attr("fill", "black")
-            .attr("paint-order", "stroke")
-            .text(d => d.text)
+            .attr("cx", d => d.x)
+            .attr("cy", d => d.y)
+            .attr("r", d => d.radius)
+            .attr("fill", d => d.color ? d.color : "black")
+            .attr("fill-opacity", 0.1)
+            .attr("stroke", "none")
     }
 
     function getLensData(mx, my, num=props.numLens, radius=props.searchRadius) {
@@ -199,28 +142,36 @@
         return res
     }
 
-    function updateLens() {
-        emit("hover", getLensData(lensX, lensY), lensX, lensY)
-        if (props.showLens) {
-            drawLens()
+    function getLensAt(mx, my) {
+        for (let i = 0; i < DM.lenses.length; ++i) {
+            const l = DM.lenses[i]
+            if ((mx-l.x)**2 < l.radius**2 && (my-l.y)**2 < l.radius**2) {
+                return l
+            }
         }
+        return null
     }
 
     function onMove(event) {
-        if (props.fixedLens) return
         const [mx, my] = d3.pointer(event, el.value)
-        emit("hover", getLensData(mx, my), mx, my)
-        lensX = mx;
-        lensY = my
-        drawLens()
+        if (props.showLens && props.fixedLens) {
+            const l = getLensAt(mx, my)
+            drawLens(l !== null ? [l] : [])
+            return
+        }
+        emit("hover", mx, my)
     }
     function onClick(event) {
         const [mx, my] = d3.pointer(event, el.value)
-        const res = getLensData(mx, my)
-        emit("click", res, mx, my)
-        lensX = mx;
-        lensY = my
-        drawLens()
+        if (props.showLens) {
+            const l = getLensAt(mx, my)
+            if (l !== null) {
+                emit("click-lens", mx, my, l.id)
+            }
+        } else {
+            const res = getLensData(mx, my)
+            emit("click", res, mx, my)
+        }
     }
 
     function makeColorScale() {
@@ -294,8 +245,11 @@
 
     onMounted(init)
 
-    watch(() => props.searchRadius, updateLens)
-    watch(() => ([props.showLens, props.activeLens, props.numLens, props.lensLabels]), drawLens, { deep: true })
+    watch(() => props.fixedLens, function(val) {
+        if (val === false) {
+            drawLens()
+        }
+    })
     watch(() => ([props.colorAttr, props.colorScale, props.colorType]), function() {
         makeColorScale()
         updateSelected()

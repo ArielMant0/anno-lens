@@ -14,19 +14,21 @@
         </Teleport>
 
         <Teleport to="body">
-            <v-sheet v-for="a in anno"
-                elevation="2"
-                rounded="sm"
-                class="pa-1 overlay text-caption"
-                :style="{
-                    left: (offsetX + a.x - 10)+'px',
-                    top: (offsetY + a.y - 15)+'px',
-                    pointerEvents: active ? 'all' : 'none',
-                    opacity: active || isSelected(a) ? 1 : 0.25,
-                    border: '1px solid ' + (isSelected(a) ? 'blue' : 'black')
-                }">
-                <div>{{ a.columns.length }}</div>
-            </v-sheet>
+            <div style="pointer-events: none;">
+                <div v-for="a in anno"
+                    class="overlay text-caption"
+                    :style="{
+                        textAlign: 'center',
+                        left: (offsetX + a.x - (a.columns[0].name.length * 3.5))+'px',
+                        top: (offsetY + a.y - 10)+'px',
+                        opacity: 1,
+                    }">
+                    {{ a.columns[0].name }}
+                    <span v-if="a.columns.length > 1" style="font-size: smaller;">
+                        (+{{ a.columns.length-1 }})
+                    </span>
+                </div>
+            </div>
         </Teleport>
 
         <Teleport to="body">
@@ -39,7 +41,7 @@
                     top: offsetY+'px',
                     pointerEvents: 'none',
                 }">
-                <g v-for="l in lenses" font-size="10" :transform="'translate('+l.x+','+l.y+')'">
+                <g v-for="l in lenses" :transform="'translate('+l.x+','+l.y+')'">
                     <circle
                         :r="l.radius"
                         stroke="blue"
@@ -50,12 +52,13 @@
 
                     <g>
                         <text v-for="(c, i) in l.columns"
-                            :dy="5 + 10 * i"
+                            :dy="5 + i * annoFontSize(c.count)"
                             text-anchor="middle"
                             fill="blue"
                             stroke="white"
                             stroke-width="3"
                             paint-order="stroke"
+                            :font-size="annoFontSize(c.count)"
                             >{{ c.name }}</text>
                     </g>
                 </g>
@@ -105,9 +108,9 @@
     const height = ref(0)
 
     const anno = ref([])
-    const open = ref(false)
 
-    let actx;
+    let actx, annoFontSize = () => 14
+
     const graph = {
         nodes: [],
         links: []
@@ -133,6 +136,13 @@
         return lensesClose.value[0].columns[0].name
     })
 
+    function getOffset(lens, index) {
+        const before = lens.columns.reduce((acc, d, i) => acc + i < index ? annoFontSize(d.count) : 0, 0)
+        const all = lens.columns.reduce((acc, d) => acc + annoFontSize(d.count), 0)
+        console.log(index, before, all, lens.columns)
+        return all < lens.radius ? before : before-lens.radius
+    }
+
     function getCoordinates() {
         const target = document.querySelector("#"+props.targetId)
         if (!target) return
@@ -153,12 +163,14 @@
     function drawLinks() {
         actx = actx ? actx : annolinks.value.getContext("2d")
 
+        actx.clearRect(0, 0, width.value, height.value)
+
+        if (props.active === false) return
+
         const path = d3.line()
             .context(actx)
             .x(d => d[0])
             .y(d => d[1])
-
-        actx.clearRect(0, 0, width.value, height.value)
 
         actx.strokeStyle = "black"
         const scale = d3.scaleQuantile(graph.links.map(d => d.value), d3.range(1, 8))
@@ -174,6 +186,8 @@
 
     function update() {
         getCoordinates()
+        annoFontSize = d3.scaleQuantile(anno.value.map(d => d.columns.map(c => c.count)).flat())
+            .range([16, 14, 12, 10, 8])
         drawLinks()
     }
     function init() {
@@ -187,6 +201,8 @@
             const t = graph.nodes.find(n => n.id === d.target)
             d.coords = [[s.x, s.y], [t.x, t.y]]
         })
+        annoFontSize = d3.scaleQuantile(anno.value.map(d => d.columns.map(c => c.count)).flat())
+            .range([16, 14, 12, 10, 8])
         drawLinks()
     }
 
@@ -196,6 +212,7 @@
     watch(wSize.width, getCoordinates)
     watch(wSize.height, getCoordinates)
     watch(scroll.y, update)
+    watch(() => props.active, drawLinks)
 
 </script>
 
