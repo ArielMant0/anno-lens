@@ -143,9 +143,9 @@
             const norm = Math.sqrt(vx*vx + vy*vy)
             const nx = bx + (-vx / norm) * r
             const ny = by + (-vy / norm) * r
-            const m = (rad2deg(Math.atan2(ny-by, nx-bx)) + 0) % 360
+            const m = rad2deg(Math.atan2(ny-by, nx-bx))
 
-            const onright = m >= 0 && m <= 180
+            const onright = m <= 90 || m >= 270
             // debug: show vector lines
             if (false) {
                 svg.append("line")
@@ -165,19 +165,19 @@
                     .attr("stroke-width", 2)
             }
 
-            return [(m + (onright ? 55 : -55)) % 360, m, (m + (onright ? -55 : 55)) % 360]
+            return [(360 + m + (onright ? -55 : 55)) % 360, (360 + m) % 360, (360 + m + (onright ? 55 : -55)) % 360]
         }
 
         const degrees = [
             sec !== null ?
                 getDegrees(tx+sec.x, ty+sec.y, tx+prim.x, ty+prim.y, prim.radius).map(deg2rad) :
-                [150, 90, 30].map(deg2rad),
+                [305, 0, 55].map(deg2rad),
             sec !== null ?
                 getDegrees(tx+prim.x, ty+prim.y, tx+sec.x, ty+sec.y, sec.radius).map(deg2rad) :
                 [],
         ]
 
-        const drawScatterForLens = (l, degrees) => {
+        const drawScatterForLens = (l, radian) => {
             const ci = getColumnIndices(l)
             const ldata = ci
                 .map(i => l.getResultColumn(props.mode, i))
@@ -192,12 +192,17 @@
             // do not draw lens if the radius is too small
             if (props.radius < 10) return
 
-            const onright = degrees[1] >= 0 && degrees[1] <= 180
-
             ldata.forEach((name, i) => {
 
-                const diffX = r * Math.cos(degrees[i])
-                const diffY = r * Math.sin(degrees[i])
+                const deg = rad2deg(radian[i])
+                const onright = deg <= 90 || deg >= 270
+                const bot = deg >= 60 && deg <= 120, top = deg >= 240 && deg <= 300
+                const topOrBot = top || bot
+
+                const trigX = Math.cos(radian[i])
+                const trigY = Math.sin(radian[i])
+                const diffX = r * trigX
+                const diffY = r * trigY
 
                 const g = svg.append("g")
                     .attr("font-size", 12)
@@ -232,9 +237,9 @@
                     .attr("stroke", "black")
 
                 g.append("text")
-                    .attr("x", dx+diffX + (onright ? props.radius+5: -props.radius-5))
-                    .attr("y", dy+diffY+4)
-                    .attr("text-anchor", onright ? "start" : "end")
+                    .attr("x", dx + diffX + (props.radius+5) * trigX)
+                    .attr("y", dy + diffY + (props.radius+5) * trigY + (bot ? 8 : 0))
+                    .attr("text-anchor", topOrBot ? "middle" : (onright ? "start" : "end"))
                     .attr("stroke", "white")
                     .attr("stroke-width", 3)
                     .attr("fill", "black")
