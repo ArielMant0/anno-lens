@@ -15,7 +15,7 @@
     import DM from '@/use/data-manager'
     import { useWindowScroll, useWindowSize } from '@vueuse/core'
     import { onMounted, useTemplateRef, watch } from 'vue'
-    import { deg2rad, getAttr } from '@/use/util'
+    import { deg2rad, getAttr, rad2deg } from '@/use/util'
     import { useTheme } from 'vuetify'
 
     const theme = useTheme()
@@ -131,11 +131,53 @@
 
     function drawScatter(lenses) {
 
+        if (lenses.length === 0) return
         const svg = d3.select(el.value)
-        let prevRight = false;
 
-        lenses.forEach(l => {
+        const prim = lenses[0]
+        const sec = lenses.length > 1 ? lenses[1] : null
 
+        const getDegrees = (ax, ay, bx, by, r) => {
+            const vx = ax - bx
+            const vy = ay - by
+            const norm = Math.sqrt(vx*vx + vy*vy)
+            const nx = bx + (-vx / norm) * r
+            const ny = by + (-vy / norm) * r
+            const m = (rad2deg(Math.atan2(ny-by, nx-bx)) + 0) % 360
+
+            const onright = m >= 0 && m <= 180
+            // debug: show vector lines
+            if (false) {
+                svg.append("line")
+                    .attr("x1", ax)
+                    .attr("y1", ay)
+                    .attr("x2", bx)
+                    .attr("y2", by)
+                    .attr("stroke", "magenta")
+                    .attr("stroke-width", 2)
+
+                svg.append("line")
+                    .attr("x1", nx)
+                    .attr("y1", ny)
+                    .attr("x2", bx)
+                    .attr("y2", by)
+                    .attr("stroke", "lime")
+                    .attr("stroke-width", 2)
+            }
+
+            return [(m + (onright ? 55 : -55)) % 360, m, (m + (onright ? -55 : 55)) % 360]
+        }
+
+        const degrees = [
+            sec !== null ?
+                getDegrees(tx+sec.x, ty+sec.y, tx+prim.x, ty+prim.y, prim.radius).map(deg2rad) :
+                [150, 90, 30].map(deg2rad),
+            sec !== null ?
+                getDegrees(tx+prim.x, ty+prim.y, tx+sec.x, ty+sec.y, sec.radius).map(deg2rad) :
+                [],
+        ]
+
+        const drawScatterForLens = (l, degrees) => {
             const ci = getColumnIndices(l)
             const ldata = ci
                 .map(i => l.getResultColumn(props.mode, i))
@@ -147,15 +189,15 @@
             const dy = l.y + ty
             const r = l.radius + props.radius + 5
 
-            const onright = !prevRight
-            prevRight = onright
+            // do not draw lens if the radius is too small
+            if (props.radius < 10) return
 
-            const degrees = (onright ? [150, 90, 30] : [210, 270, 330]).map(deg2rad)
+            const onright = degrees[1] >= 0 && degrees[1] <= 180
 
             ldata.forEach((name, i) => {
 
-                const diffX = r * Math.sin(degrees[i])
-                const diffY = r * Math.cos(degrees[i])
+                const diffX = r * Math.cos(degrees[i])
+                const diffY = r * Math.sin(degrees[i])
 
                 const g = svg.append("g")
                     .attr("font-size", 12)
@@ -200,7 +242,12 @@
                     .attr("font-weight", name === props.selectedColumn ? "bold" : null)
                     .text(name)
             })
-        })
+        }
+
+        drawScatterForLens(prim, degrees[0])
+        if (sec !== null) {
+            drawScatterForLens(sec, degrees[1])
+        }
     }
 
     function drawMicroVis(lenses) {
@@ -377,5 +424,6 @@
     position: fixed;
     top: 0;
     left: 0;
+    z-index: 200;
 }
 </style>

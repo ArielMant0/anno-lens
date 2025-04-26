@@ -1,7 +1,7 @@
 <template>
     <div class="d-flex justify-center align-start" style="max-height: 90vh; overflow-y: auto;">
 
-        <div :style="{ minWidth: chartWidth+'px' }">
+        <div :style="{ minWidth: (chartWidth+25)+'px' }">
             <div>global</div>
             <div v-for="(c, i) in colsG"
                 class="text-caption"
@@ -23,7 +23,7 @@
 
         <v-divider vertical class="ml-2 mr-2"></v-divider>
 
-        <div :style="{ minWidth: chartWidth+'px' }">
+        <div :style="{ minWidth: (chartWidth+25)+'px' }">
             <div>primary lens</div>
             <div v-for="(c, i) in colsP"
                 class="text-caption"
@@ -60,7 +60,7 @@
             <svg ref="conns" :width="Math.floor(chartWidth*0.5)" :height="height*numCols"></svg>
         </div>
 
-        <div :style="{ minWidth: chartWidth+'px' }">
+        <div :style="{ minWidth: (chartWidth+25)+'px' }">
             <div>secondary lens</div>
             <div v-for="(c, i) in colsS"
                 class="text-caption"

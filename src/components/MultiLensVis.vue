@@ -105,6 +105,13 @@
                 </div>
             </div>
 
+
+            <AnnotationOverlay
+                target-id="scatter-main"
+                :selected="chosenColorAttr"
+                :time="annoTime"
+                :active="!moveLens"/>
+
             <LensOverlay
                 target="scatter-main"
                 :time="lensTime"
@@ -114,11 +121,6 @@
                 :selected-column="chosenColorAttr"
                 :indices="[0, 1]"/>
 
-            <AnnotationOverlay
-                target-id="scatter-main"
-                :selected="chosenColorAttr"
-                :time="annoTime"
-                :active="!moveLens"/>
 
             <!-- <div class="mt-8 d-flex flex-column align-center" style="width: 100%;">
                 <h4>Snapshots</h4>

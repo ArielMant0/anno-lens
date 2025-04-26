@@ -14,11 +14,13 @@
         </Teleport>
 
         <Teleport to="body">
-            <div style="pointer-events: none;">
+            <div style="pointer-events: none;" v-if="active">
                 <div v-for="a in anno"
                     class="overlay text-caption"
                     :style="{
+                        maxWidth: '100px',
                         textAlign: 'center',
+                        textShadow: '-1px -1px white, -1px 1px white, 1px -1px white, 1px 1px white',
                         left: (offsetX + a.x - (a.columns[0].name.length * 3.5))+'px',
                         top: (offsetY + a.y - 10)+'px',
                         opacity: 1,
@@ -219,5 +221,6 @@
 <style scoped>
 .overlay {
     position: absolute;
+    z-index: 100;
 }
 </style>
