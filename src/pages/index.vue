@@ -17,13 +17,18 @@
 </template>
 
 <script setup>
-  import MultiLensVis from '@/components/MultiLensVis.vue';
-  import { storeToRefs } from 'pinia'
-  import { DATASETS, useApp } from '@/stores/app';
+    import MultiLensVis from '@/components/MultiLensVis.vue';
+    import { storeToRefs } from 'pinia'
+    import { DATASETS, useApp } from '@/stores/app';
+    import { useControls } from '@/stores/controls';
 
-  const app = useApp()
+    const app = useApp()
+    const controls = useControls()
 
-  const { dataset } = storeToRefs(app)
+    const { dataset } = storeToRefs(app)
+
+    window.addEventListener("keyup", (event) => controls.keyEvent(event))
+
 </script>
 
 <style>

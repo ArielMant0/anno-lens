@@ -196,3 +196,7 @@ export function euclidean(x0, y0, x1, y1) {
     return Math.sqrt((x0 - x1)**2 + (y1 - y0)**2)
 }
 
+export function capitalize(str) {
+    if (!str || str.length === 0) return ""
+    return str[0].toUpperCase() + str.slice(1)
+}

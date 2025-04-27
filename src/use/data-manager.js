@@ -274,7 +274,7 @@ class DataManager {
         return this.data.filter(filter)
     }
 
-    annotate(lensIndex, radius, columnIndex, mode, lensType) {
+    annotate(lensIndex, radius, columnIndex, mode, lensType, color) {
         if (this.annoTree === null) {
             this.annoTree = quadtree()
                 .x(d => d.x)
@@ -329,7 +329,8 @@ class DataManager {
                 mode: mode,
                 lensType: lensType,
                 columns: mergeCols,
-                ids: Array.from(idSet.values())
+                ids: Array.from(idSet.values()),
+                color: color
             }
         } else {
             addObj = {
@@ -340,7 +341,8 @@ class DataManager {
                 mode: mode,
                 lensType: lensType,
                 columns: [{ name: col.name, count: 1 }],
-                ids: lens.getResultIds()
+                ids: lens.getResultIds(),
+                color: color
             }
         }
 

@@ -46,13 +46,14 @@
                                 :hide="int.filterAttr"
                                 :mode="refMode"
                                 :lens-type="lensType"
+                                style="margin: 150px;"
                                 :width="w"
                                 :height="h"/>
 
                             <ScatterPlot
                                 ref="scatter"
                                 id="scatter-main"
-                                style="position: absolute; top: 0; left: 0;"
+                                style="position: absolute; top: 0; left: 0; margin: 150px;"
                                 :data="data"
                                 :selected="dataF"
                                 :time="dataTime"
@@ -121,6 +122,7 @@
                 :selected-column="chosenColorAttr"
                 :indices="[0, 1]"/>
 
+            <HotBar/>
 
             <!-- <div class="mt-8 d-flex flex-column align-center" style="width: 100%;">
                 <h4>Snapshots</h4>
@@ -153,8 +155,12 @@
     import AnnotationOverlay from './AnnotationOverlay.vue';
     import LensOverlay from './LensOverlay.vue';
     import LensComparison from './LensComparison.vue';
+    import { useWindowSize } from '@vueuse/core';
+    import HotBar from './HotBar.vue';
+    import { useControls } from '@/stores/controls';
 
     const app = useApp()
+    const controls = useControls()
     const theme = useTheme()
 
     const { datasetX, datasetY, datasetColor } = storeToRefs(app)
@@ -170,8 +176,13 @@
     const over = ref(null)
     const scatter = ref(null)
 
-    const w = ref(800)
-    const h = ref(800)
+    const wSize = useWindowSize()
+    const w = computed(() => {
+        const ww = wSize.width.value
+        const wh = wSize.height.value
+        return Math.max(500, Math.floor(Math.min(ww*0.45, wh*0.7))-150)
+    })
+    const h = computed(() => w.value)
 
     const data = ref([])
     const dataF = computed(() => {
@@ -336,13 +347,14 @@
         }
     }
 
-    function annotate() {
+    function annotate(color) {
         DM.annotate(
             activeLens.value,
             lensRadius.value,
             colorIndex.value,
             refMode.value,
-            lensType.value
+            lensType.value,
+            color
         )
     }
 
@@ -560,6 +572,9 @@
     }
 
     onMounted(function() {
+        controls.setKeyMapping(0, "KeyF", "frequent", keymap => annotate(keymap.color))
+        controls.setKeyMapping(1, "KeyR", "rare", keymap => annotate(keymap.color))
+
         window.addEventListener("wheel", function(event) {
             if (!event.ctrlKey) return
             const [mx, my] = d3.pointer(event, document.body)
@@ -606,11 +621,6 @@
                 case "KeyG":
                     if (refMode.value !== "global") {
                         setRefMode("global")
-                    }
-                    break
-                case "KeyA":
-                    if (event.shiftKey) {
-                        annotate()
                     }
                     break
                 default:
