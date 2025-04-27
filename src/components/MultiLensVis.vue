@@ -526,6 +526,7 @@
         colorIndexSec.value = 0
         colorColumn.value = app.datasetColor
         colorColumnSec.value = app.datasetColor
+        moveLens.value = true
 
         ready.value = false
 

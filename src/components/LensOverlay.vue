@@ -243,7 +243,7 @@
                 })
                 .attr("r", 3)
                 .attr("fill", d => scale(getAttr(d, name)))
-                .attr("stroke", "black")
+                .attr("stroke", d => d3.color(scale(getAttr(d, name))).darker(1))
 
             g.append("text")
                 .attr("x", dx + diffX + (props.radius+5) * trigX)

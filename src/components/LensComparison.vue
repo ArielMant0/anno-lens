@@ -41,6 +41,8 @@
                             :data="DM.getLens(0).hists[c]"
                             :y-domain="[0, 1]"
                             color-attr="color"
+                            selectable
+                            @click="v => annotate(0, i, v.x)"
                             :width="chartWidth"
                             :height="chartHeight"/>
                     </div>
@@ -77,6 +79,8 @@
                             :data="DM.getLens(1).hists[c]"
                             :y-domain="[0, 1]"
                             color-attr="color"
+                            selectable
+                            @click="v => annotate(0, i, v.x)"
                             :width="chartWidth"
                             :height="chartHeight"/>
                     </div>
@@ -142,14 +146,15 @@
 
     let links = []
 
-    function annotate(lensIndex, columnIndex) {
+    function annotate(lensIndex, columnIndex, columnValue=null) {
         const lens = DM.getLens(lensIndex)
         DM.annotate(
             lensIndex,
             columnIndex,
             props.mode,
             lens.type,
-            controls.getColor(0)
+            controls.getColor(0),
+            columnValue
         )
     }
 

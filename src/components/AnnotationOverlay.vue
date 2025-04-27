@@ -93,7 +93,7 @@
                                     fontWeight: selectedColums[c.name] ? 'bold' : 'normal',
                                     maxWidth: (padding-15)+'px'
                                 }">
-                                {{ c.name }}
+                                {{ c.name }} <span v-if="c.value !== null">({{ c.value }})</span>
                             </div>
                         </div>
                     </div>
@@ -145,7 +145,7 @@
                                     fontWeight: selectedColums[c.name] ? 'bold' : 'normal',
                                     maxWidth: (padding-15)+'px'
                                 }">
-                                {{ c.name }}
+                                {{ c.name }} <span v-if="c.value !== null">({{ c.value }})</span>
                             </div>
                         </div>
                     </div>

@@ -280,7 +280,7 @@ class DataManager {
         return this.data.filter(filter)
     }
 
-    annotate(lensIndex, columnIndex, mode, lensType, color) {
+    annotate(lensIndex, columnIndex, mode, lensType, color, columnValue=null) {
 
         const lens = this.getLens(lensIndex)
         const col = lens.getResult(mode)[columnIndex]
@@ -296,12 +296,12 @@ class DataManager {
 
         if (exact !== undefined) {
             startCols = exact.columns
-            if (!startCols.find(d => d.name === col.name && d.color === color)) {
-                startCols.push({ name: col.name, color: color })
+            if (!startCols.find(d => d.name === col.name && d.color === color && d.value === columnValue)) {
+                startCols.push({ name: col.name, color: color, value: columnValue })
             }
             this.annotations.splice(this.annotations.findIndex(a => a.id === exact.id), 1)
         } else {
-            startCols = [{ name: col.name, color: color }]
+            startCols = [{ name: col.name, color: color, value: columnValue }]
         }
 
         const overlap = this.annotations.filter(d => {
@@ -313,7 +313,7 @@ class DataManager {
         // merge annotations
         if (exact || overlap.length > 0) {
 
-            let colSet = new Set(startCols.map(d => d.name))
+            let colSet = new Map(startCols.map(d => ([d.name, d.value])))
             let idSet = new Set(lens.ids)
             let mergeCols = startCols;
 
@@ -325,12 +325,12 @@ class DataManager {
                 idSet = idSet.union(new Set(d.ids))
                 d.columns.forEach(c => {
                     delete this.annoMap[c.name][d.id]
-                    if (colSet.has(c.name)) {
-                        const it = mergeCols.find(dd => dd.name === c.name)
+                    if (colSet.has(c.name) && colSet.get(c.name) === columnValue) {
                         colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1)
                     } else {
-                        mergeCols.push({ name: c.name, color: c.color })
+                        mergeCols.push({ name: c.name, color: c.color, value: c.value })
                         colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1)
+                        colSet.set(c.name, c.value)
                     }
                 })
             })
@@ -383,7 +383,7 @@ class DataManager {
                 polygon: polygon,
                 mode: mode,
                 lensType: lensType,
-                columns: [{ name: col.name, color: color }],
+                columns: [{ name: col.name, color: color, value: columnValue }],
                 ids: Array.from(idSet.values()),
                 color: color
             }
