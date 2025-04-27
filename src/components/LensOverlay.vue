@@ -16,9 +16,6 @@
     import { useWindowScroll, useWindowSize } from '@vueuse/core'
     import { onMounted, useTemplateRef, watch } from 'vue'
     import { deg2rad, getAttr, rad2deg } from '@/use/util'
-    import { useTheme } from 'vuetify'
-
-    const theme = useTheme()
 
     const active = defineModel()
     const props = defineProps({
@@ -28,10 +25,6 @@
         },
         indices: {
             type: Array,
-            required: true
-        },
-        selectedColumn: {
-            type: String,
             required: true
         },
         mode: {
@@ -46,7 +39,15 @@
             type: String,
             default: "scatter"
         },
-        index: {
+        activeLens: {
+            type: Number,
+            default: 0
+        },
+        indexPrimary: {
+            type: Number,
+            default: 0
+        },
+        indexSecondary: {
             type: Number,
             default: 0
         },
@@ -69,11 +70,11 @@
 
     const scroll = useWindowScroll()
 
-    function getColumnIndices(lens) {
-        if (props.index <= 0) {
+    function getColumnIndices(lens, index) {
+        if (index <= 0) {
             return d3.range(0, Math.min(props.size, lens.numResults[props.mode]))
         }
-        return d3.range(props.index-1, Math.min(props.index+props.size-1, lens.numResults[props.mode]))
+        return d3.range(index-1, Math.min(index+props.size-1, lens.numResults[props.mode]))
     }
 
     function update() {
@@ -124,7 +125,7 @@
             const norm = Math.sqrt(vx*vx + vy*vy)
             const nx = bx + (-vx / norm) * r
             const ny = by + (-vy / norm) * r
-            const m = rad2deg(Math.atan2(ny-by, nx-bx))
+            const m = (360 + rad2deg(Math.atan2(ny-by, nx-bx))) % 360
 
             const onright = m <= 90 || m >= 270
             // debug: show vector lines
@@ -146,7 +147,7 @@
                     .attr("stroke-width", 2)
             }
 
-            return [(360 + m + (onright ? -55 : 55)) % 360, (360 + m) % 360, (360 + m + (onright ? 55 : -55)) % 360]
+            return [(360 + m + (onright ? -55 : 55)) % 360, m, (360 + m + (onright ? 55 : -55)) % 360]
         }
 
         const degrees = [
@@ -158,29 +159,34 @@
                 [],
         ]
 
+        const selectedColumn = props.activeLens === 0 ?
+            prim.getResultColumn(props.mode, props.indexPrimary) :
+            sec.getResultColumn(props.mode, props.indexSecondary)
+
         // draw additional vis
         switch(props.drawMode) {
             default:
             case "scatter":
-                drawScatter(prim, degrees[0])
+                drawScatter(prim, degrees[0], 0, selectedColumn)
                 if (sec !== null) {
-                    drawScatter(sec, degrees[1])
+                    drawScatter(sec, degrees[1], 1, selectedColumn)
                 }
                 break
             case "chart":
-                drawMicroVis(prim, degrees[0])
+                drawMicroVis(prim, degrees[0], 0, selectedColumn)
                 if (sec !== null) {
-                    drawMicroVis(sec, degrees[1])
+                    drawMicroVis(sec, degrees[1], 1, selectedColumn)
                 }
                 break
         }
     }
 
-    function drawScatter(l, radian) {
+    function drawScatter(l, radian, index, selectedColumn) {
 
         const svg = d3.select(el.value)
 
-        const ci = getColumnIndices(l)
+        const active = index === props.activeLens
+        const ci = getColumnIndices(l, index === 0 ? props.indexPrimary : props.indexSecondary)
         const ldata = ci
             .map(i => l.getResultColumn(props.mode, i))
             .filter(d => d !== null)
@@ -208,6 +214,7 @@
 
             const g = svg.append("g")
                 .attr("font-size", 12)
+                .attr("opacity", active && name === selectedColumn ? 1 : 0.7)
 
             g.append("circle")
                 .attr("cx", dx + diffX)
@@ -215,7 +222,7 @@
                 .attr("r", props.radius)
                 .attr("fill", "white")
                 .attr("stroke", l.color ? l.color : "black")
-                .attr("stroke-width", name === props.selectedColumn ? 3 : 2)
+                .attr("stroke-width", name === selectedColumn ? 3 : 2)
 
             const scale = DM.scales[name]
             const points = l.getResultData()
@@ -246,16 +253,17 @@
                 .attr("stroke-width", 3)
                 .attr("fill", "black")
                 .attr("paint-order", "stroke")
-                .attr("font-weight", name === props.selectedColumn ? "bold" : null)
+                .attr("font-weight", name === selectedColumn ? "bold" : null)
                 .text(name)
         })
     }
 
-    function drawMicroVis(l, radian) {
+    function drawMicroVis(l, radian, index, selectedColumn) {
 
         const svg = d3.select(el.value)
 
-        const ci = getColumnIndices(l)
+        const active = index === props.activeLens
+        const ci = getColumnIndices(l, index === 0 ? props.indexPrimary : props.indexSecondary)
         const ldata = ci
             .map(i => l.getResultColumn(props.mode, i))
             .filter(d => d !== null)
@@ -287,6 +295,7 @@
 
             const g = svg.append("g")
                 .attr("font-size", 12)
+                .attr("opacity", active && name === selectedColumn ? 1 : 0.7)
 
             const offX = dx + diffX + (onright ? 5 : -rw-5)
             const offY = dy + diffY - rh*0.5
@@ -325,11 +334,7 @@
                 .attr("height", rh)
                 .attr("fill", "none")
                 .attr("stroke", l.color ? l.color : "black")
-                .attr("stroke-width", name === props.selectedColumn ? 2 : 1)
-
-            // g.append("g")
-            //     .attr("transform", `translate(0,${rh-15})`)
-            //     .call(d3.axisBottom(sx))
+                .attr("stroke-width", name === selectedColumn ? 2 : 1)
 
             g.append("text")
                 .attr("x", offX + (topOrBot ? rw * 0.5 : (onright ? rw+5 : -5)))
@@ -339,7 +344,7 @@
                 .attr("stroke-width", 3)
                 .attr("fill", "black")
                 .attr("paint-order", "stroke")
-                .attr("font-weight", name === props.selectedColumn ? "bold" : null)
+                .attr("font-weight", name === selectedColumn ? "bold" : null)
                 .text(name)
         })
     }

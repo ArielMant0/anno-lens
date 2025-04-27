@@ -57,6 +57,13 @@ class DataManager {
         this.reset()
     }
 
+    _makePolygon(points) {
+        if (points.length > 2) {
+            return polygonHull(points.map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))])))
+        }
+        return points.map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))]))
+    }
+
     reset() {
         this.tree = null
         this.data = []
@@ -278,21 +285,37 @@ class DataManager {
         const lens = this.getLens(lensIndex)
         const col = lens.getResult(mode)[columnIndex]
 
-        const overlap = this.annotations.filter(d => {
+        const exact = this.annotations.find(d => {
             if (d.lensType !== lensType || d.mode !== mode) return false
-            const set = lens.ids.intersection(new Set(d.ids))
-            return set.size === d.ids.length || set.size > 0 && d.columns.length === 1 && d.columns[0].name === col.name
+            const set = lens.ids.union(new Set(d.ids))
+            return set.size === d.ids.length && set.size === lens.ids.size
         })
 
         const id = _ANNO_ID++
-        let addObj;
+        let addObj, startCols;
+
+        if (exact !== undefined) {
+            startCols = exact.columns
+            if (!startCols.find(d => d.name === col.name && d.color === color)) {
+                startCols.push({ name: col.name, color: color })
+            }
+            this.annotations.splice(this.annotations.findIndex(a => a.id === exact.id), 1)
+        } else {
+            startCols = [{ name: col.name, color: color }]
+        }
+
+        const overlap = this.annotations.filter(d => {
+            if (exact && d.id === exact.id || d.lensType !== lensType || d.mode !== mode) return false
+            const set = lens.ids.intersection(new Set(d.ids))
+            return set.size > 0 && d.columns.length === 1 && startCols.length === 1 && d.columns[0].name === col.name
+        })
 
         // merge annotations
-        if (overlap.length > 0) {
+        if (exact || overlap.length > 0) {
 
-            let mergeCols = [{ name: col.name, count: 1, color: color }]
-            let colSet = new Set([col.name])
+            let colSet = new Set(startCols.map(d => d.name))
             let idSet = new Set(lens.ids)
+            let mergeCols = startCols;
 
             const colCounts = new Map()
             colCounts.set(color, 1)
@@ -304,10 +327,9 @@ class DataManager {
                     delete this.annoMap[c.name][d.id]
                     if (colSet.has(c.name)) {
                         const it = mergeCols.find(dd => dd.name === c.name)
-                        it.count += c.count
                         colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1)
                     } else {
-                        mergeCols.push({ name: c.name, count: c.count, color: c.color })
+                        mergeCols.push({ name: c.name, color: c.color })
                         colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1)
                     }
                 })
@@ -322,7 +344,7 @@ class DataManager {
             })
 
             const points = this.data.filter(d => idSet.has(d.id))
-            let polygon = polygonHull(points.map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))])))
+            let polygon = this._makePolygon(points)
             const centroid = polygonCentroid(polygon)
             polygon = polygon.map(([px, py]) => {
                 const vx = px - centroid[0]
@@ -345,7 +367,7 @@ class DataManager {
         } else {
             let idSet = new Set(lens.ids)
             const points = this.data.filter(d => idSet.has(d.id))
-            let polygon = polygonHull(points.map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))])))
+            let polygon = this._makePolygon(points)
             const centroid = polygonCentroid(polygon)
             polygon = polygon.map(([px, py]) => {
                 const vx = px - centroid[0]
@@ -361,7 +383,7 @@ class DataManager {
                 polygon: polygon,
                 mode: mode,
                 lensType: lensType,
-                columns: [{ name: col.name, count: 1, color: color }],
+                columns: [{ name: col.name, color: color }],
                 ids: Array.from(idSet.values()),
                 color: color
             }
@@ -372,19 +394,13 @@ class DataManager {
             if (!this.annoMap[n]) {
                 this.annoMap[n] = {}
             }
-
-            if (this.annoMap[n][id]) {
-                this.annoMap[n][id].push(c.count)
-            } else {
-                this.annoMap[n][id] = [c.count]
-            }
+            this.annoMap[n][id] = true
         })
 
         if (addObj) {
             this.annotations.push(addObj)
             this.callbacks.anno.forEach(f => f(addObj))
         }
-
     }
 
     removeAnnotation(id) {
@@ -420,31 +436,50 @@ class DataManager {
 
     getAnnotationConnections() {
         const nodes = []
-        const added = new Set()
         const links = []
+        const added = new Set()
+        const linksAdded = new Map()
 
-        for (const name in this.annoMap) {
-            const ids = Object.keys(this.annoMap[name]).map(d => +d)
-            for (let i = 0; i < ids.length; ++i) {
-                const ia = this.annotations.find(d => d.id === ids[i])
-                const iav = ia.columns.find(d => d.name === name)
-                // add new nodes
-                if (!added.has(ids[i])) {
-                    added.add(ids[i])
-                    nodes.push({ id: ids[i], name: ids[i], x: ia.x, y: ia.y })
+        this.annotations.forEach(ia => {
+
+            const counts = new Map()
+            ia.columns.forEach(c => {
+                for (const id in this.annoMap[c.name]) {
+                    if (id === ia.id) continue
+                    if (!added.has(id)) {
+                        const ib = this.annotations.find(d => d.id === +id)
+                        if (!ib) continue
+                        nodes.push({ id: +id, name: "anno "+id, x: ib.x, y: ib.y })
+                        added.add(+id)
+                    }
+                    counts.set(+id, (counts.get(+id) || 0) + 1)
                 }
-                // add links for all other nodes to this node
-                for (let j = i+1; j < ids.length; ++j) {
-                    const jav = this.annotations.find(d => d.id === ids[j]).columns.find(d => d.name === name)
-                    links.push({
-                        source: ids[i],
-                        target: ids[j],
-                        name: name,
-                        value: iav.count + jav.count
-                    })
+            })
+
+            if (counts.size > 0) {
+                if (!added.has(ia.id)) {
+                    nodes.push({ id: ia.id, name: "anno "+ia.id, x: ia.x, y: ia.y })
+                    added.add(ia.id)
                 }
+                counts.forEach((value, id) => {
+                    let map = linksAdded.get(id)
+                    if (!map || !map.has(ia.id)) {
+                        links.push({
+                            source: ia.id,
+                            target: id,
+                            value: value
+                        })
+                        if (!map) {
+                            map = new Set()
+                        }
+                        map.add(ia.id)
+                        linksAdded.set(id, map)
+                    }
+                })
+                linksAdded.set(ia.id, new Set(counts.keys()))
             }
-        }
+        })
+
         return { nodes: nodes, links: links }
     }
 }

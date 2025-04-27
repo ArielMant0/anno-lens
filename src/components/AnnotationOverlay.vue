@@ -50,6 +50,7 @@
                     }">
 
                     <v-btn
+                        class="del-anno"
                         color="error"
                         variant="text"
                         rounded="sm"
@@ -150,6 +151,7 @@
                     </div>
 
                     <v-btn
+                        class="del-anno"
                         color="error"
                         variant="text"
                         rounded="sm"
@@ -254,6 +256,7 @@
 
     function getAnnotationPos(id, usePadding=false) {
         const pos = annoPos.value[id]
+        if (!pos) return [0, 0]
         switch(pos.side) {
             case "left": return [-5, pos.index*annoMeta.sizeL]
             default:
@@ -434,5 +437,8 @@
 .overlay {
     position: absolute;
     z-index: 100;
+}
+div:not(:hover) .del-anno {
+    visibility: hidden;
 }
 </style>

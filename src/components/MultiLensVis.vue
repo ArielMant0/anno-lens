@@ -115,8 +115,9 @@
                 :time="lensTime"
                 :radius="lensRadius-10"
                 :mode="refMode"
-                :index="colorIndex"
-                :selected-column="chosenColorAttr"
+                :index-primary="colorIndex"
+                :index-secondary="colorIndexSec"
+                :active-lens="activeLens"
                 :indices="[0, 1]"/>
 
             <HotBar/>
@@ -230,7 +231,12 @@
 
     const refMode = ref("global")
     const colorIndex = ref(0)
+    const colorIndexSec = ref(0)
+    const columnIndex = computed(() => activeLens.value === 0 ? colorIndex.value : colorIndexSec.value)
+
     const colorColumn = ref(datasetColor.value)
+    const colorColumnSec = ref(datasetColor.value)
+
     const colorOverride = ref("")
 
     const colorType = computed(() => {
@@ -328,11 +334,17 @@
             setColorIndex(colorIndex.value)
         }
     }
+
     function setColorIndex(i) {
         const lens = DM.getLens(activeLens.value)
         i = Math.max(0, Math.min(i, lens.numResults[refMode.value]))
-        colorIndex.value = i
-        colorColumn.value = lens.getResultColumn(refMode.value, i)
+        if (activeLens.value === 0) {
+            colorIndex.value = i
+            colorColumn.value = lens.getResultColumn(refMode.value, i)
+        } else {
+            colorIndexSec.value = i;
+            colorColumnSec.value = lens.getResultColumn(refMode.value, i)
+        }
     }
     function setRefMode(mode="local") {
         const m = mode === "local" || mode === "global" ? mode : "local"
@@ -347,7 +359,7 @@
     function annotate(color) {
         DM.annotate(
             activeLens.value,
-            colorIndex.value,
+            activeLens.value === 0 ? colorIndex.value : colorIndexSec.value,
             refMode.value,
             lensType.value,
             color
@@ -424,15 +436,23 @@
             }
 
             const results = lens.getResult(refMode.value)
-            if (colorIndex.value >= results.length) {
-                colorIndex.value = 0
+            if (columnIndex.value >= results.length) {
+                if (activeLens.value === 0) {
+                    colorIndex.value = 0
+                } else {
+                    colorIndexSec.value = 0
+                }
             }
-            colorColumn.value = lens.getResultColumn(refMode.value, colorIndex.value)
+
+            if (activeLens.value === 0) {
+                colorColumn.value = lens.getResultColumn(refMode.value, colorIndex.value)
+            }
 
             numDetails.local = lens.numResults.local
             numDetails.global = lens.numResults.global
         } else {
             colorColumn.value = datasetColor.value
+            colorColumnSec.value = datasetColor.value
             DM.clearLens(secondaryLens.value)
             numDetails.local = 3
             numDetails.global = 3
@@ -466,6 +486,11 @@
     }
 
     function onHover(lx, ly) {
+        if (activeLens.value === 0) {
+            colorIndex.value = 0;
+        } else {
+            colorIndexSec.value = 0;
+        }
         updateLens(lx, ly)
         applyLens()
     }
@@ -498,7 +523,9 @@
         history.clear()
         historyUpdated = false
         colorIndex.value = 0
+        colorIndexSec.value = 0
         colorColumn.value = app.datasetColor
+        colorColumnSec.value = app.datasetColor
 
         ready.value = false
 
@@ -593,15 +620,13 @@
             switch(event.code) {
                 case "ArrowUp":
                 case "ArrowLeft":
-                    if (colorIndex.value > 0) {
-                        setColorIndex(colorIndex.value - 1)
+                    if (columnIndex.value > 0) {
+                        setColorIndex(columnIndex.value - 1)
                     }
                     break;
                 case "ArrowDown":
                 case "ArrowRight":
-                    if (colorIndex.value < numDetails[refMode.value]-1) {
-                        setColorIndex(colorIndex.value + 1)
-                    }
+                    setColorIndex(columnIndex.value + 1)
                     break;
             }
         })

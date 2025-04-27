@@ -2,7 +2,7 @@
     <v-sheet density="compact" class="pa-1 hotbar d-flex align-center justify-center" rounded color="#efefef">
         <div v-for="(m, i) in mappings" :key="'keymap:'+i" :style="{ marginRight: i === 0 ? '4px' : '0', marginLeft: i > 1 ? '4px' : '0' }">
             <div class="keylabel text-dots" :style="{ width: '50px', maxWidth: '50px', minHeight: '1.5em' }">{{ m ? m.label : ' ' }}</div>
-            <v-btn height="40" variant="flat" :color="m ? m.color : 'default'" density="compact" :style="{ maxWidth: '50px', minWidth: '50px' }">
+            <v-btn height="40" variant="flat" :color="m ? m.color : 'default'" density="compact" :style="{ maxWidth: '50px', minWidth: '50px' }" @click="m.callback(m)">
                 <span v-if="m">{{ controls.format(m.key) }}</span>
             </v-btn>
         </div>
