@@ -1,17 +1,17 @@
 import { capitalize } from '@/use/util'
-import { schemeCategory10 } from 'd3'
+import { schemeDark2 } from 'd3'
 import { defineStore } from 'pinia'
 
 export const useControls = defineStore('controls', {
     state: () => ({
-        mappings: new Array(10),
+        mappings: new Array(schemeDark2.length),
     }),
 
     actions: {
 
         getColor(index) {
-            if (index >= 10) return "black"
-            return schemeCategory10[index % 10]
+            if (index >= this.mappings.length) return "black"
+            return schemeDark2[index % this.mappings.length]
         },
 
         format(key, modifier=null) {
@@ -25,7 +25,7 @@ export const useControls = defineStore('controls', {
         },
 
         setKeyMapping(index, key, label, callback, modifier=null) {
-            if (index >= 10) return
+            if (index >= this.mappings.length) return
             this.mappings[index] = {
                 key: key,
                 label: label,

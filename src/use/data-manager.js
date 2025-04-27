@@ -300,9 +300,12 @@ class DataManager {
             const x = mean(overlap.map(d => d.x).concat([lens.x]))
             const y = mean(overlap.map(d => d.y).concat([lens.y]))
 
-            let mergeCols = [{ name: col.name, count: 1 }]
+            let mergeCols = [{ name: col.name, count: 1, color: color }]
             let colSet = new Set([col.name])
             let idSet = new Set(lens.ids)
+
+            const colCounts = new Map()
+            colCounts.set(color, 1)
 
             overlap.forEach(d => {
                 this.annoTree.remove(d)
@@ -312,10 +315,20 @@ class DataManager {
                     if (colSet.has(c.name)) {
                         const it = mergeCols.find(dd => dd.name === c.name)
                         it.count += c.count
+                        colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1)
                     } else {
-                        mergeCols.push({ name: c.name, count: c.count })
+                        mergeCols.push({ name: c.name, count: c.count, color: c.color })
+                        colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1)
                     }
                 })
+            })
+
+            let annoColor, maxCount = 0;
+            colCounts.forEach((theCount, theColor) => {
+                if (theCount > maxCount) {
+                    annoColor = theColor;
+                    maxCount = theCount
+                }
             })
 
             const points = this.data.filter(d => idSet.has(d.id))
@@ -330,7 +343,7 @@ class DataManager {
                 lensType: lensType,
                 columns: mergeCols,
                 ids: Array.from(idSet.values()),
-                color: color
+                color: annoColor
             }
         } else {
             addObj = {
@@ -340,7 +353,7 @@ class DataManager {
                 radius: radius,
                 mode: mode,
                 lensType: lensType,
-                columns: [{ name: col.name, count: 1 }],
+                columns: [{ name: col.name, count: 1, color: color }],
                 ids: lens.getResultIds(),
                 color: color
             }

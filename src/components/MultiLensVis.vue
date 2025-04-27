@@ -1,37 +1,71 @@
 <template>
-    <div style="min-height: 80vh; max-width: 100vw;" class="d-flex flex-column align-center justify-start pa-4">
+    <div style="min-height: 85vh; max-height: 90vh; max-width: 100vw;" class="d-flex flex-column align-center justify-start pa-4">
         <div v-if="data.length > 0" style="max-width: 100%">
 
-            <div style="text-align: center;" class="d-flex flex-column align-center">
+            <div class="d-flex mt-2">
+                <div v-if="int.showAttrMap" class="mr-2">
+                    <div :style="{ width: w+'px' }">Attribute Map: {{ int.showAttrMap }}, Color: <b>{{ chosenColorAttr }}</b></div>
+                    <div style="position: relative;">
+                        <svg ref="under" :width="w" :height="h"></svg>
+                        <ScatterPlot
+                            style="position: absolute; top: 0; left: 0;"
+                            :data="data"
+                            :selected="dataF"
+                            :update="showTime"
+                            :x-attr="datasetX"
+                            :y-attr="datasetY"
+                            :color-attr="chosenColorAttr"
+                            :opacity-attr="'visited.'+int.showAttrMap"
+                            :color-scale="int.scales[chosenColorAttr]"
+                            :radius="3"
+                            :search-radius="6"
+                            :width="w"
+                            :height="h"/>
 
-                <div class="d-flex mt-2">
-                    <div v-if="int.showAttrMap" class="mr-2">
-                        <div :style="{ width: w+'px' }">Attribute Map: {{ int.showAttrMap }}, Color: <b>{{ chosenColorAttr }}</b></div>
-                        <div style="position: relative;">
-                            <svg ref="under" :width="w" :height="h"></svg>
-                            <ScatterPlot
-                                style="position: absolute; top: 0; left: 0;"
-                                :data="data"
-                                :selected="dataF"
-                                :update="showTime"
-                                :x-attr="datasetX"
-                                :y-attr="datasetY"
-                                :color-attr="chosenColorAttr"
-                                :opacity-attr="'visited.'+int.showAttrMap"
-                                :color-scale="int.scales[chosenColorAttr]"
-                                :radius="3"
-                                :search-radius="6"
-                                :width="w"
-                                :height="h"/>
+                    </div>
+                </div>
 
-                        </div>
+                <div v-else class="mr-2">
+                    <div style="position: relative;">
+                        <FeatureMap
+                            :column="chosenColorAttr"
+                            :hide="int.filterAttr"
+                            :mode="refMode"
+                            :lens-type="lensType"
+                            style="margin: 0px 150px;"
+                            :width="w"
+                            :height="h"/>
+
+                        <ScatterPlot
+                            ref="scatter"
+                            id="scatter-main"
+                            style="position: absolute; top: 0; left: 0; margin: 0px 150px;"
+                            :data="data"
+                            :selected="dataF"
+                            :time="dataTime"
+                            :update="lensTime"
+                            :x-attr="datasetX"
+                            :y-attr="datasetY"
+                            :color-attr="chosenColorAttr"
+                            :color-scale="int.scales[chosenColorAttr]"
+                            :radius="3"
+                            :width="w"
+                            :height="h"
+                            show-lens
+                            :fixed-lens="!moveLens"
+                            :highlight-color="theme.current.value.colors.primary"
+                            @hover="onHover"
+                            @click-lens="onClickLens"/>
+
+                        <svg ref="over" :width="w" :height="h" style="position: absolute; top: 0; left: 0; pointer-events: none;"></svg>
                     </div>
 
-                    <div v-else class="mr-2">
-                        <div :style="{ width: w+'px' }" class="d-flex justify-space-between">
-                            <div>
-                                Color: {{ chosenColorAttr }} <span v-if="!int.fromLens">(default)</span>
-                            </div>
+                </div>
+
+                <div class="d-flex">
+                    <div>
+                        <div class="text-caption">
+                            <div style="max-width: 100px;" class="text-dots">{{ chosenColorAttr }} <span v-if="!int.fromLens">(default)</span></div>
                             <FilterDesc v-if="int.filterAttr !== null"
                                 :data="int.filterValues"
                                 :name="int.filterAttr"
@@ -40,48 +74,11 @@
                                 :scale="int.scales[int.filterAttr]"/>
                         </div>
 
-                        <div style="position: relative;">
-                            <FeatureMap v-if="ready"
-                                :column="chosenColorAttr"
-                                :hide="int.filterAttr"
-                                :mode="refMode"
-                                :lens-type="lensType"
-                                style="margin: 150px;"
-                                :width="w"
-                                :height="h"/>
-
-                            <ScatterPlot
-                                ref="scatter"
-                                id="scatter-main"
-                                style="position: absolute; top: 0; left: 0; margin: 150px;"
-                                :data="data"
-                                :selected="dataF"
-                                :time="dataTime"
-                                :update="lensTime"
-                                :x-attr="datasetX"
-                                :y-attr="datasetY"
-                                :color-attr="chosenColorAttr"
-                                :color-scale="int.scales[chosenColorAttr]"
-                                :radius="3"
-                                :width="w"
-                                :height="h"
-                                show-lens
-                                :fixed-lens="!moveLens"
-                                :highlight-color="theme.current.value.colors.primary"
-                                @hover="onHover"
-                                @click-lens="onClickLens"/>
-
-                            <svg ref="over" :width="w" :height="h" style="position: absolute; top: 0; left: 0; pointer-events: none;"></svg>
-                        </div>
-
-                    </div>
-
-                    <div style="margin-top: 25px;">
                         <ColorLegend v-if="int.scales[chosenColorAttr]"
                             :key="chosenColorAttr"
                             :scale="int.scales[chosenColorAttr]"
                             :selected="chosenColorAttr === int.filterAttr ? int.filterValues : []"
-                            :height="h*0.45"
+                            :height="Math.min(300, h*0.45)"
                             style="display: block;"
                             @click="setFilter"
                             @brush="setFilter"/>
@@ -94,7 +91,7 @@
                             style="display: block;"
                             class="mt-4"
                             :scale="featureScale"
-                            :height="h*0.45"/>
+                            :height="Math.min(300, h*0.45)"/>
                     </div>
 
                     <LensComparison

@@ -1,5 +1,5 @@
 <template>
-    <main class="d-flex flex-column align-center">
+    <div class="d-flex flex-column align-center">
         <v-select
             :model-value="dataset"
             density="compact"
@@ -13,7 +13,7 @@
             @update:model-value="v => app.setDataset(v)"
             :items="DATASETS"/>
         <MultiLensVis :dataset="dataset"/>
-    </main>
+    </div>
 </template>
 
 <script setup>
@@ -36,5 +36,11 @@
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+}
+.hover-italic:hover {
+    font-style: italic;
+}
+.hover-bold:hover {
+    font-weight: bold;
 }
 </style>
