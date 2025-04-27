@@ -281,7 +281,7 @@ class DataManager {
         const overlap = this.annotations.filter(d => {
             if (d.lensType !== lensType || d.mode !== mode) return false
             const set = lens.ids.intersection(new Set(d.ids))
-            return set.size > d.ids.length * 0.5 || set.size > 0.5 * lens.ids.size
+            return set.size === d.ids.length || set.size > 0 && d.columns.length === 1 && d.columns[0].name === col.name
         })
 
         const id = _ANNO_ID++
