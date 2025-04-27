@@ -95,8 +95,10 @@
     import BarChart from './vis/BarChart.vue';
     import { useApp } from '@/stores/app';
     import { calcHistogram } from '@/use/util';
+    import { useControls } from '@/stores/controls';
 
     const app = useApp()
+    const controls = useControls()
 
     const props = defineProps({
         active: {
@@ -144,10 +146,10 @@
         const lens = DM.getLens(lensIndex)
         DM.annotate(
             lensIndex,
-            lens.radius,
             columnIndex,
             props.mode,
-            lens.type
+            lens.type,
+            controls.getColor(0)
         )
     }
 

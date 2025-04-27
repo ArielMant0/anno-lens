@@ -1,5 +1,5 @@
 import { DATA_TYPES, useApp } from "@/stores/app"
-import { bin, deviation, min, max, mean, median, quadtree, scaleLinear, extent, group } from "d3"
+import { bin, deviation, min, max, mean, median, quadtree, scaleLinear, extent, group, polygonHull, polygonCentroid } from "d3"
 import { circleIntersect, dataToNumbers, euclidean, findInCircle, getAttr } from "./util"
 import { Lens, LENS_TYPE } from "./Lens"
 
@@ -79,7 +79,6 @@ class DataManager {
         this.lensMaps = null
 
         this.annotations = []
-        this.annoTree = null
         this.annoMap = {}
         _ANNO_ID = 1
     }
@@ -274,19 +273,12 @@ class DataManager {
         return this.data.filter(filter)
     }
 
-    annotate(lensIndex, radius, columnIndex, mode, lensType, color) {
-        if (this.annoTree === null) {
-            this.annoTree = quadtree()
-                .x(d => d.x)
-                .y(d => d.y)
-                .extent([[0, 0], [this.width, this.height]])
-        }
+    annotate(lensIndex, columnIndex, mode, lensType, color) {
 
         const lens = this.getLens(lensIndex)
         const col = lens.getResult(mode)[columnIndex]
 
-        const annos = this.annoTree.data()
-        const overlap = annos.filter(d => {
+        const overlap = this.annotations.filter(d => {
             if (d.lensType !== lensType || d.mode !== mode) return false
             const set = lens.ids.intersection(new Set(d.ids))
             return set.size > d.ids.length * 0.5 || set.size > 0.5 * lens.ids.size
@@ -297,8 +289,6 @@ class DataManager {
 
         // merge annotations
         if (overlap.length > 0) {
-            const x = mean(overlap.map(d => d.x).concat([lens.x]))
-            const y = mean(overlap.map(d => d.y).concat([lens.y]))
 
             let mergeCols = [{ name: col.name, count: 1, color: color }]
             let colSet = new Set([col.name])
@@ -308,7 +298,7 @@ class DataManager {
             colCounts.set(color, 1)
 
             overlap.forEach(d => {
-                this.annoTree.remove(d)
+                this.annotations.splice(this.annotations.findIndex(a => a.id === d.id), 1)
                 idSet = idSet.union(new Set(d.ids))
                 d.columns.forEach(c => {
                     delete this.annoMap[c.name][d.id]
@@ -332,13 +322,20 @@ class DataManager {
             })
 
             const points = this.data.filter(d => idSet.has(d.id))
-            const r = max(points.map(d => euclidean(x, y, this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr)))))
+            let polygon = polygonHull(points.map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))])))
+            const centroid = polygonCentroid(polygon)
+            polygon = polygon.map(([px, py]) => {
+                const vx = px - centroid[0]
+                const vy = py - centroid[1]
+                const norm = Math.sqrt(vx*vx + vy*vy)
+                return [px + vx / norm * 5, py + vy / norm * 5]
+            })
 
             addObj = {
                 id: id,
-                x: x,
-                y: y,
-                radius: r,
+                x: centroid[0],
+                y: centroid[1],
+                polygon: polygon,
                 mode: mode,
                 lensType: lensType,
                 columns: mergeCols,
@@ -346,15 +343,26 @@ class DataManager {
                 color: annoColor
             }
         } else {
+            let idSet = new Set(lens.ids)
+            const points = this.data.filter(d => idSet.has(d.id))
+            let polygon = polygonHull(points.map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))])))
+            const centroid = polygonCentroid(polygon)
+            polygon = polygon.map(([px, py]) => {
+                const vx = px - centroid[0]
+                const vy = py - centroid[1]
+                const norm = Math.sqrt(vx*vx + vy*vy)
+                return [px + vx / norm * 5, py + vy / norm * 5]
+            })
+
             addObj = {
                 id: id,
-                x: lens.x,
-                y: lens.y,
-                radius: radius,
+                x: centroid[0],
+                y: centroid[1],
+                polygon: polygon,
                 mode: mode,
                 lensType: lensType,
                 columns: [{ name: col.name, count: 1, color: color }],
-                ids: lens.getResultIds(),
+                ids: Array.from(idSet.values()),
                 color: color
             }
         }
@@ -373,14 +381,41 @@ class DataManager {
         })
 
         if (addObj) {
-            this.annoTree.add(addObj)
+            this.annotations.push(addObj)
             this.callbacks.anno.forEach(f => f(addObj))
         }
 
     }
 
+    removeAnnotation(id) {
+        const idx = this.annotations.findIndex(d => d.id === id)
+        if (idx >= 0) {
+            this.annotations[idx].columns.forEach(c => {
+                delete this.annoMap[c.name][id]
+            })
+            this.annotations.splice(idx, 1)
+            this.callbacks.anno.forEach(f => f())
+        }
+    }
+
+    removeAnnotationColumn(id, name) {
+        const anno = this.annotations.find(d => d.id === id)
+        if (anno) {
+            if (anno.columns.length === 1) {
+                this.removeAnnotation(id)
+            } else {
+                const idx = anno.columns.findIndex(c => c.name === name)
+                if (idx >= 0) {
+                    delete this.annoMap[name][id]
+                    anno.columns.splice(idx, 1)
+                    this.callbacks.anno.forEach(f => f())
+                }
+            }
+        }
+    }
+
     getAnnotations() {
-        return this.annoTree ? this.annoTree.data() : []
+        return this.annotations
     }
 
     getAnnotationConnections() {
@@ -388,12 +423,10 @@ class DataManager {
         const added = new Set()
         const links = []
 
-        const annos = this.annoTree ? this.annoTree.data() : []
-
         for (const name in this.annoMap) {
             const ids = Object.keys(this.annoMap[name]).map(d => +d)
             for (let i = 0; i < ids.length; ++i) {
-                const ia = annos.find(d => d.id === ids[i])
+                const ia = this.annotations.find(d => d.id === ids[i])
                 const iav = ia.columns.find(d => d.name === name)
                 // add new nodes
                 if (!added.has(ids[i])) {
@@ -402,7 +435,7 @@ class DataManager {
                 }
                 // add links for all other nodes to this node
                 for (let j = i+1; j < ids.length; ++j) {
-                    const jav = annos.find(d => d.id === ids[j]).columns.find(d => d.name === name)
+                    const jav = this.annotations.find(d => d.id === ids[j]).columns.find(d => d.name === name)
                     links.push({
                         source: ids[i],
                         target: ids[j],

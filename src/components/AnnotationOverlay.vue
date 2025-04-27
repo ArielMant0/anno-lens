@@ -19,59 +19,145 @@
                 :height="height"
                 class="overlay"
                 :style="{
-                    left: offsetX+'px',
+                    left: (offsetX+padding)+'px',
                     top: offsetY+'px',
-                    pointerEvents: 'none',
+                    pointerEvents: 'none'
                 }">
-                <g v-for="(l, j) in anno">
-                    <circle
-                        :cx="padding+l.x"
-                        :cy="l.y"
-                        :r="l.radius"
-                        :stroke="l.color"
-                        :stroke-width="isSelected(l) ? 3 : 1"
+                <g v-for="a in anno">
+                    <path
+                        :d="d3.line().curve(d3.curveCardinalClosed)(a.polygon)"
+                        :stroke-width="selectedAnnos[a.id] ? 3 : 1"
+                        stroke="black"
                         stroke-dasharray="4 2"
                         fill="none">
-                    </circle>
+                    </path>
                 </g>
             </svg>
         </Teleport>
 
         <Teleport to="body">
             <div>
-                <div v-for="a in anno"
-                    :key="a.id+'_'+annoPos[a.id].index"
-                    class="ma-1 pa-1"
+                <div v-for="a in annoLeft"
+                    :key="a.id+'_l_'+annoPos[a.id].index"
+                    class="d-flex align-center"
                     @pointerenter="hoverAnno = a.id"
                     @pointerleave="hoverAnno = null"
                     :style="{
-                        border: (isSelected(a) ? 2 : 1) + 'px solid ' + a.color,
-                        borderRadius: '4px',
-                        opacity: isSelected(a) ? 1 : 0.66,
                         position: 'absolute',
-                        overflowX: 'hidden',
-                        overflowY: 'auto',
-                        minHeight: (annoPos[a.id].side === 'left' ? annoMeta.sizeL-2 : annoMeta.sizeR-2)+'px',
-                        maxHeight: (annoPos[a.id].side === 'left' ? annoMeta.sizeL-2 : annoMeta.sizeR-2)+'px',
-                        left: (offsetX+getAnnotationPos(a.id, true)[0])+'px',
+                        left: (offsetX+getAnnotationPos(a.id, true)[0]-25)+'px',
                         top: (offsetY+getAnnotationPos(a.id, true)[1])+'px',
                         fontSize: '12px',
-                        minWidth: padding+'px',
-                        maxWidth: padding+'px',
                     }">
-                    <div v-for="c in a.columns"
-                        class="text-dots hover-italic"
-                        @pointerenter="hoverAnnoCol = c.name"
-                        @pointerleave="hoverAnnoCol = null"
+
+                    <v-btn
+                        color="error"
+                        variant="text"
+                        rounded="sm"
+                        size="sm"
+                        icon="mdi-delete"
+                        density="compact"
+                        @click="DM.removeAnnotation(a.id)"/>
+
+                    <div
+                        class="ma-1 pa-1"
                         :style="{
-                            color: c.color,
-                            fontWeight: isSelectedColumn(c.name) ? 'bold' : 'normal',
-                            maxWidth: (padding-5)+'px'
+                            border: (selectedAnnos[a.id] ? 2 : 1) + 'px solid black',
+                            borderRadius: '4px',
+                            opacity: selectedAnnos[a.id] ? 1 : 0.66,
+                            overflowX: 'hidden',
+                            overflowY: 'auto',
+                            minHeight: (annoMeta.sizeL-2)+'px',
+                            maxHeight: (annoMeta.sizeL-2)+'px',
+                            fontSize: '12px',
+                            minWidth: padding+'px',
+                            maxWidth: padding+'px',
                         }">
-                        {{ c.name }}
+
+                        <div v-for="c in a.columns" class="d-flex hover-italic">
+                            <v-btn
+                                color="error"
+                                variant="text"
+                                rounded="sm"
+                                size="sm"
+                                icon="mdi-delete"
+                                density="compact"
+                                @click="DM.removeAnnotationColumn(a.id, c.name)"/>
+
+                            <div
+                                class="text-dots"
+                                @pointerenter="hoverAnnoCol = c.name"
+                                @pointerleave="hoverAnnoCol = null"
+                                :style="{
+                                    color: c.color,
+                                    fontWeight: selectedColums[c.name] ? 'bold' : 'normal',
+                                    maxWidth: (padding-15)+'px'
+                                }">
+                                {{ c.name }}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
+                <div v-for="a in annoRight"
+                    :key="a.id+'_r_'+annoPos[a.id].index"
+                    class="d-flex align-center"
+                    @pointerenter="hoverAnno = a.id"
+                    @pointerleave="hoverAnno = null"
+                    :style="{
+                        position: 'absolute',
+                        left: (offsetX+getAnnotationPos(a.id, true)[0])+'px',
+                        top: (offsetY+getAnnotationPos(a.id, true)[1])+'px',
+                        fontSize: '12px',
+                    }">
+
+                    <div
+                        class="ma-1 pa-1"
+                        :style="{
+                            border: (selectedAnnos[a.id] ? 2 : 1) + 'px solid black',
+                            borderRadius: '4px',
+                            opacity: selectedAnnos[a.id] ? 1 : 0.66,
+                            overflowX: 'hidden',
+                            overflowY: 'auto',
+                            minHeight: (annoMeta.sizeR-2)+'px',
+                            maxHeight: (annoMeta.sizeR-2)+'px',
+                            fontSize: '12px',
+                            minWidth: padding+'px',
+                            maxWidth: padding+'px',
+                        }">
+
+                        <div v-for="c in a.columns" class="d-flex hover-italic">
+                            <v-btn
+                                color="error"
+                                variant="text"
+                                rounded="sm"
+                                size="sm"
+                                icon="mdi-delete"
+                                density="compact"
+                                @click="DM.removeAnnotationColumn(a.id, c.name)"/>
+
+                            <div
+                                class="text-dots"
+                                @pointerenter="hoverAnnoCol = c.name"
+                                @pointerleave="hoverAnnoCol = null"
+                                :style="{
+                                    color: c.color,
+                                    fontWeight: selectedColums[c.name] ? 'bold' : 'normal',
+                                    maxWidth: (padding-15)+'px'
+                                }">
+                                {{ c.name }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <v-btn
+                        color="error"
+                        variant="text"
+                        rounded="sm"
+                        size="sm"
+                        icon="mdi-delete"
+                        density="compact"
+                        @click="DM.removeAnnotation(a.id)"/>
+                </div>
             </div>
         </Teleport>
     </div>
@@ -123,6 +209,9 @@
     const height = ref(0)
 
     const anno = ref([])
+    const annoLeft = ref([])
+    const annoRight = ref([])
+
     const annoPos = ref({})
     const annoMeta = reactive({
         sizeL: 15,
@@ -140,22 +229,28 @@
 
     const wSize = useWindowSize()
 
-    const lensesClose = computed(() => {
-        return anno.value.filter(d => {
-            const dx = Math.abs(mouse.x.value - (offsetX.value + props.padding + d.x))
-            const dy = Math.abs(mouse.y.value - (offsetY.value + d.y))
-            return dx < props.tolerance && dy < props.tolerance
-        })
-    })
-
     const hoverAnno = ref(null)
     const hoverAnnoCol = ref("")
-    const hoverCircle = computed(() => {
-        if (lensesClose.value.length === 0) {
-            return null
-        }
-        return lensesClose.value[0]
+    const selectedAnnos = computed(() => {
+        const obj = {}
+        const inside = mouse.x.value >= offsetX.value + props.padding &&
+            mouse.x.value <= offsetX.value + props.padding + targetRect.width &&
+            mouse.y.value >= offsetY.value &&
+            mouse.y.value <= offsetX.value + targetRect.height
+
+        const mx = mouse.x.value - offsetX.value - props.padding
+        const my = mouse.y.value - offsetY.value
+        anno.value.forEach(a => obj[a.id] = isSelected(a) || inside && d3.polygonContains(a.polygon, [mx, my]))
+        return obj
     })
+    const selectedColums = computed(() => {
+        const obj = {}
+        anno.value.forEach(a => {
+            a.columns.forEach(c => obj[c.name] = isSelectedColumn(c.name))
+        })
+        return obj
+    })
+
 
     function getAnnotationPos(id, usePadding=false) {
         const pos = annoPos.value[id]
@@ -172,7 +267,7 @@
         const rect = target.getBoundingClientRect()
         offsetX.value = rect.left - props.padding
         offsetY.value = rect.top + scroll.y.value
-        width.value = rect.width + (props.padding * 2)
+        width.value = rect.width
         height.value = rect.height
         targetRect = rect
     }
@@ -181,7 +276,7 @@
         return hoverAnno.value === annotation.id || annotation.columns.some(c => isSelectedColumn(c.name))
     }
     function isSelectedColumn(name) {
-        return props.selected === name || hoverAnnoCol.value === name || (hoverCircle.value && hoverCircle.value.columns.find(d => d.name === name))
+        return props.selected === name || hoverAnnoCol.value === name
     }
 
     function drawLinks() {
@@ -197,28 +292,19 @@
 
         actx.globalAlpha = 1
         actx.lineWidth = 2
-        if (hoverAnno.value !== null) {
-            const a = anno.value.find(d => d.id === hoverAnno.value)
-            // draw links that connect annotations labels and polygons
-            actx.strokeStyle = a.color
-            actx.beginPath()
-            const coords = getAnnotationPos(a.id)
-            const off = 0.5 * (annoPos.value[a.id].side === "left" ? annoMeta.sizeL : annoMeta.sizeR)
-            path([[a.x, a.y], [coords[0], coords[1]+off]])
-            actx.stroke()
-        }
-        if (hoverCircle.value !== null) {
-            const a = anno.value.find(d => d.id === hoverCircle.value.id)
-            // draw links that connect annotations labels and polygons
-            actx.strokeStyle = a.color
-            actx.beginPath()
-            const coords = getAnnotationPos(a.id)
-            const off = 0.5 * (annoPos.value[a.id].side === "left" ? annoMeta.sizeL : annoMeta.sizeR)
-            path([[a.x, a.y], [coords[0], coords[1]+off]])
-            actx.stroke()
-        }
-
         actx.strokeStyle = "black"
+
+        anno.value.forEach(a => {
+            if (selectedAnnos.value[a.id]) {
+                // draw links that connect annotations labels and polygons
+                actx.beginPath()
+                const coords = getAnnotationPos(a.id)
+                const off = 0.5 * (annoPos.value[a.id].side === "left" ? annoMeta.sizeL : annoMeta.sizeR)
+                path([[a.x, a.y], [coords[0], coords[1]+off]])
+                actx.stroke()
+            }
+        })
+
         const scale = d3.scaleQuantile(graph.links.map(d => d.value), d3.range(1, 8))
 
         actx.globalAlpha = 0.25
@@ -300,8 +386,12 @@
             annoMeta.sizeL = sizeL
             annoMeta.sizeR = sizeR
             annoPos.value = annoPosData
+            annoLeft.value = onLeft
+            annoRight.value = onRight
         } else {
             annoPos.value = []
+            annoLeft.value = []
+            annoRight.value = []
         }
 
         anno.value = data
@@ -336,8 +426,7 @@
     watch(wSize.height, getCoordinates)
     watch(scroll.y, update)
     watch(() => props.active, drawLinks)
-    watch(hoverAnno, drawLinks)
-    watch(hoverCircle, drawLinks)
+    watch(selectedAnnos, drawLinks)
 
 </script>
 

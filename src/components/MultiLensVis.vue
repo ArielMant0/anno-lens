@@ -1,6 +1,6 @@
 <template>
     <div style="min-height: 85vh; max-height: 90vh; max-width: 100vw;" class="d-flex flex-column align-center justify-start pa-4">
-        <div v-if="data.length > 0" style="max-width: 100%">
+        <div v-if="!loading && data.length > 0" style="max-width: 100%">
 
             <div class="d-flex mt-2">
                 <div v-if="int.showAttrMap" class="mr-2">
@@ -62,7 +62,7 @@
 
                 </div>
 
-                <div class="d-flex">
+                <div class="d-flex ml-8">
                     <div>
                         <div class="text-caption">
                             <div style="max-width: 100px;" class="text-dots">{{ chosenColorAttr }} <span v-if="!int.fromLens">(default)</span></div>
@@ -226,6 +226,7 @@
     const snapshots = ref([])
 
     const ready = ref(false)
+    const loading = ref(true)
 
     const refMode = ref("global")
     const colorIndex = ref(0)
@@ -258,7 +259,6 @@
     const lensTime = ref(0)
     const lensMoveTime = ref(0)
     const lensType = ref(LENS_TYPE.RARE)
-    const numLens = ref(1)
     const numDetails = reactive({
         local: 3,
         global: 3
@@ -347,7 +347,6 @@
     function annotate(color) {
         DM.annotate(
             activeLens.value,
-            lensRadius.value,
             colorIndex.value,
             refMode.value,
             lensType.value,
@@ -440,8 +439,6 @@
         }
 
         lensTime.value = Date.now()
-        // drawLensSuggestions()
-        // highlightAnnotations()
     }
 
     function updateLens(lx, ly) {
@@ -486,6 +483,8 @@
     }
 
     async function init() {
+        loading.value = true
+
         data.value = []
         topFeatures.value = []
         int.scales = {}
@@ -552,6 +551,8 @@
         DM.setDataset(app.datasetObj)
         DM.setData(points, toRaw(columns.value), ct, "x", "y", w.value, h.value)
 
+        loading.value = false
+
         data.value = points
         dataTime.value = Date.now()
         annoTime.value = Date.now()
@@ -563,7 +564,7 @@
         ready.value = false
         DM.computeFeatureMaps(lensRadius.value, 10, () => {
             topFeatures.value = DM.getBestFeatures(lensType.value, refMode.value)
-            app.setColor(topFeatures.value[0])
+            // app.setColor(topFeatures.value.at(-1))
             ready.value = true
         })
     }
