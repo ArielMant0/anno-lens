@@ -27,14 +27,7 @@
         </div>
 
         <div>
-            <div style="min-height: 24px; text-align: center;"  class="mb-1">
-                <v-btn
-                    variant="tonal"
-                    rounded="sm"
-                    @click="DM.swapLenses(0, 1)"
-                    icon="mdi-swap-horizontal"
-                    density="compact"/>
-            </div>
+            <div style="min-height: 24px; text-align: center;"  class="mb-1"></div>
             <svg ref="conns" :width="Math.floor(chartWidth*0.5)" :height="height*numCols"></svg>
         </div>
 
@@ -153,7 +146,12 @@
 
     function getMerged(index, column) {
         const data = histG.get(column).concat(DM.getLens(index).hists[column])
-        data.sort((a, b) => b.y - a.y)
+        data.sort((a, b) => {
+            if (a.x !== b.x) {
+                return a.x - b.x
+            }
+            return b.y - a.y
+        })
         return data
     }
 
@@ -177,13 +175,14 @@
             numCols.value = Math.max(1, Math.max(pc.length, sc.length))
             colsP.value = pc
             colsS.value = sc
+            drawConnections()
         } else {
+            d3.select(conns.value).selectAll("*").remove()
             links = []
             connSet.clear()
             colsP.value = []
             colsS.value = []
         }
-        drawConnections()
     }
 
     function readGlobal() {
@@ -205,5 +204,5 @@
 
     watch(() => app.dataset, readGlobal)
 
-    watch(() => ([props.active, props.time, props.selectedColumn]), read, { deep: true })
+    watch(() => ([props.active, props.time]), read, { deep: true })
 </script>

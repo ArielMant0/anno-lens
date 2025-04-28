@@ -345,13 +345,15 @@ class DataManager {
 
             const points = this.data.filter(d => idSet.has(d.id))
             let polygon = this._makePolygon(points)
-            const centroid = polygonCentroid(polygon)
-            polygon = polygon.map(([px, py]) => {
-                const vx = px - centroid[0]
-                const vy = py - centroid[1]
-                const norm = Math.sqrt(vx*vx + vy*vy)
-                return [px + vx / norm * 5, py + vy / norm * 5]
-            })
+            const centroid = polygon.length > 1 ? polygonCentroid(polygon) : polygon[0]
+            if (polygon.length > 1) {
+                polygon = polygon.map(([px, py]) => {
+                    const vx = px - centroid[0]
+                    const vy = py - centroid[1]
+                    const norm = Math.sqrt(vx*vx + vy*vy)
+                    return [px + vx / norm * 5, py + vy / norm * 5]
+                })
+            }
 
             addObj = {
                 id: id,
@@ -368,13 +370,16 @@ class DataManager {
             let idSet = new Set(lens.ids)
             const points = this.data.filter(d => idSet.has(d.id))
             let polygon = this._makePolygon(points)
-            const centroid = polygonCentroid(polygon)
-            polygon = polygon.map(([px, py]) => {
-                const vx = px - centroid[0]
-                const vy = py - centroid[1]
-                const norm = Math.sqrt(vx*vx + vy*vy)
-                return [px + vx / norm * 5, py + vy / norm * 5]
-            })
+            const centroid = polygon.length > 1 ? polygonCentroid(polygon) : polygon[0]
+            if (polygon.length > 1) {
+                polygon = polygon.map(([px, py]) => {
+                    const vx = px - centroid[0]
+                    const vy = py - centroid[1]
+                    const norm = Math.sqrt(vx*vx + vy*vy)
+                    return [px + vx / norm * 5, py + vy / norm * 5]
+                })
+            }
+
 
             addObj = {
                 id: id,
@@ -458,13 +463,15 @@ class DataManager {
 
             const points = this.data.filter(d => idSet.has(d.id))
             let polygon = this._makePolygon(points)
-            const centroid = polygonCentroid(polygon)
-            polygon = polygon.map(([px, py]) => {
-                const vx = px - centroid[0]
-                const vy = py - centroid[1]
-                const norm = Math.sqrt(vx*vx + vy*vy)
-                return [px + vx / norm * 5, py + vy / norm * 5]
-            })
+            const centroid = polygon.length > 1 ? polygonCentroid(polygon) : polygon[0]
+            if (polygon.length > 1) {
+                polygon = polygon.map(([px, py]) => {
+                    const vx = px - centroid[0]
+                    const vy = py - centroid[1]
+                    const norm = Math.sqrt(vx*vx + vy*vy)
+                    return [px + vx / norm * 5, py + vy / norm * 5]
+                })
+            }
 
             mergeCols.forEach(c => {
                 const n = c.name

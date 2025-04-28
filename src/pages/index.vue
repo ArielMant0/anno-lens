@@ -12,7 +12,7 @@
     const controls = useControls()
 
     onMounted(function() {
-        window.addEventListener("keyup", (event) => controls.keyEvent(event))
+        window.addEventListener("keydown", (event) => controls.keyEvent(event))
     })
 
 </script>

@@ -29,11 +29,11 @@
         },
         width: {
             type: Number,
-            default: 100
+            default: 300
         },
         height: {
             type: Number,
-            default: 300
+            default: 100
         },
     })
 
@@ -45,20 +45,20 @@
 
     function ramp(color, n=256) {
         const canvas = document.createElement("canvas");
-        canvas.width = 1;
-        canvas.height = n;
+        canvas.width = n;
+        canvas.height = 1;
         const context = canvas.getContext("2d");
         for (let i = 0; i < n; ++i) {
             context.fillStyle = color(i / (n - 1));
-            context.fillRect(0, i, 1, 1);
+            context.fillRect(i, 0, 1, 1);
         }
         return canvas;
     }
 
     function draw() {
 
-        const margin = 10, ticks = props.numTicks ? props.numTicks : props.height / 25;
-        const w = Math.max(10, Math.floor(props.width * 0.25))
+        const margin = 10, ticks = props.numTicks ? props.numTicks : props.width / 25;
+        const h = Math.max(10, Math.floor(props.height * 0.25))
 
         const svg = d3.select(el.value)
         svg.selectAll("*").remove()
@@ -68,15 +68,15 @@
         // Sequential
         if (props.scale.interpolator) {
             x = Object.assign(props.scale.copy()
-                .interpolator(d3.interpolateRound(margin, props.height - margin)),
-                { range() { return [margin, props.height - margin]; } });
+                .interpolator(d3.interpolateRound(margin, props.width - margin)),
+                { range() { return [margin, props.width - margin]; } });
 
             const tmp = d3.scaleLinear()
-                .domain([margin, props.height - margin])
+                .domain([margin, props.width - margin])
                 .range(x.domain())
 
             brush = d3.brushY()
-                .extent([[margin, margin], [margin+w, props.height-margin]])
+                .extent([[margin, margin], [margin+h, props.width-margin]])
                 .on("brush", function({ selection, sourceEvent }) {
                     if (sourceEvent) {
                         const vals = selection ? selection.map(d => tmp(d)) : null
@@ -94,8 +94,8 @@
             svg.append("image")
                 .attr("x", margin)
                 .attr("y", margin)
-                .attr("width", w)
-                .attr("height", props.height - margin * 2)
+                .attr("height", h)
+                .attr("width", props.width - margin * 2)
                 .attr("preserveAspectRatio", "none")
                 .attr("xlink:href", ramp(props.scale.interpolator()).toDataURL())
 
@@ -110,17 +110,17 @@
         } else {
             x = d3.scaleBand()
                 .domain(props.scale.domain())
-                .rangeRound([props.height - margin, margin])
+                .rangeRound([margin, props.width - margin])
                 .paddingInner(0.05)
 
             rects = svg.append("g")
                 .selectAll("rect")
                 .data(props.scale.domain())
                 .join("rect")
-                    .attr("x", margin)
-                    .attr("y", x)
-                    .attr("height", Math.max(0, x.bandwidth() - 1))
-                    .attr("width", w)
+                    .attr("x", x)
+                    .attr("y", margin)
+                    .attr("width", Math.max(0, x.bandwidth() - 1))
+                    .attr("height", h)
                     .attr("fill", props.scale)
                     .style("cursor", "pointer")
                     .on("pointerenter", function() { d3.select(this).style("filter", "saturate(3)") })
@@ -129,10 +129,16 @@
 
         }
 
-        svg.append("g")
-            .attr("transform", `translate(${w + margin})`)
-            .call(d3.axisRight(x).ticks(ticks).tickValues(tickValues).tickFormat(props.tickFormat))
+        const axis = svg.append("g")
+            .attr("transform", `translate(0,${margin+h})`)
+            .call(d3.axisBottom(x).ticks(ticks).tickValues(tickValues).tickFormat(props.tickFormat))
             .call(g => g.select(".domain").remove())
+
+        if (props.scale.interpolator) {
+            axis.select(".tick text").attr("text-anchor", "start")
+
+            axis.select(".tick:last-child text").attr("text-anchor", "end")
+        }
 
         highlight()
     }

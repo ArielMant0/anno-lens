@@ -1,9 +1,9 @@
 <template>
-    <div class="text-caption">
+    <div class="text-caption d-flex align-center">
         <v-btn icon="mdi-close" color="error" variant="text" density="compact" size="sm" @click="emit('clear')"/>
         <span class="mr-1">{{ name }}: </span>
 
-        <div v-if="ordinal" class="d-flex align-center ml-4">
+        <span v-if="ordinal" class="d-flex align-center">
             <span v-if="data.length === 1">
                 {{ data[0] }}
                 <v-icon :color="scale(data[0])" size="small">mdi-circle</v-icon>
@@ -11,8 +11,8 @@
             <span v-else>
                 <v-icon v-for="d in data" :color="scale(d)" size="small">mdi-circle</v-icon>
             </span>
-        </div>
-        <div v-else class="d-flex align-center ml-4">
+        </span>
+        <span v-else class="d-flex align-center">
             <span>
                 {{ formatter(data[0]) }}
                 <v-icon :color="scale(data[0])" size="small">mdi-circle</v-icon>
@@ -22,7 +22,7 @@
                 {{ formatter(data[1]) }}
                 <v-icon :color="scale(data[1])" size="small">mdi-circle</v-icon>
             </span>
-        </div>
+        </span>
     </div>
 </template>
 

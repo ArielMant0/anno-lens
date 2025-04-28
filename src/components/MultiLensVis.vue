@@ -16,29 +16,8 @@
     </div>
     <div v-if="!loading && data.length > 0" class="d-flex flex-column align-center justify-start mt-8">
         <div class="d-flex mt-2">
-            <div v-if="int.showAttrMap" class="mr-2">
-                <div :style="{ width: w+'px' }">Attribute Map: {{ int.showAttrMap }}, Color: <b>{{ chosenColorAttr }}</b></div>
-                <div style="position: relative;">
-                    <svg ref="under" :width="w" :height="h"></svg>
-                    <ScatterPlot
-                        style="position: absolute; top: 0; left: 0;"
-                        :data="data"
-                        :selected="dataF"
-                        :update="showTime"
-                        :x-attr="datasetX"
-                        :y-attr="datasetY"
-                        :color-attr="chosenColorAttr"
-                        :opacity-attr="'visited.'+int.showAttrMap"
-                        :color-scale="int.scales[chosenColorAttr]"
-                        :radius="3"
-                        :search-radius="6"
-                        :width="w"
-                        :height="h"/>
 
-                </div>
-            </div>
-
-            <div v-else class="mr-2">
+            <div>
                 <div style="position: relative;">
                     <FeatureMap
                         :column="chosenColorAttr"
@@ -73,37 +52,30 @@
 
                     <svg ref="over" :width="w" :height="h" style="position: absolute; top: 0; left: 0; pointer-events: none;"></svg>
                 </div>
-
             </div>
 
-            <div class="d-flex ml-8">
+            <div class="ml-8" style="min-width: 625px;">
+                <div class="d-flex">
+                    <div>
+                        <div class="d-flex text-caption">
+                            <div>{{ chosenColorAttr }} <span v-if="!int.fromLens">(default)</span></div>
+                            <v-divider v-if="int.filterAttr !== null" vertical class="ml-2 mr-2"></v-divider>
+                            <FilterDesc v-if="int.filterAttr !== null"
+                                :data="int.filterValues"
+                                :name="int.filterAttr"
+                                @clear="setFilter(null)"
+                                :ordinal="int.filterType === DATA_TYPES.ORDINAL || int.filterType === DATA_TYPES.NOMINAL || int.filterType === DATA_TYPES.BOOLEAN"
+                                :scale="int.scales[int.filterAttr]"/>
+                        </div>
 
-                <LensComparison
-                    class="mr-2"
-                    :active="!moveLens"
-                    :time="lensMoveTime"
-                    :mode="refMode"
-                    :selected-column="chosenColorAttr"/>
-
-                <div>
-                    <div class="text-caption">
-                        <div style="max-width: 100px;" class="text-dots">{{ chosenColorAttr }} <span v-if="!int.fromLens">(default)</span></div>
-                        <FilterDesc v-if="int.filterAttr !== null"
-                            :data="int.filterValues"
-                            :name="int.filterAttr"
-                            @clear="setFilter(null)"
-                            :ordinal="int.filterType === DATA_TYPES.ORDINAL || int.filterType === DATA_TYPES.NOMINAL || int.filterType === DATA_TYPES.BOOLEAN"
-                            :scale="int.scales[int.filterAttr]"/>
+                        <ColorLegend v-if="int.scales[chosenColorAttr]"
+                            :key="chosenColorAttr"
+                            :scale="int.scales[chosenColorAttr]"
+                            :selected="chosenColorAttr === int.filterAttr ? int.filterValues : []"
+                            style="display: block;"
+                            @click="setFilter"
+                            @brush="setFilter"/>
                     </div>
-
-                    <ColorLegend v-if="int.scales[chosenColorAttr]"
-                        :key="chosenColorAttr"
-                        :scale="int.scales[chosenColorAttr]"
-                        :selected="chosenColorAttr === int.filterAttr ? int.filterValues : []"
-                        :height="Math.min(300, h*0.45)"
-                        style="display: block;"
-                        @click="setFilter"
-                        @brush="setFilter"/>
 
                     <ColorLegend v-if="ready"
                         :key="'cf_'+lensType"
@@ -111,11 +83,17 @@
                         :tick-values="[0, 1]"
                         :num-ticks="2"
                         style="display: block;"
-                        class="mt-4"
-                        :scale="featureScale"
-                        :height="Math.min(300, h*0.45)"/>
+                        class="mt-6"
+                        :scale="featureScale"/>
                 </div>
+
+                <LensComparison
+                    :active="!moveLens"
+                    :time="lensMoveTime"
+                    :mode="refMode"
+                    :selected-column="chosenColorAttr"/>
             </div>
+
         </div>
 
 
@@ -160,7 +138,7 @@
     import { storeToRefs } from 'pinia'
     import { DATA_TYPES, useApp, DATASETS } from '@/stores/app';
     import { LENS_TYPE } from '@/use/Lens';
-    import { computed, reactive, toRaw } from 'vue';
+    import { computed, reactive, toRaw, watch } from 'vue';
     import DM from '@/use/data-manager';
     import ColorLegend from './vis/ColorLegend.vue';
     import FilterDesc from './FilterDesc.vue';
@@ -174,7 +152,7 @@
     import HotBar from './HotBar.vue';
     import { useControls } from '@/stores/controls';
     import AnnoInventory from './AnnoInventory.vue';
-import INV from '@/use/inventory';
+    import INV from '@/use/inventory';
 
     const app = useApp()
     const controls = useControls()
@@ -182,7 +160,6 @@ import INV from '@/use/inventory';
 
     const { dataset, datasetX, datasetY, datasetColor } = storeToRefs(app)
 
-    const under = ref(null)
     const over = ref(null)
     const scatter = ref(null)
 
@@ -190,7 +167,7 @@ import INV from '@/use/inventory';
     const w = computed(() => {
         const ww = wSize.width.value
         const wh = wSize.height.value
-        return Math.max(500, Math.floor(Math.min(ww*0.6, wh*0.75))-150)
+        return Math.max(500, Math.floor(Math.min(ww*0.65-300, wh*0.75)))
     })
     const h = computed(() => w.value)
 
@@ -303,13 +280,8 @@ import INV from '@/use/inventory';
         if (lensType.value === LENS_TYPE.FREQUENT) {
             return d => d < 1 ? "less frequent" : "more frequent"
         }
-            return d => d < 1 ? "less rare" : "more rare"
+        return d => d < 1 ? "less rare" : "more rare"
     })
-
-    function toggleColorOverride(name) {
-        colorOverride.value = colorOverride.value !== name ? name : ""
-        lensTime.value = Date.now()
-    }
 
     function saveHistory() {
         if (!historyUpdated) return
@@ -334,14 +306,7 @@ import INV from '@/use/inventory';
         data.value.forEach(d => columns.value.forEach(c => d.visited[c] = 0))
         lensTime.value = Date.now()
     }
-    function setLensType(t) {
-        saveHistory()
-        lensType.value = t;
-        DM.lenses.forEach(l => l.type = t)
-        applyLens()
-        topFeatures.value = DM.getBestFeatures(lensType.value, refMode.value)
-        app.setColor(topFeatures.value[0])
-    }
+
     function setActiveLens(i) {
         if (i !== activeLens.value && i === primaryLens.value || i === secondaryLens.value) {
             activeLens.value = i
@@ -363,7 +328,7 @@ import INV from '@/use/inventory';
     function setRefMode(mode="local") {
         const m = mode === "local" || mode === "global" ? mode : "local"
         if (m !== refMode.value) {
-            saveHistory()
+            // saveHistory()
             topFeatures.value = DM.getBestFeatures(lensType.value, m)
             app.setColor(topFeatures.value[0])
             refMode.value = m
@@ -615,9 +580,27 @@ import INV from '@/use/inventory';
         })
     }
 
+    function swapLenses() {
+        if (DM.getLens(1).numResults[refMode.value] > 0) {
+            setActiveLens(Math.abs(1 - activeLens.value))
+        }
+    }
+
     onMounted(function() {
         // static hotkeys
-        controls.setKeyMappingLocked(0, "s", "save", function() {
+        controls.setKeyMappingLocked(0, "a", "prev", function() {
+            if (columnIndex.value > 0) {
+                setColorIndex(columnIndex.value - 1)
+                applyLens()
+            }
+        })
+        controls.setKeyMappingLocked(1, "d", "next", function() {
+            setColorIndex(columnIndex.value + 1)
+            applyLens()
+        })
+
+        controls.setKeyMappingLocked(2, "s", "swap", swapLenses)
+        controls.setKeyMappingLocked(3, "s", "save", function() {
             const graph = DM.getAnnotationConnections()
             graph.links.forEach(d => {
                 const s = graph.nodes.find(n => n.id === d.source)
@@ -627,30 +610,15 @@ import INV from '@/use/inventory';
 
             INV.add(dataset.value, DM.getAnnotations(), graph.links)
             DM.clearAnnotations()
-        })
+        }, ["ctrl"])
 
-        controls.setKeyMappingLocked(1, "a", "prev", function() {
-            if (columnIndex.value > 0) {
-                setColorIndex(columnIndex.value - 1)
-                applyLens()
-            }
-        })
-        controls.setKeyMappingLocked(2, "d", "next", function() {
-            setColorIndex(columnIndex.value + 1)
+        controls.setKeyMappingLocked(4, "m", "mode", function() {
+            setRefMode(refMode.value !== "local" ? "local" : "global")
+            const lens = DM.getLens(activeLens.value)
+            updateLens(lens.x, lens.y)
             applyLens()
         })
-        controls.setKeyMappingLocked(3, "l", "local", function() {
-            if (refMode.value !== "local") {
-                setRefMode("local")
-                applyLens()
-            }
-        })
-        controls.setKeyMappingLocked(4, "g", "global", function() {
-            if (refMode.value !== "global") {
-                setRefMode("global")
-                applyLens()
-            }
-        })
+
 
         // annotation hotkeys
         const annoFunc = keymap => annotate(keymap.color)
