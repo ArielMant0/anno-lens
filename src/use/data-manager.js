@@ -195,6 +195,26 @@ class DataManager {
         return this.data
     }
 
+    resize(width, height) {
+        // scales for quadtree
+        this.x = scaleLinear()
+            .domain(extent(data, d => getAttr(d, this.xAttr)))
+            .range([0, width])
+        this.y = scaleLinear()
+            .domain(extent(data, d => getAttr(d, this.yAttr)))
+            .range([height, 0])
+
+        // calculate quadtree
+        this.tree = quadtree()
+            .x(d => this.x(getAttr(d, this.xAttr)))
+            .y(d => this.y(getAttr(d, this.yAttr)))
+            .addAll(data)
+
+        // mark as updated
+        const app = useApp()
+        app.updateData()
+    }
+
     computeFeatureMaps(radius, size=10, callback=null) {
         if (this.data.length === 0) return
 
@@ -345,8 +365,19 @@ class DataManager {
 
             const points = this.data.filter(d => idSet.has(d.id))
             let polygon = this._makePolygon(points)
-            const centroid = polygon.length > 1 ? polygonCentroid(polygon) : polygon[0]
-            if (polygon.length > 1) {
+            let centroid;
+            if (polygon.length === 1) {
+                centroid = polygon[0]
+            } else if (polygon.length === 2) {
+                centroid = [
+                    polygon[0][0]*0.5 + polygon[1][0]*0.5,
+                    polygon[0][1]*0.5 + polygon[1][1]*0.5,
+                ]
+            } else {
+                centroid = polygonCentroid(polygon)
+            }
+
+            if (polygon.length > 2) {
                 polygon = polygon.map(([px, py]) => {
                     const vx = px - centroid[0]
                     const vy = py - centroid[1]
@@ -370,8 +401,19 @@ class DataManager {
             let idSet = new Set(lens.ids)
             const points = this.data.filter(d => idSet.has(d.id))
             let polygon = this._makePolygon(points)
-            const centroid = polygon.length > 1 ? polygonCentroid(polygon) : polygon[0]
-            if (polygon.length > 1) {
+            let centroid;
+            if (polygon.length === 1) {
+                centroid = polygon[0]
+            } else if (polygon.length === 2) {
+                centroid = [
+                    polygon[0][0]*0.5 + polygon[1][0]*0.5,
+                    polygon[0][1]*0.5 + polygon[1][1]*0.5,
+                ]
+            } else {
+                centroid = polygonCentroid(polygon)
+            }
+
+            if (polygon.length > 2) {
                 polygon = polygon.map(([px, py]) => {
                     const vx = px - centroid[0]
                     const vy = py - centroid[1]
@@ -379,7 +421,6 @@ class DataManager {
                     return [px + vx / norm * 5, py + vy / norm * 5]
                 })
             }
-
 
             addObj = {
                 id: id,
@@ -463,8 +504,19 @@ class DataManager {
 
             const points = this.data.filter(d => idSet.has(d.id))
             let polygon = this._makePolygon(points)
-            const centroid = polygon.length > 1 ? polygonCentroid(polygon) : polygon[0]
-            if (polygon.length > 1) {
+            let centroid;
+            if (polygon.length === 1) {
+                centroid = polygon[0]
+            } else if (polygon.length === 2) {
+                centroid = [
+                    polygon[0][0]*0.5 + polygon[1][0]*0.5,
+                    polygon[0][1]*0.5 + polygon[1][1]*0.5,
+                ]
+            } else {
+                centroid = polygonCentroid(polygon)
+            }
+
+            if (polygon.length > 2) {
                 polygon = polygon.map(([px, py]) => {
                     const vx = px - centroid[0]
                     const vy = py - centroid[1]
