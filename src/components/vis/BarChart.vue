@@ -3,9 +3,12 @@
 </template>
 
 <script setup>
+    import { useTooltip } from '@/stores/tooltip';
     import { getAttr } from '@/use/util';
     import * as d3 from 'd3'
     import { onMounted } from 'vue';
+
+    const tt = useTooltip()
 
     const props = defineProps({
         data: {
@@ -83,21 +86,36 @@
         const set = new Set(props.selected)
 
         if (props.patternAttr) {
-            const p = svg.append("mask")
-                .attr("id", "diagl")
-                .attr("maskUnits", "userSpaceOnUse")
 
             const xs = x.bandwidth()
-            const ys = (props.height-5-off) / 10
+            // x.domain().forEach(xi => {
 
-            p.selectAll("path")
-                .data(d3.range(10))
-                .join("path")
-                // .attr("transform", "rotate(125)")
-                .attr("fill", "none")
-                .attr("stroke", "white")
-                .attr("stroke-width", 2)
-                .attr("d", d => `M5 ${5 + (d+1)*ys} h${xs}z`)
+                const p = svg.append("mask")
+                    .attr("id", "pattern")
+                    .attr("maskUnits", "userSpaceOnUse")
+                    .attr("x", "0%")
+                    .attr("y", "0%")
+                    .attr("width", "100%")
+                    .attr("height", "100%")
+                // .attr("maskContentUnits", "objectBoundingBox")
+
+                p.append("rect")
+                    .attr("x", 5)
+                    .attr("y", 5)
+                    .attr("width", xs+5)
+                    .attr("height", props.height-10-off)
+                    .attr("fill", "white")
+
+            //     p.selectAll("rect")
+            //         .data(d3.range(7))
+            //         .join("rect")
+            //         .attr("fill", "white")
+            //         .attr("stroke", "none")
+            //         .attr("x", x(xi))
+            //         .attr("y", d => d*ys)
+            //         .attr("width", xs)
+            //         .attr("height", 3)
+            // })
         }
 
         svg.append("g")
@@ -111,13 +129,29 @@
             .attr("fill", d => {
                 const col = props.colorAttr ? getC(d) : props.fillColor
                 if (props.patternAttr && getP(d)) {
-                    return d3.color(col).brighter(1)
+                    const hsl = d3.hsl(col)
+                    return hsl < 0.33 ? hsl.brighter(1.5) : hsl.darker(1.5)
                 }
                 return col
             })
-            .attr("mask", d => props.patternAttr && getP(d) ? "url(#diagl)" : null)
-            .attr("opacity", d => set.size > 0 && !set.has(d.x) ? 0.5 : 1)
+            .attr("mask", d => props.patternAttr && getP(d) ? `url(#pattern)` : null)
+            .attr("opacity", d => set.size > 0 && !set.has(getX(d)) ? 0.5 : 1)
             .style("cursor", props.selectable ? "pointer" : null)
+            .on("pointerenter", function() {
+                if (props.selectable) {
+                    d3.select(this).attr("stroke", "black")
+                }
+            })
+            .on("pointermove", function(event, d) {
+                const [mx, my] = d3.pointer(event, document.body)
+                tt.show(`${getX(d)}: ${getY(d).toFixed(2)}`, mx, my)
+            })
+            .on("pointerleave", function() {
+                if (props.selectable) {
+                    d3.select(this).attr("stroke", null)
+                }
+                tt.hide()
+            })
             .on("click", (_event, d) => {
                 emit("click", d)
             })
@@ -135,6 +169,7 @@
                 return t.length*5 > x.bandwidth() ? t.slice(0, Math.floor(x.bandwidth() / 5))+'..' : t
             })
             .style("cursor", props.selectable ? "pointer" : null)
+            .classed("hover-bold", props.selectable)
             .on("click", (_event, d) => {
                 emit("click", { x: d, y: 0 })
             })

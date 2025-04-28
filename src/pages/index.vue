@@ -1,17 +1,19 @@
 <template>
-    <div class="d-flex flex-column align-center">
-        <v-select
-            :model-value="dataset"
-            density="compact"
-            style="min-width: 300px;"
-            label="Dataset"
-            item-title="name"
-            item-value="file"
-            class="mt-2"
-            hide-details
-            hide-spin-buttons
-            @update:model-value="v => app.setDataset(v)"
-            :items="DATASETS"/>
+    <div style="height: 99vh;" class="pa-2">
+        <div style="width: 100%;" class="d-flex justify-center">
+            <v-select
+                :model-value="dataset"
+                density="compact"
+                style="max-width: 300px;"
+                label="Dataset"
+                item-title="name"
+                item-value="file"
+                hide-details
+                hide-spin-buttons
+                hide-no-data
+                @update:model-value="v => app.setDataset(v)"
+                :items="DATASETS"/>
+        </div>
         <MultiLensVis :dataset="dataset"/>
     </div>
 </template>

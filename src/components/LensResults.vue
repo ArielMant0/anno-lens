@@ -42,10 +42,7 @@
     import * as d3 from 'd3'
     import { onMounted, watch } from 'vue';
     import BarChart from './vis/BarChart.vue';
-    import { DATA_TYPES } from '@/stores/app';
     import DM from '@/use/data-manager';
-    // import KDEChart from './vis/KDEChart.vue';
-    import { getAttr } from '@/use/util';
 
     const props = defineProps({
         lens: {

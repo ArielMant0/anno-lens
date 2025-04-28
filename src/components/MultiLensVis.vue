@@ -1,126 +1,126 @@
 <template>
-    <div style="min-height: 85vh; max-height: 90vh; max-width: 100vw;" class="d-flex flex-column align-center justify-start pa-4">
-        <div v-if="!loading && data.length > 0" style="max-width: 100%">
+    <div v-if="!loading && data.length > 0" style="min-height: 90vh; max-height: 95vh; max-width: 100vw;" class="d-flex flex-column align-center justify-start mt-4">
+        <div class="d-flex mt-2">
+            <div v-if="int.showAttrMap" class="mr-2">
+                <div :style="{ width: w+'px' }">Attribute Map: {{ int.showAttrMap }}, Color: <b>{{ chosenColorAttr }}</b></div>
+                <div style="position: relative;">
+                    <svg ref="under" :width="w" :height="h"></svg>
+                    <ScatterPlot
+                        style="position: absolute; top: 0; left: 0;"
+                        :data="data"
+                        :selected="dataF"
+                        :update="showTime"
+                        :x-attr="datasetX"
+                        :y-attr="datasetY"
+                        :color-attr="chosenColorAttr"
+                        :opacity-attr="'visited.'+int.showAttrMap"
+                        :color-scale="int.scales[chosenColorAttr]"
+                        :radius="3"
+                        :search-radius="6"
+                        :width="w"
+                        :height="h"/>
 
-            <div class="d-flex mt-2">
-                <div v-if="int.showAttrMap" class="mr-2">
-                    <div :style="{ width: w+'px' }">Attribute Map: {{ int.showAttrMap }}, Color: <b>{{ chosenColorAttr }}</b></div>
-                    <div style="position: relative;">
-                        <svg ref="under" :width="w" :height="h"></svg>
-                        <ScatterPlot
-                            style="position: absolute; top: 0; left: 0;"
-                            :data="data"
-                            :selected="dataF"
-                            :update="showTime"
-                            :x-attr="datasetX"
-                            :y-attr="datasetY"
-                            :color-attr="chosenColorAttr"
-                            :opacity-attr="'visited.'+int.showAttrMap"
-                            :color-scale="int.scales[chosenColorAttr]"
-                            :radius="3"
-                            :search-radius="6"
-                            :width="w"
-                            :height="h"/>
-
-                    </div>
-                </div>
-
-                <div v-else class="mr-2">
-                    <div style="position: relative;">
-                        <FeatureMap
-                            :column="chosenColorAttr"
-                            :hide="int.filterAttr"
-                            :mode="refMode"
-                            :lens-type="lensType"
-                            style="margin: 0px 150px;"
-                            :width="w"
-                            :height="h"/>
-
-                        <ScatterPlot
-                            ref="scatter"
-                            id="scatter-main"
-                            style="position: absolute; top: 0; left: 0; margin: 0px 150px;"
-                            :data="data"
-                            :selected="dataF"
-                            :time="dataTime"
-                            :update="lensTime"
-                            :x-attr="datasetX"
-                            :y-attr="datasetY"
-                            :color-attr="chosenColorAttr"
-                            :color-scale="int.scales[chosenColorAttr]"
-                            :radius="3"
-                            :width="w"
-                            :height="h"
-                            show-lens
-                            :fixed-lens="!moveLens"
-                            :highlight-color="theme.current.value.colors.primary"
-                            @hover="onHover"
-                            @click-lens="onClickLens"/>
-
-                        <svg ref="over" :width="w" :height="h" style="position: absolute; top: 0; left: 0; pointer-events: none;"></svg>
-                    </div>
-
-                </div>
-
-                <div class="d-flex ml-8">
-                    <div>
-                        <div class="text-caption">
-                            <div style="max-width: 100px;" class="text-dots">{{ chosenColorAttr }} <span v-if="!int.fromLens">(default)</span></div>
-                            <FilterDesc v-if="int.filterAttr !== null"
-                                :data="int.filterValues"
-                                :name="int.filterAttr"
-                                @clear="setFilter(null)"
-                                :ordinal="int.filterType === DATA_TYPES.ORDINAL || int.filterType === DATA_TYPES.NOMINAL || int.filterType === DATA_TYPES.BOOLEAN"
-                                :scale="int.scales[int.filterAttr]"/>
-                        </div>
-
-                        <ColorLegend v-if="int.scales[chosenColorAttr]"
-                            :key="chosenColorAttr"
-                            :scale="int.scales[chosenColorAttr]"
-                            :selected="chosenColorAttr === int.filterAttr ? int.filterValues : []"
-                            :height="Math.min(300, h*0.45)"
-                            style="display: block;"
-                            @click="setFilter"
-                            @brush="setFilter"/>
-
-                        <ColorLegend v-if="ready"
-                            :key="'cf_'+lensType"
-                            :tick-format="featureScaleTicks"
-                            :tick-values="[0, 1]"
-                            :num-ticks="2"
-                            style="display: block;"
-                            class="mt-4"
-                            :scale="featureScale"
-                            :height="Math.min(300, h*0.45)"/>
-                    </div>
-
-                    <LensComparison
-                        class="ml-2"
-                        :active="!moveLens"
-                        :time="lensMoveTime"
-                        :mode="refMode"
-                        :selected-column="chosenColorAttr"/>
                 </div>
             </div>
 
+            <div v-else class="mr-2">
+                <div style="position: relative;">
+                    <FeatureMap
+                        :column="chosenColorAttr"
+                        :hide="int.filterAttr"
+                        :mode="refMode"
+                        :lens-type="lensType"
+                        :time="featureTime"
+                        style="margin: 0px 150px;"
+                        :width="w"
+                        :height="h"/>
 
-            <AnnotationOverlay
-                target-id="scatter-main"
-                :selected="chosenColorAttr"
-                :time="annoTime"
-                :active="!moveLens"/>
+                    <ScatterPlot
+                        ref="scatter"
+                        id="scatter-main"
+                        style="position: absolute; top: 0; left: 0; margin: 0px 150px;"
+                        :data="data"
+                        :selected="dataF"
+                        :time="dataTime"
+                        :update="lensTime"
+                        :x-attr="datasetX"
+                        :y-attr="datasetY"
+                        :color-attr="chosenColorAttr"
+                        :color-scale="int.scales[chosenColorAttr]"
+                        :radius="3"
+                        :width="w"
+                        :height="h"
+                        show-lens
+                        :fixed-lens="!moveLens"
+                        :highlight-color="theme.current.value.colors.primary"
+                        @hover="onHover"
+                        @click-lens="onClickLens"/>
 
-            <LensOverlay
-                target="scatter-main"
-                :time="lensTime"
-                :radius="lensRadius-10"
-                :mode="refMode"
-                :index-primary="colorIndex"
-                :index-secondary="colorIndexSec"
-                :active-lens="activeLens"
-                :indices="[0, 1]"/>
+                    <svg ref="over" :width="w" :height="h" style="position: absolute; top: 0; left: 0; pointer-events: none;"></svg>
+                </div>
 
-            <HotBar/>
+            </div>
+
+            <div class="d-flex ml-8">
+
+                <LensComparison
+                    class="mr-2"
+                    :active="!moveLens"
+                    :time="lensMoveTime"
+                    :mode="refMode"
+                    :selected-column="chosenColorAttr"/>
+
+                <div>
+                    <div class="text-caption">
+                        <div style="max-width: 100px;" class="text-dots">{{ chosenColorAttr }} <span v-if="!int.fromLens">(default)</span></div>
+                        <FilterDesc v-if="int.filterAttr !== null"
+                            :data="int.filterValues"
+                            :name="int.filterAttr"
+                            @clear="setFilter(null)"
+                            :ordinal="int.filterType === DATA_TYPES.ORDINAL || int.filterType === DATA_TYPES.NOMINAL || int.filterType === DATA_TYPES.BOOLEAN"
+                            :scale="int.scales[int.filterAttr]"/>
+                    </div>
+
+                    <ColorLegend v-if="int.scales[chosenColorAttr]"
+                        :key="chosenColorAttr"
+                        :scale="int.scales[chosenColorAttr]"
+                        :selected="chosenColorAttr === int.filterAttr ? int.filterValues : []"
+                        :height="Math.min(300, h*0.45)"
+                        style="display: block;"
+                        @click="setFilter"
+                        @brush="setFilter"/>
+
+                    <ColorLegend v-if="ready"
+                        :key="'cf_'+lensType"
+                        :tick-format="featureScaleTicks"
+                        :tick-values="[0, 1]"
+                        :num-ticks="2"
+                        style="display: block;"
+                        class="mt-4"
+                        :scale="featureScale"
+                        :height="Math.min(300, h*0.45)"/>
+                </div>
+            </div>
+        </div>
+
+
+        <AnnotationOverlay
+            target-id="scatter-main"
+            :selected="chosenColorAttr"
+            :time="annoTime"
+            :active="!moveLens"/>
+
+        <LensOverlay
+            target="scatter-main"
+            :time="lensTime"
+            :radius="lensRadius-10"
+            :mode="refMode"
+            :index-primary="colorIndex"
+            :index-secondary="colorIndexSec"
+            :active-lens="activeLens"
+            :indices="[0, 1]"/>
+
+        <HotBar @annotate="annotate"/>
 
             <!-- <div class="mt-8 d-flex flex-column align-center" style="width: 100%;">
                 <h4>Snapshots</h4>
@@ -133,7 +133,6 @@
                     <BarChart :data="s.data" :width="w"/>
                 </div>
             </div> -->
-        </div>
     </div>
 </template>
 
@@ -178,7 +177,7 @@
     const w = computed(() => {
         const ww = wSize.width.value
         const wh = wSize.height.value
-        return Math.max(500, Math.floor(Math.min(ww*0.45, wh*0.7))-150)
+        return Math.max(500, Math.floor(Math.min(ww*0.6, wh*0.75))-150)
     })
     const h = computed(() => w.value)
 
@@ -264,6 +263,8 @@
     const annoTime = ref(0)
     const lensTime = ref(0)
     const lensMoveTime = ref(0)
+    const featureTime = ref(0)
+
     const lensType = ref(LENS_TYPE.RARE)
     const numDetails = reactive({
         local: 3,
@@ -594,12 +595,51 @@
             topFeatures.value = DM.getBestFeatures(lensType.value, refMode.value)
             // app.setColor(topFeatures.value.at(-1))
             ready.value = true
+            const lens = DM.getLens(0)
+            updateLens(lens.x, lens.y)
+            applyLens()
+            featureTime.value = Date.now()
         })
     }
 
     onMounted(function() {
-        controls.setKeyMapping(0, "KeyF", "frequent", keymap => annotate(keymap.color))
-        controls.setKeyMapping(1, "KeyR", "rare", keymap => annotate(keymap.color))
+        // static hotkeys
+        controls.setKeyMappingLocked(0, "s", "save", function() {
+            if (columnIndex.value > 0) {
+                setColorIndex(columnIndex.value - 1)
+                applyLens()
+            }
+        })
+        controls.setKeyMappingLocked(1, "a", "prev", function() {
+            if (columnIndex.value > 0) {
+                setColorIndex(columnIndex.value - 1)
+                applyLens()
+            }
+        })
+        controls.setKeyMappingLocked(2, "d", "next", function() {
+            setColorIndex(columnIndex.value + 1)
+            applyLens()
+        })
+        controls.setKeyMappingLocked(3, "l", "local", function() {
+            if (refMode.value !== "local") {
+                setRefMode("local")
+                applyLens()
+            }
+        })
+        controls.setKeyMappingLocked(4, "g", "global", function() {
+            if (refMode.value !== "global") {
+                setRefMode("global")
+                applyLens()
+            }
+        })
+
+        // annotation hotkeys
+        const annoFunc = keymap => annotate(keymap.color)
+        controls.setKeyMapping(5, "1", "group 1", annoFunc)
+        controls.setKeyMapping(6, "2", "group 2", annoFunc)
+        controls.setKeyMapping(7, "3", "group 3", annoFunc)
+        controls.setKeyMapping(8, "4", "group 4", annoFunc)
+        controls.setKeyMapping(9, "5", "group 5", annoFunc)
 
         window.addEventListener("wheel", function(event) {
             if (!event.ctrlKey) return
@@ -616,45 +656,6 @@
             int.lenses.forEach((l, i) => l.radius = lensRadius.value * (i+1))
             refreshFeatureMaps()
             return false
-        })
-        window.addEventListener("keydown", function(event) {
-            switch(event.code) {
-                case "ArrowUp":
-                case "ArrowLeft":
-                    if (columnIndex.value > 0) {
-                        setColorIndex(columnIndex.value - 1)
-                    }
-                    break;
-                case "ArrowDown":
-                case "ArrowRight":
-                    setColorIndex(columnIndex.value + 1)
-                    break;
-            }
-        })
-        window.addEventListener("keyup", function(event) {
-            switch(event.code) {
-                case "Digit1":
-                case "Digit2":
-                    setActiveLens(Number.parseInt(event.code.at(-1)) - 1)
-                    break
-                case "KeyL":
-                    if (refMode.value !== "local") {
-                        setRefMode("local")
-                    }
-                    break
-                case "KeyG":
-                    if (refMode.value !== "global") {
-                        setRefMode("global")
-                    }
-                    break
-                default:
-                    const i = KEYS.findIndex(d => "Key"+d === event.code)
-                    if (i >= 0 && lensType.value !== LENS_TYPES[i])  {
-                        setLensType(LENS_TYPES[i])
-                    }
-                    break;
-            }
-            applyLens()
         })
 
         DM.onLens(() => {

@@ -4,7 +4,7 @@
 
 <script setup>
     import DM from '@/use/data-manager';
-    import { LENS_TYPE, LENS_TYPES } from '@/use/Lens';
+    import { LENS_TYPE } from '@/use/Lens';
     import { getAttr } from '@/use/util';
     import * as d3 from 'd3'
     import { onMounted, watch } from 'vue';

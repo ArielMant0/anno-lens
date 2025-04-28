@@ -2882,6 +2882,7 @@ __metadata:
     vite-plugin-vuetify: ^2.0.3
     vue: ^3.4.31
     vue-router: ^4.4.0
+    vue3-toastify: ^0.2.8
     vuetify: ^3.6.14
   languageName: unknown
   linkType: soft
@@ -5172,6 +5173,18 @@ __metadata:
   peerDependencies:
     vue: ^3.2.0
   checksum: 2604db5a6b33c5079e3ba1a3aabf5693b4a112899b7cb2c44521961cf60677b48efdf87bb76a284ce938d70ca39e5e46e2b5dbe59f684ca519526bc6cd91efaa
+  languageName: node
+  linkType: hard
+
+"vue3-toastify@npm:^0.2.8":
+  version: 0.2.8
+  resolution: "vue3-toastify@npm:0.2.8"
+  peerDependencies:
+    vue: ">=3.2.0"
+  peerDependenciesMeta:
+    vue:
+      optional: true
+  checksum: 45e99c3871453486b0e05e4f4a3742072f1032f528913e3a5895a40dda8db2d09174e7064bfd387354cb404cade2508f2755e917d0e184dd01866f462471d743
   languageName: node
   linkType: hard
 

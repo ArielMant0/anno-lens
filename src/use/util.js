@@ -198,5 +198,5 @@ export function euclidean(x0, y0, x1, y1) {
 
 export function capitalize(str) {
     if (!str || str.length === 0) return ""
-    return str[0].toUpperCase() + str.slice(1)
+    return str[0].toUpperCase() + (str.length > 1 ? str.slice(1, str.length) : "")
 }
