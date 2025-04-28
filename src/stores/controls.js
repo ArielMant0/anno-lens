@@ -2,7 +2,7 @@ import { capitalize } from '@/use/util'
 import { defineStore } from 'pinia'
 
 function isValidKey(key) {
-    return key.length === 1 && new RegExp("\w", "i").test(key)
+    return new RegExp(/\w/, "i").test(key)
 }
 
 const COLORS4 = ["#ef476f", "#06d6a0", "#118ab2", "#ffd166"]
@@ -73,7 +73,7 @@ export const useControls = defineStore('controls', {
 
         mappingFromHotkey(key, modifiers=[], ignoreIndex=[]) {
             return this.mappings.find((d, i) => !ignoreIndex.includes(i) &&
-                key === d.key &&
+                (key === d.key || key.toLowerCase() === d.key) &&
                 modifiers.length === d.modifiers.length &&
                 modifiers.every(m => d.modifiers.includes(m)) &&
                 d.modifiers.every(m => modifiers.includes(m))
@@ -83,33 +83,28 @@ export const useControls = defineStore('controls', {
         keyEvent(event) {
             if (event.target.tagName === "input") return
 
-            const key = event.key.length === 1 ? event.key.toLowerCase() : event.key
-            if (!isValidKey(key)) return
+            if (!isValidKey(event.key)) return
 
             if (this.recording) {
                 return this.recordHotkey(event)
             }
 
-            const idx = this.mappings.findIndex(d => d && d.key === key)
-            if (idx >= 0) {
-                const m = this.mappings[idx]
-                let execute = true;
-                if (m.modifiers.length > 0) {
-                    execute = m.modifiers.includes("shift") && event.shiftKey ||
-                        m.modifiers.includes("ctrl") && event.ctrlKey ||
-                        m.modifiers.includes("meta") && event.metaKey
-                }
+            const mods = [
+                event.ctrlKey ? "ctrl" : null,
+                event.shiftKey ? "shift" : null,
+                event.metaKey ? "meta" : null,
+            ].filter(d => d !== null)
 
-                if (execute) {
-                    event.preventDefault();
-                    m.callback(m)
-                }
+            const m = this.mappingFromHotkey(event.key, mods)
+            if (m) {
+                event.preventDefault();
+                m.callback(m)
             }
         },
 
         recordHotkey(event) {
             if (this.recordTarget !== null) {
-                const key = event.key.length === 1 ? event.key.toLowerCase() : event.key
+                const key = event.key
                 // cancel if user presses escape
                 if (key === "Escape") {
                     this.recording = false
