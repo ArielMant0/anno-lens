@@ -25,14 +25,14 @@
                         :mode="refMode"
                         :lens-type="lensType"
                         :time="featureTime"
-                        style="margin: 0px 150px;"
+                        style="margin: 0px 170px;"
                         :width="w"
                         :height="h"/>
 
                     <ScatterPlot
                         ref="scatter"
                         id="scatter-main"
-                        style="position: absolute; top: 0; left: 0; margin: 0px 150px;"
+                        style="position: absolute; top: 0; left: 0; margin: 0px 170px;"
                         :data="data"
                         :selected="dataF"
                         :time="dataTime"
@@ -54,8 +54,9 @@
                 </div>
             </div>
 
-            <div class="ml-8" style="min-width: 625px;">
-                <div class="d-flex">
+            <div class="ml-8" style="min-width: 525px;">
+
+                <div class="d-flex justify-space-between">
                     <div>
                         <div class="d-flex text-caption">
                             <div>{{ chosenColorAttr }} <span v-if="!int.fromLens">(default)</span></div>
@@ -82,16 +83,20 @@
                         :tick-format="featureScaleTicks"
                         :tick-values="[0, 1]"
                         :num-ticks="2"
+                        :width="200"
                         style="display: block;"
-                        class="mt-6"
+                        class="mt-5"
                         :scale="featureScale"/>
                 </div>
 
-                <LensComparison
-                    :active="!moveLens"
-                    :time="lensMoveTime"
-                    :mode="refMode"
-                    :selected-column="chosenColorAttr"/>
+                <div>
+                    <LensComparison
+                        :active="!moveLens"
+                        :time="lensTime"
+                        :mode="refMode"
+                        :selected-column="chosenColorAttr"
+                        @update="applyLens"/>
+                </div>
             </div>
 
         </div>
@@ -158,7 +163,23 @@
     const controls = useControls()
     const theme = useTheme()
 
-    const { dataset, datasetX, datasetY, datasetColor } = storeToRefs(app)
+    const {
+        dataset,
+        datasetX,
+        datasetY,
+        datasetColor,
+
+        activeLens,
+        colorIndex,
+        colorIndexSec,
+
+        annoTime,
+        featureTime,
+        dataTime,
+        lensTime,
+        lensMoveTime
+
+    } = storeToRefs(app)
 
     const over = ref(null)
     const scatter = ref(null)
@@ -167,7 +188,7 @@
     const w = computed(() => {
         const ww = wSize.width.value
         const wh = wSize.height.value
-        return Math.max(500, Math.floor(Math.min(ww*0.65-300, wh*0.75)))
+        return Math.max(500, Math.floor(Math.min(ww-850, wh*0.75)))
     })
     const h = computed(() => w.value)
 
@@ -185,13 +206,11 @@
             .filter(d => getAttr(d, int.filterAttr) >= a && getAttr(d, int.filterAttr) <= b)
             .map(d => d.id)
     })
-    const searchCol = ref("")
-    const dataTime = ref(0)
+
     const columns = ref([])
     const ctypes = ref([])
     const topFeatures = ref([])
 
-    const showTime = ref(0)
     const int = reactive({
         scales: {},
         columns: [],
@@ -219,8 +238,6 @@
     const loading = ref(true)
 
     const refMode = ref("global")
-    const colorIndex = ref(0)
-    const colorIndexSec = ref(0)
     const columnIndex = computed(() => activeLens.value === 0 ? colorIndex.value : colorIndexSec.value)
 
     const colorColumn = ref(datasetColor.value)
@@ -250,24 +267,16 @@
 
     const moveLens = ref(true)
 
-    const annoTime = ref(0)
-    const lensTime = ref(0)
-    const lensMoveTime = ref(0)
-    const featureTime = ref(0)
-
     const lensType = ref(LENS_TYPE.RARE)
     const numDetails = reactive({
         local: 3,
         global: 3
     })
 
-    const activeLens = ref(0)
     const primaryLens = ref(0)
     const secondaryLens = ref(1)
 
     const lensRadius = ref(35)
-
-    const KEYS = ["Q", "W"]
 
     const featureScale = computed(() => {
         if (lensType.value === LENS_TYPE.FREQUENT) {
@@ -440,12 +449,24 @@
         lensTime.value = Date.now()
     }
 
-    function updateLens(lx, ly) {
+    function updateLens(lx, ly, resetOnChange=true) {
 
         const lens = DM.getLens(activeLens.value)
         if (!lens) return
 
         const points = findInCircle(DM.tree, lx, ly, lens.radius)
+
+        const pointIds = new Set(points.map(d => d.id))
+        const changes = lens.ids.union(pointIds).size !== pointIds.size
+
+        if (resetOnChange && changes) {
+            if (activeLens.value === 0) {
+                colorIndex.value = 0;
+            } else {
+                colorIndexSec.value = 0;
+            }
+        }
+
         DM.updateLens(activeLens.value, lx, ly, lensRadius.value, points)
 
         if (activeLens.value === primaryLens.value && scatter.value) {
@@ -465,11 +486,6 @@
     }
 
     function onHover(lx, ly) {
-        if (activeLens.value === 0) {
-            colorIndex.value = 0;
-        } else {
-            colorIndexSec.value = 0;
-        }
         updateLens(lx, ly)
         applyLens()
     }

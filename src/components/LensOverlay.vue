@@ -119,13 +119,20 @@
         const prim = lenses[0]
         const sec = lenses.length > 1 ? lenses[1] : null
 
-        const getDegrees = (ax, ay, bx, by, r) => {
+        const getDegrees = (ax, ay, bx, by, r, idx) => {
             const vx = ax - bx
             const vy = ay - by
             const norm = Math.sqrt(vx*vx + vy*vy)
+
             const nx = bx + (-vx / norm) * r
             const ny = by + (-vy / norm) * r
-            const m = (360 + rad2deg(Math.atan2(ny-by, nx-bx))) % 360
+
+            let m;
+            if (norm > r*2 + props.radius*2) {
+                m = idx === 0 ? 0 : 180
+            } else {
+                m = (360 + rad2deg(Math.atan2(ny-by, nx-bx))) % 360
+            }
 
             const onright = m <= 90 || m >= 270
             // debug: show vector lines
@@ -152,10 +159,10 @@
 
         const degrees = [
             sec !== null ?
-                getDegrees(tx+sec.x, ty+sec.y, tx+prim.x, ty+prim.y, prim.radius).map(deg2rad) :
+                getDegrees(tx+sec.x, ty+sec.y, tx+prim.x, ty+prim.y, prim.radius, 0).map(deg2rad) :
                 [305, 0, 55].map(deg2rad),
             sec !== null ?
-                getDegrees(tx+prim.x, ty+prim.y, tx+sec.x, ty+sec.y, sec.radius).map(deg2rad) :
+                getDegrees(tx+prim.x, ty+prim.y, tx+sec.x, ty+sec.y, sec.radius, 1).map(deg2rad) :
                 [],
         ]
 

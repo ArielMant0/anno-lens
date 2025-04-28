@@ -2,19 +2,19 @@
     <v-sheet density="compact" class="pa-1 hotbar d-flex align-center justify-center" rounded elevation="4">
         <div v-for="(m, i) in mappings" :key="'keymap:'+i" :style="{ marginRight: i === 0 ? '4px' : '0', marginLeft: i > 1 ? '4px' : '0' }">
             <div class="keylabel text-dots" :style="{ width: '50px', maxWidth: '50px', minHeight: '1.5em' }">
-                <input v-if="m && !m.locked" v-model="m.label" style="max-width: 100%; text-align: center;">
-                <span v-else-if="m && m.locked" style="max-width: 100%; text-align: center;">{{ m.label }}</span>
+                <input v-if="m && !m.locked" v-model="m.label" style="max-width: 100%; text-align: center;" :title="m.label">
+                <span v-else-if="m && m.locked" style="max-width: 100%; text-align: center;" :title="m.label">{{ m.label }}</span>
                 <span v-else style="max-width: 100%; text-align: center;"></span>
             </div>
             <v-btn
                 height="40"
                 variant="flat"
-                :color="m ? m.color : 'default'"
-                :disabled="m && m.locked"
+                :color="m && m.color ? m.color : '#ddd'"
                 density="compact"
                 stacked
                 :style="{ maxWidth: '50px', minWidth: '50px', fontSize: '12px' }"
-                @click="record(i)">
+                @click="annotate(m)"
+                @contextmenu.prevent="record(i)">
                 <div v-if="m && m.key">
                     <div v-for="str in controls.formatArray(m.key, m.modifiers)">
                         {{ str }}
@@ -34,14 +34,13 @@
     const controls = useControls()
     const { mappings, recording, recordMessage } = storeToRefs(controls)
 
-    const emit = defineEmits(["annotate"])
-
     let toastId = null;
 
-    function annotate(color) {
-        emit("annotate", color)
+    function annotate(mapping) {
+        if (mapping) {
+            mapping.callback(mapping)
+        }
     }
-
     function record(i) {
         controls.startRecordHotkey(i, 'group '+(i+1), annotate)
     }
@@ -62,6 +61,7 @@
             }
         }
     })
+
 </script>
 
 <style scoped>

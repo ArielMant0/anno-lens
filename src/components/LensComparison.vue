@@ -1,19 +1,23 @@
 <template>
-    <div class="d-flex justify-center align-start" style="max-height: 90vh; overflow-y: auto;">
+    <div class="d-flex justify-start align-start" style="max-height: 85vh; overflow-y: auto;">
 
         <div :style="{ minWidth: (chartWidth+5)+'px' }">
-            <div style="text-align: center;" class="mb-1 text-dots" :style="{ minWidth: (chartWidth+25)+'px' }">
-                primary lens
+            <div style="text-align: center;" class="mb-1 text-dots" :style="{ maxWidth: chartWidth+'px' }">
+                <v-icon :color="colorP" class="mr-1" size="small">mdi-circle-outline</v-icon>
+                <span :style="{ fontWeight: activeLens === 0 ? 'bold' : null }">primary</span>
             </div>
             <div v-for="(c, i) in colsP"
                 class="text-caption"
+                :key="'p_'+c+'_'+i"
                 :style="{
                     textAlign: 'center',
                     border: '1px solid ' + (c === selectedColumn ? 'black' : 'white'),
                     borderRadius: '4px'
                 }">
                 <div>
-                    <div @click="annotate(0, i)" :style="{ maxWidth: chartWidth+'px' }" class="cursor-pointer text-dots hover-bold">{{ c }}</div>
+                    <div @click="setColor(0, i)" :style="{ maxWidth: (chartWidth-5)+'px' }" class="cursor-pointer text-dots hover-bold">
+                        {{ i+1 }}. {{ c }}
+                    </div>
                     <BarChart
                         :data="getMerged(0, c)"
                         :y-domain="[0, 1]"
@@ -32,18 +36,22 @@
         </div>
 
         <div :style="{ minWidth: (chartWidth+5)+'px' }">
-            <div style="text-align: center;" class="mb-1 text-dots" :style="{ minWidth: (chartWidth+25)+'px' }">
-                secondary lens
+            <div style="text-align: center;" class="mb-1 text-dots" :style="{ maxWidth: chartWidth+'px' }">
+                <v-icon :color="colorS" class="mr-1" size="small">mdi-circle-outline</v-icon>
+                <span :style="{ fontWeight: activeLens === 1 ? 'bold' : null }">secondary</span>
             </div>
             <div v-for="(c, i) in colsS"
                 class="text-caption"
+                :key="'s_'+c+'_'+i"
                 :style="{
                     textAlign: 'center',
                     border: '1px solid ' + (c === selectedColumn ? 'black' : 'white'),
                     borderRadius: '4px'
                 }">
                 <div>
-                    <div @click="annotate(1, i)" :style="{ maxWidth: chartWidth+'px' }" class="cursor-pointer text-dots hover-bold">{{ c }}</div>
+                    <div @click="setColor(1, i)" :style="{ maxWidth: (chartWidth-5)+'px' }" class="cursor-pointer text-dots hover-bold">
+                        {{ i+1 }}. {{ c }}
+                    </div>
                     <BarChart
                         :data="getMerged(1, c)"
                         :y-domain="[0, 1]"
@@ -66,8 +74,11 @@
     import { useApp } from '@/stores/app';
     import { calcHistogram } from '@/use/util';
     import { useControls } from '@/stores/controls';
+    import { storeToRefs } from 'pinia';
 
     const app = useApp()
+    const { activeLens } = storeToRefs(app)
+
     const controls = useControls()
 
     const props = defineProps({
@@ -97,10 +108,15 @@
         },
     })
 
+    const emit = defineEmits(["update"])
+
     const conns = ref(null)
 
     const colsP = ref([])
     const colsS = ref([])
+
+    const colorP = ref("")
+    const colorS = ref("")
 
     const histG = new Map()
 
@@ -110,6 +126,11 @@
     const height = computed(() => props.chartHeight + 20 + 8)
 
     let links = []
+
+    function setColor(lensIndex, columnIndex) {
+        app.setColorIndex(lensIndex, columnIndex)
+        emit("update")
+    }
 
     function annotate(lensIndex, columnIndex, columnValue=null) {
         const lens = DM.getLens(lensIndex)
@@ -141,11 +162,27 @@
             .attr("fill", "none")
             .attr("stroke", "black")
             .attr("opacity", 0.25)
-            .attr("stroke-width", 2)
+            .attr("stroke-width", 4)
+            .style("cursor", "pointer")
+            .on("pointerenter", function() {
+                d3.select(this).attr("opacity", 0.75)
+            })
+            .on("pointerleave", function() {
+                d3.select(this).attr("opacity", 0.25)
+            })
+            .on("click", function(_event, d) {
+                app.setColorIndex(0, d[0])
+                app.setColorIndex(1, d[1])
+                emit("update")
+            })
+            .append("title")
+            .text(d => `${colsP.value[d[0]]}: (${d[0]+1}) - (${d[1]+1})`)
     }
 
     function getMerged(index, column) {
-        const data = histG.get(column).concat(DM.getLens(index).hists[column])
+        const lens = DM.getLens(index)
+        const other = lens.hists[column] ? lens.hists[column] : []
+        const data = histG.get(column).concat(other)
         data.sort((a, b) => {
             if (a.x !== b.x) {
                 return a.x - b.x
@@ -156,33 +193,34 @@
     }
 
     function read() {
+        const limit = props.active ? undefined : 5
+        const p = DM.getLens(0)
+        const s = DM.getLens(1)
+        colorP.value = p.color ? p.color : "black"
+        colorS.value = s.color ? s.color : "black"
+        // get column names (in order, for each lens)
+        const pc = p.results[props.mode].map(d => d.name).slice(0, limit)
+        const sc = s.results[props.mode].map(d => d.name).slice(0, limit)
+        // store connected columns
+        links = []
+        connSet.clear()
+        pc.forEach((c, i) => {
+            let j = sc.indexOf(c)
+            if (j >= 0) {
+                connSet.add(c)
+                links.push([i, j, Math.abs(pc[i].value-sc[j].value)])
+            }
+        })
+        numCols.value = Math.max(1, Math.max(pc.length, sc.length))
+        colsP.value = pc
+        colsS.value = sc
+
         if (props.active) {
-            const p = DM.getLens(0)
-            const s = DM.getLens(1)
-            // get column names (in order, for each lens)
-            const pc = p.results[props.mode].map(d => d.name)
-            const sc = s.results[props.mode].map(d => d.name)
-            // store connected columns
-            links = []
-            connSet.clear()
-            pc.forEach((c, i) => {
-                let j = sc.indexOf(c)
-                if (j >= 0) {
-                    connSet.add(c)
-                    links.push([i, j, Math.abs(p.results[props.mode][i].value-s.results[props.mode][j].value)])
-                }
-            })
-            numCols.value = Math.max(1, Math.max(pc.length, sc.length))
-            colsP.value = pc
-            colsS.value = sc
             drawConnections()
         } else {
             d3.select(conns.value).selectAll("*").remove()
-            links = []
-            connSet.clear()
-            colsP.value = []
-            colsS.value = []
         }
+
     }
 
     function readGlobal() {
@@ -204,5 +242,6 @@
 
     watch(() => app.dataset, readGlobal)
 
-    watch(() => ([props.active, props.time]), read, { deep: true })
+    watch(() => props.active, read)
+    watch(() => props.time, read)
 </script>

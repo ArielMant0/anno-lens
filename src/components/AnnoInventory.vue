@@ -1,9 +1,13 @@
 <template>
     <Teleport to="body">
         <v-card v-if="showInventory" class="inv-panel" elevation="4">
-            <v-card-title>Annotation Inventory</v-card-title>
+            <v-card-title>
+                <div style="position: relative;">
+                    <span>Annotation Inventory</span>
+                    <v-btn style="position: absolute; top: 5px; right: 0px" density="compact" @click="showInventory = false" color="error" icon="mdi-close" variant="plain"></v-btn>
+                </div>
+            </v-card-title>
             <v-card-text>
-                <v-btn density="compact" @click="showInventory = false" color="primary" block>close</v-btn>
                 <div class="mt-2">
                     <v-sheet v-for="i in items" :key="i.id" class="pa-2 d-flex justify-space-between" rounded elevation="2" style="width: 100%;">
                         <div>

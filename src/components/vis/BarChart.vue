@@ -29,7 +29,7 @@
         },
         height: {
             type: Number,
-            default: 100
+            default: 120
         },
         xAttr: {
             type: String,
@@ -72,7 +72,7 @@
         const svg = d3.select(el.value)
         svg.selectAll("*").remove()
 
-        const off = 25;
+        const off = 20;
 
         const x = d3.scaleBand()
             .domain(Array.from(new Set(props.data.map(getX))))

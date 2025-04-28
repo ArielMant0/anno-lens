@@ -7,7 +7,7 @@ function isValidKey(key) {
 
 const COLORS4 = ["#ef476f", "#06d6a0", "#118ab2", "#ffd166"]
 const COLORS5_1 = ["#390099", "#f15bb5", "#ff0054", "#ff5400", "#ffbd00"]
-const COLORS5_2 = ["#619b8a", "#a1c181", "#f0b51d", "#fe7f2d", "#233d4d"]
+const COLORS5_2 = ["#619b8a", "#a1c181", "#f0b51d", "#fe8435", "#233d4d"]
 
 export const SIZE = 5
 
@@ -18,7 +18,8 @@ export const useControls = defineStore('controls', {
         recordMessage: "",
         recordTarget: null,
         recordLabel: null,
-        recordCallback: null
+        recordCallback: null,
+        trigger: null
     }),
 
     actions: {
@@ -51,6 +52,7 @@ export const useControls = defineStore('controls', {
         setKeyMapping(index, key, label, callback, modifiers=[]) {
             if (index < SIZE || index >= this.mappings.length) return
             this.mappings[index] = {
+                id: index,
                 key: key,
                 label: label,
                 callback: callback,
@@ -63,6 +65,7 @@ export const useControls = defineStore('controls', {
         setKeyMappingLocked(index, key, label, callback, modifiers=[]) {
             if (index < 0 || index >= SIZE) return
             this.mappings[index] = {
+                id: index,
                 key: key,
                 label: label,
                 callback: callback,
@@ -81,7 +84,7 @@ export const useControls = defineStore('controls', {
         },
 
         keyEvent(event) {
-            if (event.target.tagName === "input") return
+            if (document.activeElement && document.activeElement.tagName === "INPUT") return
             if (!isValidKey(event.key)) return
 
             if (this.recording) {
@@ -98,6 +101,9 @@ export const useControls = defineStore('controls', {
             if (m) {
                 event.preventDefault();
                 m.callback(m)
+                this.trigger = m.id
+            } else {
+                this.trigger = null
             }
         },
 

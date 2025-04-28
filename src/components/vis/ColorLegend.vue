@@ -33,7 +33,7 @@
         },
         height: {
             type: Number,
-            default: 100
+            default: 60
         },
     })
 
@@ -58,7 +58,7 @@
     function draw() {
 
         const margin = 10, ticks = props.numTicks ? props.numTicks : props.width / 25;
-        const h = Math.max(10, Math.floor(props.height * 0.25))
+        const h = Math.max(10, Math.floor(props.height * 0.5))
 
         const svg = d3.select(el.value)
         svg.selectAll("*").remove()
@@ -99,6 +99,14 @@
                 .attr("preserveAspectRatio", "none")
                 .attr("xlink:href", ramp(props.scale.interpolator()).toDataURL())
 
+            svg.append("rect")
+                .attr("x", margin)
+                .attr("y", margin)
+                .attr("height", h)
+                .attr("width", props.width - margin * 2)
+                .attr("stroke", "black")
+                .attr("fill", "none")
+
             brushG = svg.append("g").call(brush)
 
             // scaleSequentialQuantile doesn’t implement ticks or tickFormat.
@@ -126,7 +134,6 @@
                     .on("pointerenter", function() { d3.select(this).style("filter", "saturate(3)") })
                     .on("pointerleave", function() { d3.select(this).style("filter", null) })
                     .on("click", function(_e, d) { emit("click", d) })
-
         }
 
         const axis = svg.append("g")

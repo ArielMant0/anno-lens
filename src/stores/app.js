@@ -89,8 +89,15 @@ export const useApp = defineStore('app', {
         dataset: "games.dr",
         datasetObj: Object.assign({}, DATASETS[0]),
 
+        activeLens: 0,
+        colorIndex: 0,
+        colorIndexSec: 0,
+
         dataTime: 0,
         lensTime: 0,
+        lensMoveTime: 0,
+        annoTime: 0,
+        featureTime: 0,
 
         showInventory: false,
         inventoryTime: 0
@@ -114,6 +121,14 @@ export const useApp = defineStore('app', {
         setColor(name) {
             if (this.datasetObj) {
                 this.datasetObj.color = name
+            }
+        },
+
+        setColorIndex(lensIndex, columnIndex) {
+            if (lensIndex === 0) {
+                this.colorIndex = columnIndex
+            } else {
+                this.colorIndexSec = columnIndex
             }
         },
 
