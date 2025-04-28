@@ -1,5 +1,5 @@
 <template>
-    <v-sheet density="compact" class="pa-1 hotbar d-flex align-center justify-center" rounded color="#efefef">
+    <v-sheet density="compact" class="pa-1 hotbar d-flex align-center justify-center" rounded elevation="4">
         <div v-for="(m, i) in mappings" :key="'keymap:'+i" :style="{ marginRight: i === 0 ? '4px' : '0', marginLeft: i > 1 ? '4px' : '0' }">
             <div class="keylabel text-dots" :style="{ width: '50px', maxWidth: '50px', minHeight: '1.5em' }">
                 <input v-if="m" v-model="m.label" style="max-width: 100%; text-align: center;">

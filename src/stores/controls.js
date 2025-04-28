@@ -9,7 +9,7 @@ const COLORS4 = ["#ef476f", "#06d6a0", "#118ab2", "#ffd166"]
 const COLORS5_1 = ["#390099", "#f15bb5", "#ff0054", "#ff5400", "#ffbd00"]
 const COLORS5_2 = ["#619b8a", "#a1c181", "#f0b51d", "#fe7f2d", "#233d4d"]
 
-const SIZE = 5
+export const SIZE = 5
 
 export const useControls = defineStore('controls', {
     state: () => ({

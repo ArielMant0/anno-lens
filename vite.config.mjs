@@ -11,8 +11,11 @@ import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 import { defineConfig } from 'vite'
 import { fileURLToPath, URL } from 'node:url'
 
+const BASE_PATH = "/anno-lens"
+
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: BASE_PATH,
   plugins: [
     VueRouter(),
     Layouts(),
@@ -63,6 +66,12 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    base: BASE_PATH
+  },
+  preview: {
+    port: 3000,
+    host: true,
+    base: BASE_PATH
   },
   css: {
     preprocessorOptions: {
