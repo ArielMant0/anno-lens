@@ -1,35 +1,19 @@
 <template>
-    <div style="height: 99vh;" class="pa-2">
-        <div style="width: 100%;" class="d-flex justify-center">
-            <v-select
-                :model-value="dataset"
-                density="compact"
-                style="max-width: 300px;"
-                label="Dataset"
-                item-title="name"
-                item-value="file"
-                hide-details
-                hide-spin-buttons
-                hide-no-data
-                @update:model-value="v => app.setDataset(v)"
-                :items="DATASETS"/>
-        </div>
-        <MultiLensVis :dataset="dataset"/>
+    <div style="height: 100vh;" class="pa-2">
+        <MultiLensVis/>
     </div>
 </template>
 
 <script setup>
     import MultiLensVis from '@/components/MultiLensVis.vue';
-    import { storeToRefs } from 'pinia'
-    import { DATASETS, useApp } from '@/stores/app';
     import { useControls } from '@/stores/controls';
+    import { onMounted } from 'vue';
 
-    const app = useApp()
     const controls = useControls()
 
-    const { dataset } = storeToRefs(app)
-
-    window.addEventListener("keyup", (event) => controls.keyEvent(event))
+    onMounted(function() {
+        window.addEventListener("keyup", (event) => controls.keyEvent(event))
+    })
 
 </script>
 

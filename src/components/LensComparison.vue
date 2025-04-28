@@ -1,8 +1,10 @@
 <template>
     <div class="d-flex justify-center align-start" style="max-height: 90vh; overflow-y: auto;">
 
-        <div :style="{ minWidth: (chartWidth+50)+'px' }">
-            <div>primary lens</div>
+        <div :style="{ minWidth: (chartWidth+5)+'px' }">
+            <div style="text-align: center;" class="mb-1 text-dots" :style="{ minWidth: (chartWidth+25)+'px' }">
+                primary lens
+            </div>
             <div v-for="(c, i) in colsP"
                 class="text-caption"
                 :style="{
@@ -10,26 +12,22 @@
                     border: '1px solid ' + (c === selectedColumn ? 'black' : 'white'),
                     borderRadius: '4px'
                 }">
-                <div class="d-flex align-center">
-                    <v-btn icon="mdi-tag" size="sm" density="compact" variant="plain" @click="annotate(0, i)" class="ml-1 mr-1"/>
-                    <div>
-                        <div :style="{ maxWidth: chartWidth+'px' }" class="text-dots">{{ c }}</div>
-                        <BarChart
-                            :data="getMerged(0, c)"
-                            :y-domain="[0, 1]"
-                            pattern-attr="pattern"
-                            color-attr="color"
-                            selectable
-                            @click="v => annotate(0, i, v.x)"
-                            :width="chartWidth"
-                            :height="chartHeight"/>
-                    </div>
+                <div>
+                    <div @click="annotate(0, i)" :style="{ maxWidth: chartWidth+'px' }" class="cursor-pointer text-dots hover-bold">{{ c }}</div>
+                    <BarChart
+                        :data="getMerged(0, c)"
+                        :y-domain="[0, 1]"
+                        color-attr="color"
+                        selectable
+                        @click="v => annotate(0, i, v.x)"
+                        :width="chartWidth"
+                        :height="chartHeight"/>
                 </div>
             </div>
         </div>
 
         <div>
-            <div style="min-height: 24px;">
+            <div style="min-height: 24px; text-align: center;"  class="mb-1">
                 <v-btn
                     variant="tonal"
                     rounded="sm"
@@ -40,8 +38,10 @@
             <svg ref="conns" :width="Math.floor(chartWidth*0.5)" :height="height*numCols"></svg>
         </div>
 
-        <div :style="{ minWidth: (chartWidth+50)+'px' }">
-            <div>secondary lens</div>
+        <div :style="{ minWidth: (chartWidth+5)+'px' }">
+            <div style="text-align: center;" class="mb-1 text-dots" :style="{ minWidth: (chartWidth+25)+'px' }">
+                secondary lens
+            </div>
             <div v-for="(c, i) in colsS"
                 class="text-caption"
                 :style="{
@@ -49,21 +49,16 @@
                     border: '1px solid ' + (c === selectedColumn ? 'black' : 'white'),
                     borderRadius: '4px'
                 }">
-                <div class="d-flex align-center">
-                    <div>
-                        <div :style="{ maxWidth: chartWidth+'px' }" class="text-dots">{{ c }}</div>
-                        <BarChart
-                            :data="getMerged(1, c)"
-                            :y-domain="[0, 1]"
-                            pattern-attr="pattern"
-                            color-attr="color"
-                            selectable
-                            @click="v => annotate(0, i, v.x)"
-                            :width="chartWidth"
-                            :height="chartHeight"/>
-                    </div>
-
-                    <v-btn icon="mdi-tag" size="sm" density="compact" variant="plain" @click="annotate(1, i)" class="ml-1 mr-1"/>
+                <div>
+                    <div @click="annotate(1, i)" :style="{ maxWidth: chartWidth+'px' }" class="cursor-pointer text-dots hover-bold">{{ c }}</div>
+                    <BarChart
+                        :data="getMerged(1, c)"
+                        :y-domain="[0, 1]"
+                        color-attr="color"
+                        selectable
+                        @click="v => annotate(0, i, v.x)"
+                        :width="chartWidth"
+                        :height="chartHeight"/>
                 </div>
             </div>
         </div>
@@ -195,7 +190,10 @@
         const data = DM.getData()
         DM.columns.forEach((c, i) => {
             const h = calcHistogram(data, c, DM.types[i], DM.filterStats, DM.scales[c])
-            h.forEach(d => d.pattern = true)
+            h.forEach(d => {
+                const hsl = d3.hsl(d.color)
+                d.color = hsl < 0.33 ? hsl.brighter(1.5) : hsl.darker(1.5)
+            })
             histG.set(c, h)
         })
     }

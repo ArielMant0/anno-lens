@@ -82,7 +82,6 @@ export const useControls = defineStore('controls', {
 
         keyEvent(event) {
             if (event.target.tagName === "input") return
-
             if (!isValidKey(event.key)) return
 
             if (this.recording) {

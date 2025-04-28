@@ -419,7 +419,8 @@ class DataManager {
 
                 const int = idsA.intersection(new Set(b.ids))
                 if (int.size === idsA.size || int.size > 0 &&
-                    a.columns.length === 1 && b.columns.length === 1
+                    a.columns.length === 1 && b.columns.length === 1 &&
+                    a.columns[0].name === b.columns[0].name
                 ) {
                     toMerge.push(j)
                     merged.add(b.id)
@@ -518,6 +519,12 @@ class DataManager {
 
     getAnnotations() {
         return this.annotations
+    }
+
+    clearAnnotations() {
+        this.annoMap = {}
+        this.annotations = []
+        this.callbacks.anno.forEach(f => f())
     }
 
     getAnnotationConnections() {

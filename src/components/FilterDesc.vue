@@ -1,9 +1,9 @@
 <template>
-    <div class="text-caption d-flex align-center">
+    <div class="text-caption">
         <v-btn icon="mdi-close" color="error" variant="text" density="compact" size="sm" @click="emit('clear')"/>
-        <span class="mr-1">Filter by {{ name }}: </span>
+        <span class="mr-1">{{ name }}: </span>
 
-        <span v-if="ordinal" class="d-flex align-center">
+        <div v-if="ordinal" class="d-flex align-center ml-4">
             <span v-if="data.length === 1">
                 {{ data[0] }}
                 <v-icon :color="scale(data[0])" size="small">mdi-circle</v-icon>
@@ -11,8 +11,8 @@
             <span v-else>
                 <v-icon v-for="d in data" :color="scale(d)" size="small">mdi-circle</v-icon>
             </span>
-        </span>
-        <span v-else class="d-flex align-center">
+        </div>
+        <div v-else class="d-flex align-center ml-4">
             <span>
                 {{ formatter(data[0]) }}
                 <v-icon :color="scale(data[0])" size="small">mdi-circle</v-icon>
@@ -22,7 +22,7 @@
                 {{ formatter(data[1]) }}
                 <v-icon :color="scale(data[1])" size="small">mdi-circle</v-icon>
             </span>
-        </span>
+        </div>
     </div>
 </template>
 

@@ -91,6 +91,9 @@ export const useApp = defineStore('app', {
 
         dataTime: 0,
         lensTime: 0,
+
+        showInventory: false,
+        inventoryTime: 0
     }),
 
     getters: {

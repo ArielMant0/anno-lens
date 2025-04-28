@@ -23,7 +23,7 @@
                     top: offsetY+'px',
                     pointerEvents: 'none'
                 }">
-                <g v-for="a in anno">
+                <g v-for="a in anno" :opacity="active ? 0.5 : 1">
                     <path
                         :d="d3.line().curve(d3.curveCardinalClosed)(a.polygon)"
                         :stroke-width="selectedAnnos[a.id] ? 3 : 1"

@@ -1,5 +1,20 @@
 <template>
-    <div v-if="!loading && data.length > 0" style="min-height: 90vh; max-height: 95vh; max-width: 100vw;" class="d-flex flex-column align-center justify-start mt-4">
+<div style="min-height: 90vh; max-height: 95vh; max-width: 100vw;">
+    <div style="width: 100%;" class="d-flex justify-center">
+        <v-select
+            :model-value="dataset"
+            density="compact"
+            style="max-width: 300px;"
+            label="Dataset"
+            item-title="name"
+            item-value="file"
+            hide-details
+            hide-spin-buttons
+            hide-no-data
+            @update:model-value="v => app.setDataset(v)"
+            :items="DATASETS"/>
+    </div>
+    <div v-if="!loading && data.length > 0" class="d-flex flex-column align-center justify-start mt-8">
         <div class="d-flex mt-2">
             <div v-if="int.showAttrMap" class="mr-2">
                 <div :style="{ width: w+'px' }">Attribute Map: {{ int.showAttrMap }}, Color: <b>{{ chosenColorAttr }}</b></div>
@@ -27,7 +42,7 @@
                 <div style="position: relative;">
                     <FeatureMap
                         :column="chosenColorAttr"
-                        :hide="int.filterAttr"
+                        :hide="int.filterAttr!==null"
                         :mode="refMode"
                         :lens-type="lensType"
                         :time="featureTime"
@@ -122,6 +137,8 @@
 
         <HotBar @annotate="annotate"/>
 
+        <AnnoInventory/>
+
             <!-- <div class="mt-8 d-flex flex-column align-center" style="width: 100%;">
                 <h4>Snapshots</h4>
                 <div v-for="(s, i) in snapshots" :key="'snap_'+i" class="d-flex align-center">
@@ -134,14 +151,15 @@
                 </div>
             </div> -->
     </div>
+</div>
 </template>
 
 <script setup>
     import * as d3 from 'd3'
     import ScatterPlot from './vis/ScatterPlot.vue'
     import { storeToRefs } from 'pinia'
-    import { DATA_TYPES, useApp } from '@/stores/app';
-    import { LENS_TYPE, LENS_TYPES } from '@/use/Lens';
+    import { DATA_TYPES, useApp, DATASETS } from '@/stores/app';
+    import { LENS_TYPE } from '@/use/Lens';
     import { computed, reactive, toRaw } from 'vue';
     import DM from '@/use/data-manager';
     import ColorLegend from './vis/ColorLegend.vue';
@@ -155,19 +173,14 @@
     import { useWindowSize } from '@vueuse/core';
     import HotBar from './HotBar.vue';
     import { useControls } from '@/stores/controls';
+    import AnnoInventory from './AnnoInventory.vue';
+import INV from '@/use/inventory';
 
     const app = useApp()
     const controls = useControls()
     const theme = useTheme()
 
-    const { datasetX, datasetY, datasetColor } = storeToRefs(app)
-
-    const props = defineProps({
-        dataset: {
-            type: String,
-            default: "iris"
-        }
-    })
+    const { dataset, datasetX, datasetY, datasetColor } = storeToRefs(app)
 
     const under = ref(null)
     const over = ref(null)
@@ -533,7 +546,7 @@
 
         DM.reset()
 
-        const points = await d3.csv(`data/${props.dataset}.csv`, d3.autoType)
+        const points = await d3.csv(`data/${dataset.value}.csv`, d3.autoType)
         columns.value = points.columns.filter(d => {
             const n = d.toLowerCase()
             return n !== "id" && n !== "x" && n !== "y" && !app.datasetObj.ignore.includes(d)
@@ -605,11 +618,17 @@
     onMounted(function() {
         // static hotkeys
         controls.setKeyMappingLocked(0, "s", "save", function() {
-            if (columnIndex.value > 0) {
-                setColorIndex(columnIndex.value - 1)
-                applyLens()
-            }
+            const graph = DM.getAnnotationConnections()
+            graph.links.forEach(d => {
+                const s = graph.nodes.find(n => n.id === d.source)
+                const t = graph.nodes.find(n => n.id === d.target)
+                d.coords = [[s.x, s.y], [t.x, t.y]]
+            })
+
+            INV.add(dataset.value, DM.getAnnotations(), graph.links)
+            DM.clearAnnotations()
         })
+
         controls.setKeyMappingLocked(1, "a", "prev", function() {
             if (columnIndex.value > 0) {
                 setColorIndex(columnIndex.value - 1)
@@ -669,5 +688,5 @@
         init()
     })
 
-    watch(props, init, { deep: true })
+    watch(dataset, init)
 </script>
