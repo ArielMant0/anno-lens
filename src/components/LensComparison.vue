@@ -1,35 +1,12 @@
 <template>
     <div class="d-flex justify-center align-start" style="max-height: 90vh; overflow-y: auto;">
 
-        <div :style="{ minWidth: chartWidth+'px' }">
-            <div>global</div>
-            <div v-for="(c, i) in colsG"
-                class="text-caption"
-                :style="{
-                    textAlign: 'center',
-                    opacity: connSet.size === 0 || connSet.has(c) ? 1 : 0.5,
-                    border: '1px solid ' + (c === selectedColumn ? 'black' : 'white'),
-                    borderRadius: '4px'
-                }">
-                <div :style="{ maxWidth: chartWidth+'px' }" class="text-dots">{{ c }}</div>
-                <BarChart
-                    :data="histG[i]"
-                    :y-domain="[0, 1]"
-                    color-attr="color"
-                    :width="chartWidth"
-                    :height="chartHeight"/>
-            </div>
-        </div>
-
-        <v-divider vertical class="ml-2 mr-2"></v-divider>
-
         <div :style="{ minWidth: (chartWidth+50)+'px' }">
             <div>primary lens</div>
             <div v-for="(c, i) in colsP"
                 class="text-caption"
                 :style="{
                     textAlign: 'center',
-                    opacity: connSet.has(c) ? 1 : 0.5,
                     border: '1px solid ' + (c === selectedColumn ? 'black' : 'white'),
                     borderRadius: '4px'
                 }">
@@ -38,8 +15,9 @@
                     <div>
                         <div :style="{ maxWidth: chartWidth+'px' }" class="text-dots">{{ c }}</div>
                         <BarChart
-                            :data="DM.getLens(0).hists[c]"
+                            :data="getMerged(0, c)"
                             :y-domain="[0, 1]"
+                            pattern-attr="pattern"
                             color-attr="color"
                             selectable
                             @click="v => annotate(0, i, v.x)"
@@ -68,7 +46,6 @@
                 class="text-caption"
                 :style="{
                     textAlign: 'center',
-                    opacity: connSet.has(c) ? 1 : 0.5,
                     border: '1px solid ' + (c === selectedColumn ? 'black' : 'white'),
                     borderRadius: '4px'
                 }">
@@ -76,8 +53,9 @@
                     <div>
                         <div :style="{ maxWidth: chartWidth+'px' }" class="text-dots">{{ c }}</div>
                         <BarChart
-                            :data="DM.getLens(1).hists[c]"
+                            :data="getMerged(1, c)"
                             :y-domain="[0, 1]"
+                            pattern-attr="pattern"
                             color-attr="color"
                             selectable
                             @click="v => annotate(0, i, v.x)"
@@ -136,8 +114,7 @@
     const colsP = ref([])
     const colsS = ref([])
 
-    const colsG = ref([])
-    const histG = ref([])
+    const histG = new Map()
 
     const numCols = ref(1)
     const connSet = reactive(new Set())
@@ -179,6 +156,12 @@
             .attr("stroke-width", 2)
     }
 
+    function getMerged(index, column) {
+        const data = histG.get(column).concat(DM.getLens(index).hists[column])
+        data.sort((a, b) => b.y - a.y)
+        return data
+    }
+
     function read() {
         if (props.active) {
             const p = DM.getLens(0)
@@ -210,13 +193,11 @@
 
     function readGlobal() {
         const data = DM.getData()
-        const results = [], cols = []
         DM.columns.forEach((c, i) => {
-            cols.push(c)
-            results.push(calcHistogram(data, c, DM.types[i], DM.filterStats, DM.scales[c]))
+            const h = calcHistogram(data, c, DM.types[i], DM.filterStats, DM.scales[c])
+            h.forEach(d => d.pattern = true)
+            histG.set(c, h)
         })
-        histG.value = results
-        colsG.value = cols
     }
 
     onMounted(function() {

@@ -313,7 +313,7 @@ class DataManager {
         // merge annotations
         if (exact || overlap.length > 0) {
 
-            let colSet = new Map(startCols.map(d => ([d.name, d.value])))
+            const colSet = new Map(startCols.map(d => ([d.name, d.value])))
             let idSet = new Set(lens.ids)
             let mergeCols = startCols;
 
@@ -400,6 +400,90 @@ class DataManager {
         if (addObj) {
             this.annotations.push(addObj)
             this.callbacks.anno.forEach(f => f(addObj))
+            this.checkAnnoMerges()
+        }
+    }
+
+    checkAnnoMerges() {
+        const merged = new Set()
+
+        for (let i = 0; i < this.annotations.length-1; ++i) {
+            const a = this.annotations[i]
+            if (merged.has(a.id)) continue
+
+            const idsA = new Set(a.ids)
+            const toMerge = []
+            for (let j = i+1; j < this.annotations.length; ++j) {
+                const b = this.annotations[j]
+                if (merged.has(b.id)) continue
+
+                const int = idsA.intersection(new Set(b.ids))
+                if (int.size === idsA.size || int.size > 0 &&
+                    a.columns.length === 1 && b.columns.length === 1
+                ) {
+                    toMerge.push(j)
+                    merged.add(b.id)
+                }
+            }
+
+            let idSet = new Set(idsA)
+            let mergeCols = a.columns
+            const colSet = new Map(mergeCols.map(d => ([d.name, d.value])))
+            const colCounts = new Map()
+            mergeCols.forEach(c => colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1))
+
+            toMerge.forEach(j => {
+                const b = this.annotations[j]
+                idSet = idSet.union(new Set(b.ids))
+                b.columns.forEach(c => {
+                    delete this.annoMap[c.name][b.id]
+                    if (colSet.has(c.name) && colSet.get(c.name) === columnValue) {
+                        colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1)
+                    } else {
+                        mergeCols.push({ name: c.name, color: c.color, value: c.value })
+                        colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1)
+                        colSet.set(c.name, c.value)
+                    }
+                })
+            })
+
+            let annoColor, maxCount = 0;
+            colCounts.forEach((theCount, theColor) => {
+                if (theCount > maxCount) {
+                    annoColor = theColor;
+                    maxCount = theCount
+                }
+            })
+
+            const points = this.data.filter(d => idSet.has(d.id))
+            let polygon = this._makePolygon(points)
+            const centroid = polygonCentroid(polygon)
+            polygon = polygon.map(([px, py]) => {
+                const vx = px - centroid[0]
+                const vy = py - centroid[1]
+                const norm = Math.sqrt(vx*vx + vy*vy)
+                return [px + vx / norm * 5, py + vy / norm * 5]
+            })
+
+            mergeCols.forEach(c => {
+                const n = c.name
+                if (!this.annoMap[n]) {
+                    this.annoMap[n] = {}
+                }
+                this.annoMap[n][a.id] = true
+            })
+
+            a.x = centroid[0]
+            a.y = centroid[1]
+            a.polygon = polygon
+            a.columns = mergeCols
+            a.color = annoColor
+            a.ids = Array.from(idSet.values())
+        }
+
+        if (merged.size > 0) {
+            this.annotations = this.annotations.filter(d => !merged.has(d.id))
+            this.callbacks.anno.forEach(f => f())
         }
     }
 
@@ -411,6 +495,7 @@ class DataManager {
             })
             this.annotations.splice(idx, 1)
             this.callbacks.anno.forEach(f => f())
+            this.checkAnnoMerges()
         }
     }
 
@@ -427,6 +512,7 @@ class DataManager {
                     this.callbacks.anno.forEach(f => f())
                 }
             }
+            this.checkAnnoMerges()
         }
     }
 

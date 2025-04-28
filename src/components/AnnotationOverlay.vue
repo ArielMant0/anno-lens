@@ -321,7 +321,7 @@
     }
 
     function calcLabelPositions() {
-        const data = DM.getAnnotations()
+        const data = DM.getAnnotations().map(d => Object.assign({}, d))
 
         if (data.length > 0) {
             // default size

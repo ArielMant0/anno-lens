@@ -43,6 +43,9 @@
         colorAttr: {
             type: String,
         },
+        patternAttr: {
+            type: String,
+        },
         fillColor: {
             type: String,
             default: "darkgreen"
@@ -60,6 +63,7 @@
     const getX = d => getAttr(d, props.xAttr)
     const getY = d => getAttr(d, props.yAttr)
     const getC = d => getAttr(d, props.colorAttr)
+    const getP = d => getAttr(d, props.patternAttr)
 
     function draw() {
         const svg = d3.select(el.value)
@@ -78,6 +82,24 @@
 
         const set = new Set(props.selected)
 
+        if (props.patternAttr) {
+            const p = svg.append("mask")
+                .attr("id", "diagl")
+                .attr("maskUnits", "userSpaceOnUse")
+
+            const xs = x.bandwidth()
+            const ys = (props.height-5-off) / 10
+
+            p.selectAll("path")
+                .data(d3.range(10))
+                .join("path")
+                // .attr("transform", "rotate(125)")
+                .attr("fill", "none")
+                .attr("stroke", "white")
+                .attr("stroke-width", 2)
+                .attr("d", d => `M5 ${5 + (d+1)*ys} h${xs}z`)
+        }
+
         svg.append("g")
             .selectAll("rect")
             .data(props.data)
@@ -86,7 +108,14 @@
             .attr("y", d => y(getY(d)))
             .attr("width", x.bandwidth())
             .attr("height", d => y(0) - y(getY(d)))
-            .attr("fill", d => props.colorAttr ? getC(d) : props.fillColor)
+            .attr("fill", d => {
+                const col = props.colorAttr ? getC(d) : props.fillColor
+                if (props.patternAttr && getP(d)) {
+                    return d3.color(col).brighter(1)
+                }
+                return col
+            })
+            .attr("mask", d => props.patternAttr && getP(d) ? "url(#diagl)" : null)
             .attr("opacity", d => set.size > 0 && !set.has(d.x) ? 0.5 : 1)
             .style("cursor", props.selectable ? "pointer" : null)
             .on("click", (_event, d) => {
