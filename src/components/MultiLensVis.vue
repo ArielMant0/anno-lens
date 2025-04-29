@@ -158,8 +158,10 @@
     import { useControls } from '@/stores/controls';
     import AnnoInventory from './AnnoInventory.vue';
     import INV from '@/use/inventory';
+    import { useTooltip } from '@/stores/tooltip';
 
     const app = useApp()
+    const tt = useTooltip()
     const controls = useControls()
     const theme = useTheme()
 
@@ -485,9 +487,21 @@
         }
     }
 
-    function onHover(lx, ly) {
-        updateLens(lx, ly)
-        applyLens()
+    function onHover(lx, ly, points, event) {
+        if (moveLens.value) {
+            updateLens(lx, ly)
+            applyLens()
+        } else if (app.datasetObj.meta) {
+            // show tooltip with meta info
+            if (points.length === 0) {
+                tt.hide()
+            } else {
+                const [mx, my] = d3.pointer(event, document.body)
+                const meta = app.datasetObj.meta
+                const str = points.map(d => `<div>${meta.map(m => getAttr(d, m)).join(", ")}</div>`).join("\n")
+                tt.show(str, mx, my)
+            }
+        }
     }
     function onClickLens(lx, ly, id) {
         const act = DM.getLens(activeLens.value)
@@ -521,6 +535,7 @@
         colorIndexSec.value = 0
         colorColumn.value = app.datasetColor
         colorColumnSec.value = app.datasetColor
+        activeLens.value = primaryLens.value
         moveLens.value = true
 
         ready.value = false

@@ -20,6 +20,16 @@ export const DATASETS = [
         color: "enact violence",
         type: DATA_TYPES.NOMINAL,
         ignore: ["name", "cluster"],
+        meta: ["name"]
+    },{
+        name: "Cereal",
+        file: "cereal.dr",
+        x: "x",
+        y: "y",
+        color: "ratings",
+        type: DATA_TYPES.SEQUENTIAL,
+        ignore: ["grain_name", "producer"],
+        meta: ["grain_name"]
     },{
         name: "Iris Flowers",
         file: "iris.dr",
@@ -44,6 +54,7 @@ export const DATASETS = [
         color: "Attrition",
         type: DATA_TYPES.NOMINAL,
         ignore: ["Employee ID"],
+        meta: ["Employee ID"]
     },{
         name: "Heart Disease",
         file: "heart_disease_uci.dr",
@@ -73,14 +84,6 @@ export const DATASETS = [
             Chronic_Illnesses: DATA_TYPES.NOMINAL,
             Family_History_Mental_Illness: DATA_TYPES.NOMINAL
         }
-    },{
-        name: "Cereal",
-        file: "cereal.dr",
-        x: "x",
-        y: "y",
-        color: "ratings",
-        type: DATA_TYPES.SEQUENTIAL,
-        ignore: ["grain_name", "producer"]
     }
 ]
 

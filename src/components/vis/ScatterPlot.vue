@@ -9,8 +9,8 @@
     import * as d3 from 'd3'
     import { DATA_TYPES } from '@/stores/app'
     import { watch } from 'vue'
-    import { deg2rad, findInCircle, getAttr } from '@/use/util'
-import DM from '@/use/data-manager'
+    import { findInCircle, getAttr } from '@/use/util'
+    import DM from '@/use/data-manager'
 
     const props = defineProps({
         data: {
@@ -133,13 +133,28 @@ import DM from '@/use/data-manager'
             .attr("stroke", "none")
     }
 
-    function getLensData(mx, my, num=props.numLens, radius=props.searchRadius) {
-        const res = []
-        for (let i = 1; i <= num; ++i) {
-            const ids = findInCircle(tree, mx, my, radius*i).map(d => d.id)
-            res.push(ids)
+    function drawPointsOverlay(points=[]) {
+        const svg = d3.select(overlay.value)
+        if (points.length === 0) {
+            svg.selectAll(".point").remove()
+        } else {
+            svg.selectAll(".point")
+                .data(points)
+                .join("circle")
+                .classed("point", true)
+                .attr("cx", d => x(getX(d)))
+                .attr("cy", d => y(getY(d)))
+                .attr("r", props.radius+2)
+                .attr("fill", d => getColor(d))
+                .attr("stroke", d => {
+                    const c = getColor(d)
+                    return c ? d3.color(c).darker() : "black"
+                })
         }
-        return res
+    }
+
+    function getLensData(mx, my, radius=props.searchRadius) {
+        return findInCircle(tree, mx, my, radius)
     }
 
     function getLensAt(mx, my) {
@@ -157,9 +172,12 @@ import DM from '@/use/data-manager'
         if (props.showLens && props.fixedLens) {
             const l = getLensAt(mx, my)
             drawLens(l !== null ? [l] : [])
-            return
+            const points = getLensData(mx, my, props.radius+3)
+            drawPointsOverlay(points)
+            emit("hover", mx, my, points, event)
+        } else {
+            emit("hover", mx, my)
         }
-        emit("hover", mx, my)
     }
     function onClick(event) {
         const [mx, my] = d3.pointer(event, el.value)
@@ -169,7 +187,7 @@ import DM from '@/use/data-manager'
                 emit("click-lens", mx, my, l.id)
             }
         } else {
-            const res = getLensData(mx, my)
+            const res = getLensData(mx, my).map(d => d.id)
             emit("click", res, mx, my)
         }
     }
