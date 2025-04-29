@@ -29,4 +29,7 @@
 .hover-bold:hover {
     font-weight: bold;
 }
+.hover-bg-grey:hover {
+    background-color: #efefef;
+}
 </style>

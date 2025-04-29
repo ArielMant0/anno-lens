@@ -23,13 +23,14 @@
                     top: offsetY+'px',
                     pointerEvents: 'none'
                 }">
-                <g v-for="a in anno" :opacity="active && !selectedAnnos[a.id] ? 0.5 : 1">
+                <g v-for="a in anno" :opacity="active && !selectedAnnos[a.id] ? 0.75 : 1">
                     <path v-if="a.polygon.length > 1"
                         :d="d3.line().curve(d3.curveCardinalClosed)(a.polygon)"
                         :stroke-width="selectedAnnos[a.id] ? 3 : 1"
-                        stroke="black"
+                        :stroke="a.color ? a.color : 'black'"
                         stroke-dasharray="4 2"
-                        fill="none">
+                        fill-opacity="0.25"
+                        :fill="selectedAnnos[a.id] ? (a.color ? a.color : 'black') : 'none'">
                     </path>
                 </g>
             </svg>
@@ -64,7 +65,7 @@
                         :style="{
                             border: (selectedAnnos[a.id] ? 2 : 1) + 'px solid black',
                             borderRadius: '4px',
-                            opacity: selectedAnnos[a.id] ? 1 : 0.66,
+                            opacity: selectedAnnos[a.id] ? 1 : 0.75,
                             overflowX: 'hidden',
                             overflowY: 'auto',
                             minHeight: (annoMeta.sizeL-2)+'px',
@@ -74,7 +75,7 @@
                             maxWidth: padding+'px',
                         }">
 
-                        <div v-for="c in a.columns" class="d-flex hover-italic">
+                        <div v-for="c in a.columns" class="d-flex">
                             <v-btn
                                 color="error"
                                 variant="text"
@@ -85,9 +86,10 @@
                                 @click="DM.removeAnnotationColumn(a.id, c.name)"/>
 
                             <div
-                                class="text-dots"
+                                class="text-dots cursor-pointer"
                                 @pointerenter="hoverAnnoCol = c.name"
                                 @pointerleave="hoverAnnoCol = null"
+                                @click="selectColor(c.name)"
                                 :style="{
                                     color: c.color,
                                     fontWeight: selectedColums[c.name] ? 'bold' : 'normal',
@@ -116,7 +118,7 @@
                         :style="{
                             border: (selectedAnnos[a.id] ? 2 : 1) + 'px solid black',
                             borderRadius: '4px',
-                            opacity: selectedAnnos[a.id] ? 1 : 0.66,
+                            opacity: selectedAnnos[a.id] ? 1 : 0.75,
                             overflowX: 'hidden',
                             overflowY: 'auto',
                             minHeight: (annoMeta.sizeR-2)+'px',
@@ -126,7 +128,7 @@
                             maxWidth: padding+'px',
                         }">
 
-                        <div v-for="c in a.columns" class="d-flex hover-italic">
+                        <div v-for="c in a.columns" class="d-flex">
                             <v-btn
                                 color="error"
                                 variant="text"
@@ -137,9 +139,10 @@
                                 @click="DM.removeAnnotationColumn(a.id, c.name)"/>
 
                             <div
-                                class="text-dots"
+                                class="text-dots cursor-pointer"
                                 @pointerenter="hoverAnnoCol = c.name"
                                 @pointerleave="hoverAnnoCol = null"
+                                @click="selectColor(c.name)"
                                 :style="{
                                     color: c.color,
                                     fontWeight: selectedColums[c.name] ? 'bold' : 'normal',
@@ -201,6 +204,8 @@
         },
     })
 
+    const emit = defineEmits(["select-color"])
+
     const scroll = useWindowScroll()
 
     const annolinks = ref(null)
@@ -253,6 +258,10 @@
         return obj
     })
 
+    function selectColor(name) {
+        emit("select-color", name)
+    }
+
 
     function getAnnotationPos(id, usePadding=false) {
         const pos = annoPos.value[id]
@@ -295,11 +304,11 @@
 
         actx.globalAlpha = 1
         actx.lineWidth = 2
-        actx.strokeStyle = "black"
 
         anno.value.forEach(a => {
             if (selectedAnnos.value[a.id]) {
                 // draw links that connect annotations labels and polygons
+                actx.strokeStyle = a.color ? a.color : "black"
                 actx.beginPath()
                 const coords = getAnnotationPos(a.id)
                 const off = 0.5 * (annoPos.value[a.id].side === "left" ? annoMeta.sizeL : annoMeta.sizeR)

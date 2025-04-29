@@ -67,7 +67,7 @@
         },
     })
 
-    const emit = defineEmits(["click-lens", "click-mini"])
+    const emit = defineEmits(["click-lens", "click-mini", "click-label"])
 
     const el = useTemplateRef("el")
 
@@ -150,6 +150,9 @@
         const prim = lenses[0]
         const sec = lenses.length > 1 ? lenses[1] : null
 
+        const ttx = tx.value
+        const tty = ty.value
+
         const getDegrees = (ax, ay, bx, by, r, idx) => {
             const vx = ax - bx
             const vy = ay - by
@@ -159,10 +162,18 @@
             const ny = by + (-vy / norm) * r
 
             let m;
-            if (norm > r*2 + props.radius*2) {
-                m = idx === 0 ? 0 : 180
+            const minDist = r + props.radius*2 + 25
+
+            if (bx+r+props.radius*2+15 > ttx+width.value-offX*2) {
+                m = 180;
+            } else if (bx-r-props.radius*2-15 < ttx) {
+                m = 0;
             } else {
-                m = (360 + rad2deg(Math.atan2(ny-by, nx-bx))) % 360
+                if (norm < minDist && (Math.abs(vx) < minDist || Math.abs(vy) < minDist)) {
+                    m = (360 + rad2deg(Math.atan2(ny-by, nx-bx))) % 360
+                } else {
+                    m = idx === 0 ? 0 : 180
+                }
             }
 
             const onright = m <= 90 || m >= 270
@@ -188,9 +199,6 @@
             return [(360 + m + (onright ? -55 : 55)) % 360, m, (360 + m + (onright ? 55 : -55)) % 360]
         }
 
-        const ttx = tx.value
-        const tty = ty.value
-
         const degrees = [
             sec !== null ?
                 getDegrees(ttx+sec.x, tty+sec.y, ttx+prim.x, tty+prim.y, prim.radius, 0).map(deg2rad) :
@@ -200,29 +208,30 @@
                 [],
         ]
 
-        const selectedColumn = props.activeLens === 0 ?
-            prim.getResultColumn(props.mode, props.indexPrimary) :
-            sec.getResultColumn(props.mode, props.indexSecondary)
+        const colorColumn = prim.getResultColumn(props.mode, props.indexPrimary)
+        const selectedColumn = props.activeLens === 1 ?
+            sec.getResultColumn(props.mode, props.indexSecondary) :
+            colorColumn
 
         // draw additional vis
         switch(props.drawMode) {
             default:
             case "scatter":
-                drawScatter(prim, degrees[0], 0, selectedColumn)
+                drawScatter(prim, degrees[0], 0, selectedColumn, colorColumn)
                 if (sec !== null) {
-                    drawScatter(sec, degrees[1], 1, selectedColumn)
+                    drawScatter(sec, degrees[1], 1, selectedColumn, colorColumn)
                 }
                 break
             case "chart":
-                drawMicroVis(prim, degrees[0], 0, selectedColumn)
+                drawMicroVis(prim, degrees[0], 0, selectedColumn, colorColumn)
                 if (sec !== null) {
-                    drawMicroVis(sec, degrees[1], 1, selectedColumn)
+                    drawMicroVis(sec, degrees[1], 1, selectedColumn, colorColumn)
                 }
                 break
         }
     }
 
-    function drawScatter(l, radian, index, selectedColumn) {
+    function drawScatter(l, radian, index, selectedColumn, colorColumn) {
 
         const svg = d3.select(el.value)
 
@@ -255,7 +264,7 @@
 
             const g = svg.append("g")
                 .attr("font-size", 12)
-                .attr("opacity", active && name === selectedColumn ? 1 : 0.7)
+                .attr("opacity", name === selectedColumn ? 1 : 0.7)
                 .on("pointerenter", function() {
                     d3.select(this).attr("opacity", 1)
                 })
@@ -269,8 +278,7 @@
                 .attr("r", props.radius)
                 .attr("fill", "white")
                 .attr("stroke", l.color ? l.color : "black")
-                .attr("stroke-width", name === selectedColumn ? 3 : 2)
-
+                .attr("stroke-width", name === colorColumn ? 3 : 2)
                 .on("click", function() {
                     emit("click-mini", index, ci[i])
                 })
@@ -306,6 +314,10 @@
                 .attr("paint-order", "stroke")
                 .attr("font-weight", name === selectedColumn ? "bold" : null)
                 .text(name)
+                .style("cursor", "pointer")
+                .on("click", function() {
+                    emit("click-label", index, ci[i])
+                })
         })
     }
 
@@ -400,6 +412,10 @@
                 .attr("paint-order", "stroke")
                 .attr("font-weight", name === selectedColumn ? "bold" : null)
                 .text(name)
+                .style("cursor", "pointer")
+                .on("click", function() {
+                    emit("click-label", index, ci[i])
+                })
         })
     }
 

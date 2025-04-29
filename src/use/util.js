@@ -2,6 +2,8 @@ import { DATA_TYPES, useApp } from "@/stores/app";
 import { bin, deviation, extent, group, interpolatePlasma, mean, scaleOrdinal, scaleQuantile, scaleSequential, schemeBlues, schemeCategory10, schemeOrRd } from "d3";
 import DM from "./data-manager";
 
+let _UID = 1;
+
 export function getDataType(d, name) {
     const app = useApp()
     if (app.datasetObj.types && app.datasetObj.types[name]) {
@@ -119,7 +121,7 @@ export function calcHistogram(data, column, type, stats, scale) {
                 (data)
 
             const list = []
-            tmp.forEach(d => list.push({ x: d.x0, y: d.length / data.length, color: scale(d.x0) }))
+            tmp.forEach(d => list.push({ x: d.x0, x1: d.x1, y: d.length / data.length, color: scale(d.x0) }))
             return list
         }
     }
@@ -199,4 +201,8 @@ export function euclidean(x0, y0, x1, y1) {
 export function capitalize(str) {
     if (!str || str.length === 0) return ""
     return str[0].toUpperCase() + (str.length > 1 ? str.slice(1, str.length) : "")
+}
+
+export function uid(namespace="u_") {
+    return namespace+(_UID++)
 }

@@ -338,7 +338,7 @@ class DataManager {
             let mergeCols = startCols;
 
             const colCounts = new Map()
-            colCounts.set(color, 1)
+            mergeCols.forEach(c => colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1))
 
             overlap.forEach(d => {
                 this.annotations.splice(this.annotations.findIndex(a => a.id === d.id), 1)
@@ -358,7 +358,7 @@ class DataManager {
             let annoColor, maxCount = 0;
             colCounts.forEach((theCount, theColor) => {
                 if (theCount > maxCount) {
-                    annoColor = theColor;
+                    annoColor = theColor
                     maxCount = theCount
                 }
             })

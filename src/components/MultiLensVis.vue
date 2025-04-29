@@ -59,7 +59,15 @@
                 <div class="d-flex justify-space-between">
                     <div>
                         <div class="d-flex text-caption">
-                            <div>{{ chosenColorAttr }} <span v-if="!int.fromLens">(default)</span></div>
+                            <div class="d-flex align-center">
+                                <v-btn size="sm" rounded="sm" density="compact" icon="mdi-magnify" variant="text" @click="editColor = true"/>
+                                <div class="ml-1 mr-1">
+                                    {{ chosenColorAttr }}
+                                    <span v-if="!int.fromLens">(default)</span>
+                                    <span v-if="colorOverride">(override)</span>
+                                </div>
+                                <v-btn v-if="colorOverride" size="sm" rounded="sm" density="compact" icon="mdi-delete" color="error" variant="text" @click="setColorOverride('')"/>
+                            </div>
                             <v-divider v-if="int.filterAttr !== null" vertical class="ml-2 mr-2"></v-divider>
                             <FilterDesc v-if="int.filterAttr !== null"
                                 :data="int.filterValues"
@@ -87,6 +95,10 @@
                         style="display: block;"
                         class="mt-5"
                         :scale="featureScale"/>
+
+                    <div v-else style="width: 200px; text-align: center;" class="mt-5">
+                        <v-progress-circular indeterminate size="30"></v-progress-circular>
+                    </div>
                 </div>
 
                 <div>
@@ -101,10 +113,12 @@
 
         </div>
 
+        <ColorPicker v-model="editColor" @select="setColorOverride"/>
 
         <AnnotationOverlay
             target-id="scatter-main"
             :selected="chosenColorAttr"
+            @select-color="setColorOverride"
             :time="annoTime"
             :active="!moveLens"/>
 
@@ -118,6 +132,7 @@
             :active-lens="activeLens"
             @click-lens="onClickLensOverlay"
             @click-mini="onClickMini"
+            @click-label="onClickLabel"
             :indices="[0, 1]"/>
 
         <HotBar @annotate="annotate"/>
@@ -161,6 +176,7 @@
     import AnnoInventory from './AnnoInventory.vue';
     import INV from '@/use/inventory';
     import { useTooltip } from '@/stores/tooltip';
+    import ColorPicker from './ColorPicker.vue';
 
     const app = useApp()
     const tt = useTooltip()
@@ -189,6 +205,8 @@
 
     const over = ref(null)
     const scatter = ref(null)
+
+    const editColor = ref(null)
 
     const wSize = useWindowSize()
     const w = computed(() => {
@@ -296,28 +314,11 @@
         return d => d < 1 ? "less relevant" : "more relevant"
     })
 
-    function saveHistory() {
-        if (!historyUpdated) return
-        snapshots.value.push({
-            time: Date.now(),
-            dataset: app.dataset,
-            lens: lensType.value,
-            index: colorIndex.value,
-            mode: refMode.value,
-            positions: int.attrLensPos,
-            filter: {
-                attr: int.filterAttr,
-                type: int.filterType,
-                values: int.filterValues,
-            },
-            data: historyData.value,
-        })
-        history.clear()
-        historyUpdated = false
-        int.attrLensPos = {}
-        columns.value.forEach(c => int.attrLensPos[c] = [])
-        data.value.forEach(d => columns.value.forEach(c => d.visited[c] = 0))
-        lensTime.value = Date.now()
+    function setColorOverride(c="") {
+        if (c !== colorOverride.value) {
+            colorOverride.value = c
+            applyLens()
+        }
     }
 
     function setActiveLens(i) {
@@ -531,7 +532,6 @@
     }
     function onClickMini(lensIndex, columnIndex) {
         const lens = DM.getLens(lensIndex)
-        console.log(lensIndex, columnIndex)
         if (lensIndex === primaryLens.value) {
             colorIndex.value = columnIndex
             colorColumn.value = lens.getResultColumn(refMode.value, columnIndex)
@@ -540,6 +540,16 @@
             colorColumnSec.value = lens.getResultColumn(refMode.value, columnIndex)
         }
         lensTime.value = Date.now()
+    }
+
+    function onClickLabel(lensIndex, columnIndex) {
+        DM.annotate(
+            lensIndex,
+            columnIndex,
+            refMode.value,
+            lensType.value,
+            controls.getColor(5)
+        )
     }
 
     async function init() {
@@ -562,7 +572,7 @@
         colorColumn.value = app.datasetColor
         colorColumnSec.value = app.datasetColor
         activeLens.value = primaryLens.value
-        moveLens.value = true
+        moveLens.value = false
 
         ready.value = false
 
@@ -618,8 +628,12 @@
         loading.value = false
 
         data.value = points
+
         dataTime.value = Date.now()
         annoTime.value = Date.now()
+
+        updateLens(lensRadius.value, lensRadius.value, false)
+        applyLens()
 
         refreshFeatureMaps()
     }
@@ -645,13 +659,13 @@
 
     onMounted(function() {
         // static hotkeys
-        controls.setKeyMappingLocked(0, "a", "up", function() {
+        controls.setKeyMappingLocked(0, "a", "up/left", function() {
             if (columnIndex.value > 0) {
                 setColorIndex(columnIndex.value - 1)
                 applyLens()
             }
         })
-        controls.setKeyMappingLocked(1, "d", "down", function() {
+        controls.setKeyMappingLocked(1, "d", "down/right", function() {
             setColorIndex(columnIndex.value + 1)
             applyLens()
         })

@@ -96,7 +96,7 @@ export const useApp = defineStore('app', {
         colorIndex: 0,
         colorIndexSec: 0,
 
-        moveLens: true,
+        moveLens: false,
         hoverX: 0,
         hoverY: 0,
 

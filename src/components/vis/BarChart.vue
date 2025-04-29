@@ -4,7 +4,7 @@
 
 <script setup>
     import { useTooltip } from '@/stores/tooltip';
-    import { getAttr } from '@/use/util';
+    import { getAttr, uid } from '@/use/util';
     import * as d3 from 'd3'
     import { onMounted } from 'vue';
 
@@ -84,14 +84,19 @@
             .range([props.height-5-off, 5])
 
         const set = new Set(props.selected)
+        const patternUIDs = new Map()
 
         if (props.patternAttr) {
 
             const xs = x.bandwidth()
-            // x.domain().forEach(xi => {
+            const ys = Math.floor((props.height-10-off) / 5) + 1
+
+            x.domain().forEach(xi => {
+
+                patternUIDs.set(xi, uid("pb_"))
 
                 const p = svg.append("mask")
-                    .attr("id", "pattern")
+                    .attr("id", patternUIDs.get(xi))
                     .attr("maskUnits", "userSpaceOnUse")
                     .attr("x", "0%")
                     .attr("y", "0%")
@@ -99,23 +104,23 @@
                     .attr("height", "100%")
                 // .attr("maskContentUnits", "objectBoundingBox")
 
-                p.append("rect")
-                    .attr("x", 5)
-                    .attr("y", 5)
-                    .attr("width", xs+5)
-                    .attr("height", props.height-10-off)
-                    .attr("fill", "white")
+                // p.append("rect")
+                //     .attr("x", 5)
+                //     .attr("y", 5)
+                //     .attr("width", xs+5)
+                //     .attr("height", props.height-10-off)
+                //     .attr("fill", "white")
 
-            //     p.selectAll("rect")
-            //         .data(d3.range(7))
-            //         .join("rect")
-            //         .attr("fill", "white")
-            //         .attr("stroke", "none")
-            //         .attr("x", x(xi))
-            //         .attr("y", d => d*ys)
-            //         .attr("width", xs)
-            //         .attr("height", 3)
-            // })
+                p.selectAll("rect")
+                    .data(d3.range(0, ys))
+                    .join("rect")
+                    .attr("fill", "white")
+                    .attr("stroke", "none")
+                    .attr("x", x(xi))
+                    .attr("y", d => d*5)
+                    .attr("width", xs)
+                    .attr("height", 4)
+            })
         }
 
         svg.append("g")
@@ -123,9 +128,9 @@
             .data(props.data)
             .join("rect")
             .attr("x", d => x(getX(d)))
-            .attr("y", d => y(getY(d)))
+            .attr("y", d => Math.min(y(0)-2, y(getY(d))))
             .attr("width", x.bandwidth())
-            .attr("height", d => y(0) - y(getY(d)))
+            .attr("height", d => Math.max(2, y(0) - y(getY(d))))
             .attr("fill", d => {
                 const col = props.colorAttr ? getC(d) : props.fillColor
                 if (props.patternAttr && getP(d)) {
@@ -134,7 +139,7 @@
                 }
                 return col
             })
-            .attr("mask", d => props.patternAttr && getP(d) ? `url(#pattern)` : null)
+            .attr("mask", d => props.patternAttr && getP(d) ? `url(#${patternUIDs.get(getX(d))})` : null)
             .attr("opacity", d => set.size > 0 && !set.has(getX(d)) ? 0.5 : 1)
             .style("cursor", props.selectable ? "pointer" : null)
             .on("pointerenter", function() {
@@ -144,7 +149,12 @@
             })
             .on("pointermove", function(event, d) {
                 const [mx, my] = d3.pointer(event, document.body)
-                tt.show(`${getX(d)}: ${getY(d).toFixed(2)}`, mx, my)
+                const extra = props.title ? props.title+" ➡ " : ""
+                if (d.x1) {
+                    tt.show(`${extra}${getX(d)} - ${d.x1}: ${getY(d).toFixed(2)}`, mx, my)
+                } else {
+                    tt.show(`${extra}${getX(d)}: ${getY(d).toFixed(2)}`, mx, my)
+                }
             })
             .on("pointerleave", function() {
                 if (props.selectable) {
