@@ -102,6 +102,7 @@ export const useControls = defineStore('controls', {
                 event.preventDefault();
                 m.callback(m)
                 this.trigger = m.id
+                setTimeout(() => this.trigger = null, 500)
             } else {
                 this.trigger = null
             }
@@ -120,7 +121,7 @@ export const useControls = defineStore('controls', {
                     return
                 }
                 // cancel if not a valid key (like only shift or control)
-                if (!isValidKey(key)) return
+                if (key.length > 1 || !isValidKey(key)) return
 
                 let m;
                 if (this.mappings[this.recordTarget]) {

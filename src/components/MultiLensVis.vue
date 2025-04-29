@@ -693,11 +693,11 @@
 
         // annotation hotkeys
         const annoFunc = keymap => annotate(keymap.color)
-        controls.setKeyMapping(5, "1", "group 1", annoFunc)
-        controls.setKeyMapping(6, "2", "group 2", annoFunc)
-        controls.setKeyMapping(7, "3", "group 3", annoFunc)
-        controls.setKeyMapping(8, "4", "group 4", annoFunc)
-        controls.setKeyMapping(9, "5", "group 5", annoFunc)
+        controls.setKeyMapping(5, "1", "rare", annoFunc)
+        controls.setKeyMapping(6, "2", "common", annoFunc)
+        controls.setKeyMapping(7, "3", "interesting", annoFunc)
+        controls.setKeyMapping(8, "4", "weird", annoFunc)
+        controls.setKeyMapping(9, "5", "misc", annoFunc)
 
         window.addEventListener("wheel", function(event) {
             if (!event.ctrlKey) return

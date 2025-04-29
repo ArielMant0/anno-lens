@@ -49,7 +49,8 @@
                     :style="{
                         textAlign: 'center',
                         border: '1px solid ' + (colsOtherP[i] === selectedColumn ? 'black' : 'white'),
-                        borderRadius: '4px'
+                        borderRadius: '4px',
+                        backgroundColor: '#eee'
                     }">
                     <div>
                         <div :style="{ maxWidth: (chartWidth-5)+'px' }" class="cursor-pointer text-dots hover-bold">
@@ -108,7 +109,8 @@
                     :style="{
                         textAlign: 'center',
                         border: '1px solid ' + (colsOtherS[i] === selectedColumn ? 'black' : 'white'),
-                        borderRadius: '4px'
+                        borderRadius: '4px',
+                        backgroundColor: '#eee'
                     }">
                     <div>
                         <div :style="{ maxWidth: (chartWidth-5)+'px' }" class="cursor-pointer text-dots hover-bold">

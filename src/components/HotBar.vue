@@ -1,7 +1,13 @@
 <template>
-    <v-sheet density="compact" class="pa-1 hotbar d-flex align-center justify-center" rounded elevation="4">
-        <div v-for="(m, i) in mappings" :key="'keymap:'+i" :style="{ marginRight: i === 0 ? '4px' : '0', marginLeft: i > 1 ? '4px' : '0' }">
-            <div class="keylabel text-dots" :style="{ width: '50px', maxWidth: '50px', minHeight: '1.5em' }">
+    <v-sheet density="compact" class="pa-2 hotbar d-flex align-center justify-center" rounded elevation="4">
+
+        <div v-for="(m, i) in mappings"
+            :key="'km:'+m.id"
+            :style="{
+                marginRight: i === 0 ? '4px' : '0',
+                marginLeft: i > 1 ? '4px' : '0',
+            }">
+            <div class="keylabel text-dots" :style="{ minWidth: '75px', maxWidth: '75px', minHeight: '1em' }">
                 <input v-if="m && !m.locked" v-model="m.label" style="max-width: 100%; text-align: center;" :title="m.label">
                 <span v-else-if="m && m.locked" style="max-width: 100%; text-align: center;" :title="m.label">{{ m.label }}</span>
                 <span v-else style="max-width: 100%; text-align: center;"></span>
@@ -12,7 +18,8 @@
                 :color="m && m.color ? m.color : '#ddd'"
                 density="compact"
                 stacked
-                :style="{ maxWidth: '50px', minWidth: '50px', fontSize: '12px' }"
+                :class="{ aPulse: m && m.id === trigger }"
+                :style="{ maxWidth: '100%', fontSize: '12px' }"
                 @click="annotate(m)"
                 @contextmenu.prevent="record(i)">
                 <div v-if="m && m.key">
@@ -32,7 +39,7 @@
     import { toast } from 'vue3-toastify';
 
     const controls = useControls()
-    const { mappings, recording, recordMessage } = storeToRefs(controls)
+    const { mappings, recording, recordMessage, trigger } = storeToRefs(controls)
 
     let toastId = null;
 

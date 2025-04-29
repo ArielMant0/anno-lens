@@ -32,4 +32,40 @@
 .hover-bg-grey:hover {
     background-color: #efefef;
 }
+
+.aPulse {
+    animation: pulse 500ms cubic-bezier(0.33, 1, 0.68, 1) infinite;
+}
+.aSat {
+    animation: sat 500ms cubic-bezier(0.33, 1, 0.68, 1) infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.15);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes sat {
+    0% {
+        filter: saturate(1)
+    }
+
+    50% {
+        filter: saturate(1.5)
+    }
+
+    100% {
+        filter: saturate(1)
+    }
+}
+
 </style>

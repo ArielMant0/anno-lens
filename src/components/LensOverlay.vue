@@ -74,7 +74,7 @@
     const tx = ref(0)
     const ty = ref(0)
 
-    let offX = 25, offY = 25
+    let offX = 15, offY = 15
     let tw = 0, th = 0;
 
     const width = ref(100)
