@@ -7,10 +7,14 @@
 
 <script setup>
     import * as d3 from 'd3'
-    import { DATA_TYPES } from '@/stores/app'
+    import { DATA_TYPES, useApp } from '@/stores/app'
     import { watch } from 'vue'
     import { findInCircle, getAttr } from '@/use/util'
     import DM from '@/use/data-manager'
+    import { storeToRefs } from 'pinia'
+
+    const app = useApp()
+    const { hoverX, hoverY } = storeToRefs(app)
 
     const props = defineProps({
         data: {
@@ -167,11 +171,16 @@
         return null
     }
 
+    function onHover() {
+        const points = getLensData(hoverX.value, hoverY.value, props.radius+3)
+        drawPointsOverlay(points)
+        emit("hover", hoverX.value, hoverY.value, points, event)
+    }
     function onMove(event) {
         const [mx, my] = d3.pointer(event, el.value)
         if (props.showLens && props.fixedLens) {
-            const l = getLensAt(mx, my)
-            drawLens(l !== null ? [l] : [])
+            // const l = getLensAt(mx, my)
+            // drawLens(l !== null ? [l] : [])
             const points = getLensData(mx, my, props.radius+3)
             drawPointsOverlay(points)
             emit("hover", mx, my, points, event)
@@ -263,11 +272,11 @@
 
     onMounted(init)
 
-    watch(() => props.fixedLens, function(val) {
-        if (val === false) {
-            drawLens()
-        }
-    })
+    // watch(() => props.fixedLens, function(val) {
+    //     if (val === false) {
+    //         drawLens()
+    //     }
+    // })
     watch(() => ([props.colorAttr, props.colorScale, props.colorType]), function() {
         makeColorScale()
         updateSelected()
@@ -279,6 +288,8 @@
         makeColorScale()
         updateSelected()
     })
+
+    watch(() => ([hoverX.value, hoverY.value]), onHover)
 </script>
 
 <style scoped>

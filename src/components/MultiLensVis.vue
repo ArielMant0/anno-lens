@@ -47,8 +47,8 @@
                         show-lens
                         :fixed-lens="!moveLens"
                         :highlight-color="theme.current.value.colors.primary"
-                        @hover="onHover"
-                        @click-lens="onClickLens"/>
+                        @click-lens="onClickLens"
+                        @hover="onHover"/>
 
                     <svg ref="over" :width="w" :height="h" style="position: absolute; top: 0; left: 0; pointer-events: none;"></svg>
                 </div>
@@ -116,6 +116,8 @@
             :index-primary="colorIndex"
             :index-secondary="colorIndexSec"
             :active-lens="activeLens"
+            @click-lens="onClickLensOverlay"
+            @click-mini="onClickMini"
             :indices="[0, 1]"/>
 
         <HotBar @annotate="annotate"/>
@@ -174,6 +176,8 @@
         activeLens,
         colorIndex,
         colorIndexSec,
+
+        moveLens,
 
         annoTime,
         featureTime,
@@ -266,8 +270,6 @@
 
         return datasetColor.value
     })
-
-    const moveLens = ref(true)
 
     const lensType = ref(LENS_TYPE.RARE)
     const numDetails = reactive({
@@ -496,7 +498,7 @@
             if (points.length === 0) {
                 tt.hide()
             } else {
-                const [mx, my] = d3.pointer(event, document.body)
+                const [mx, my] = event ? d3.pointer(event, document.body) : [lx, ly]
                 const meta = app.datasetObj.meta
                 const str = points.map(d => `<div>${meta.map(m => getAttr(d, m)).join(", ")}</div>`).join("\n")
                 tt.show(str, mx, my)
@@ -514,6 +516,30 @@
         updateLens(lx, ly)
         applyLens()
         lensMoveTime.value = Date.now()
+    }
+    function onClickLensOverlay(id) {
+        const act = DM.getLens(activeLens.value)
+        if (act.id !== id) {
+            setActiveLens(DM.getLensIndex(id))
+            moveLens.value = true
+        } else {
+            moveLens.value = !moveLens.value
+        }
+        updateLens(act.x, act.y)
+        applyLens()
+        lensMoveTime.value = Date.now()
+    }
+    function onClickMini(lensIndex, columnIndex) {
+        const lens = DM.getLens(lensIndex)
+        console.log(lensIndex, columnIndex)
+        if (lensIndex === primaryLens.value) {
+            colorIndex.value = columnIndex
+            colorColumn.value = lens.getResultColumn(refMode.value, columnIndex)
+        } else {
+            colorIndexSec.value = columnIndex;
+            colorColumnSec.value = lens.getResultColumn(refMode.value, columnIndex)
+        }
+        lensTime.value = Date.now()
     }
 
     async function init() {

@@ -4,7 +4,9 @@
             :width="width"
             :height="height"
             :style="{
-                pointerEvents: active ? 'painted' : 'none'
+                left: tx+'px',
+                top: ty+'px',
+                pointerEvents: moveLens ? 'none' : 'painted'
             }">
         </svg>
     </Teleport>
@@ -13,11 +15,15 @@
 <script setup>
     import * as d3 from 'd3'
     import DM from '@/use/data-manager'
-    import { useWindowScroll, useWindowSize } from '@vueuse/core'
+    import { useWindowScroll } from '@vueuse/core'
     import { onMounted, useTemplateRef, watch } from 'vue'
     import { deg2rad, getAttr, rad2deg } from '@/use/util'
+    import { useApp } from '@/stores/app'
+    import { storeToRefs } from 'pinia'
 
-    const active = defineModel()
+    const app = useApp()
+    const { moveLens } = storeToRefs(app)
+
     const props = defineProps({
         target: {
             type: String,
@@ -61,11 +67,17 @@
         },
     })
 
+    const emit = defineEmits(["click-lens", "click-mini"])
+
     const el = useTemplateRef("el")
 
-    let tx = 0, ty = 0, tw = 0, th = 0;
+    const tx = ref(0)
+    const ty = ref(0)
 
-    const { width } = useWindowSize()
+    let offX = 150, offY = 100
+    let tw = 0, th = 0;
+
+    const width = ref(100)
     const height = ref(100)
 
     const scroll = useWindowScroll()
@@ -80,9 +92,10 @@
     function update() {
         const el = document.querySelector("#"+props.target)
         const rect = el.getBoundingClientRect()
-        height.value = rect.top + rect.height + 200
-        tx = rect.left
-        ty = rect.top
+        width.value = rect.width + offX*2
+        height.value = rect.height + offY*2
+        tx.value = rect.left - offX
+        ty.value = rect.top - offY
         tw = rect.width
         th = rect.height
         // draw lenses
@@ -99,14 +112,22 @@
         const svg = d3.select(el.value)
         svg.selectAll("*").remove()
 
+        svg.on("pointermove", function(event) {
+            const el = document.querySelector("#"+props.target)
+            const [mx, my] = d3.pointer(event, el)
+            app.hoverX = mx
+            app.hoverY = my
+        })
+
         if (lenses.length === 0) return
+
 
         const lg = svg.append("g")
             .selectAll(".lens")
             .data(lenses)
             .join("g")
             .classed("lens", true)
-            .attr("transform", d => `translate(${tx+d.x},${ty+d.y})`)
+            .attr("transform", d => `translate(${offX+d.x},${offY+d.y})`)
 
         lg.append("circle")
             .attr("cx", 0)
@@ -114,7 +135,17 @@
             .attr("r", d => d.radius)
             .attr("stroke", d => d.color ? d.color : "black")
             .attr("fill", "none")
+            .attr("fill-opacity", 0.1)
             .attr("stroke-width", 2)
+            .on("pointerenter", function(_event, d) {
+                d3.select(this).attr("fill", d.color ? d.color : "black")
+            })
+            .on("pointerleave", function() {
+                d3.select(this).attr("fill", "none")
+            })
+            .on("click", function(_event, d) {
+                emit("click-lens", d.id)
+            })
 
         const prim = lenses[0]
         const sec = lenses.length > 1 ? lenses[1] : null
@@ -157,12 +188,15 @@
             return [(360 + m + (onright ? -55 : 55)) % 360, m, (360 + m + (onright ? 55 : -55)) % 360]
         }
 
+        const ttx = tx.value
+        const tty = ty.value
+
         const degrees = [
             sec !== null ?
-                getDegrees(tx+sec.x, ty+sec.y, tx+prim.x, ty+prim.y, prim.radius, 0).map(deg2rad) :
+                getDegrees(ttx+sec.x, tty+sec.y, ttx+prim.x, tty+prim.y, prim.radius, 0).map(deg2rad) :
                 [305, 0, 55].map(deg2rad),
             sec !== null ?
-                getDegrees(tx+prim.x, ty+prim.y, tx+sec.x, ty+sec.y, sec.radius, 1).map(deg2rad) :
+                getDegrees(ttx+prim.x, tty+prim.y, ttx+sec.x, tty+sec.y, sec.radius, 1).map(deg2rad) :
                 [],
         ]
 
@@ -200,8 +234,8 @@
 
         if (!ldata || ldata.length === 0) return
 
-        const dx = l.x + tx
-        const dy = l.y + ty
+        const dx = l.x + offX
+        const dy = l.y + offY
         const r = l.radius + props.radius + 5
 
         // do not draw lens if the radius is too small
@@ -223,6 +257,7 @@
                 .attr("font-size", 12)
                 .attr("opacity", active && name === selectedColumn ? 1 : 0.7)
 
+
             g.append("circle")
                 .attr("cx", dx + diffX)
                 .attr("cy", dy + diffY)
@@ -230,6 +265,9 @@
                 .attr("fill", "white")
                 .attr("stroke", l.color ? l.color : "black")
                 .attr("stroke-width", name === selectedColumn ? 3 : 2)
+                .on("click", function() {
+                    emit("click-mini", index, ci[i])
+                })
 
             const scale = DM.scales[name]
             const points = l.getResultData()
@@ -242,11 +280,11 @@
                 .join("circle")
                 .attr("cx", d => {
                     const px = DM.x(d.x)
-                    return px + tx + diffX + (l.x - px) * sf
+                    return px + offX + diffX + (l.x - px) * sf
                 })
                 .attr("cy", d => {
                     const py = DM.y(d.y)
-                    return py + ty + diffY + (l.y - py) * sf
+                    return py + offY + diffY + (l.y - py) * sf
                 })
                 .attr("r", 3)
                 .attr("fill", d => scale(getAttr(d, name)))
@@ -279,8 +317,8 @@
 
         const hists = ci.map(i => l.getResultHist(props.mode, i))
 
-        const dx = l.x + tx
-        const dy = l.y + ty
+        const dx = l.x + offX
+        const dy = l.y + offY
         const rw = Math.floor(props.radius * 2.5)
         const rh = Math.floor(rw * 0.5)
         const r = l.radius + 10
@@ -322,6 +360,9 @@
                 .attr("height", rh)
                 .attr("fill", "white")
                 .attr("stroke", "none")
+                .on("click", function() {
+                    emit("click-mini", index, ci[i])
+                })
 
             g.append("g")
                 .selectAll("rect")
