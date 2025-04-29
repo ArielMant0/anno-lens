@@ -54,7 +54,7 @@
                 </div>
             </div>
 
-            <div class="ml-8" style="min-width: 525px;">
+            <div class="ml-4" style="min-width: 525px;">
 
                 <div class="d-flex justify-space-between">
                     <div>
@@ -293,7 +293,7 @@
         if (lensType.value === LENS_TYPE.FREQUENT) {
             return d => d < 1 ? "less frequent" : "more frequent"
         }
-        return d => d < 1 ? "less rare" : "more rare"
+        return d => d < 1 ? "less relevant" : "more relevant"
     })
 
     function saveHistory() {
@@ -645,13 +645,13 @@
 
     onMounted(function() {
         // static hotkeys
-        controls.setKeyMappingLocked(0, "a", "prev", function() {
+        controls.setKeyMappingLocked(0, "a", "up", function() {
             if (columnIndex.value > 0) {
                 setColorIndex(columnIndex.value - 1)
                 applyLens()
             }
         })
-        controls.setKeyMappingLocked(1, "d", "next", function() {
+        controls.setKeyMappingLocked(1, "d", "down", function() {
             setColorIndex(columnIndex.value + 1)
             applyLens()
         })

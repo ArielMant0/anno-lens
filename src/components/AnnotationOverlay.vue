@@ -23,7 +23,7 @@
                     top: offsetY+'px',
                     pointerEvents: 'none'
                 }">
-                <g v-for="a in anno" :opacity="active ? 0.5 : 1">
+                <g v-for="a in anno" :opacity="active && !selectedAnnos[a.id] ? 0.5 : 1">
                     <path v-if="a.polygon.length > 1"
                         :d="d3.line().curve(d3.curveCardinalClosed)(a.polygon)"
                         :stroke-width="selectedAnnos[a.id] ? 3 : 1"
@@ -36,7 +36,7 @@
         </Teleport>
 
         <Teleport to="body">
-            <div>
+            <div style="z-index: 4999;">
                 <div v-for="a in annoLeft"
                     :key="a.id+'_l_'+annoPos[a.id].index"
                     class="d-flex align-center"
@@ -80,7 +80,7 @@
                                 variant="text"
                                 rounded="sm"
                                 size="sm"
-                                icon="mdi-delete"
+                                icon="mdi-close"
                                 density="compact"
                                 @click="DM.removeAnnotationColumn(a.id, c.name)"/>
 
@@ -132,7 +132,7 @@
                                 variant="text"
                                 rounded="sm"
                                 size="sm"
-                                icon="mdi-delete"
+                                icon="mdi-close"
                                 density="compact"
                                 @click="DM.removeAnnotationColumn(a.id, c.name)"/>
 

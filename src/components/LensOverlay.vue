@@ -6,7 +6,7 @@
             :style="{
                 left: tx+'px',
                 top: ty+'px',
-                pointerEvents: moveLens ? 'none' : 'painted'
+                pointerEvents: moveLens ? 'none' : 'all'
             }">
         </svg>
     </Teleport>
@@ -74,7 +74,7 @@
     const tx = ref(0)
     const ty = ref(0)
 
-    let offX = 150, offY = 100
+    let offX = 25, offY = 25
     let tw = 0, th = 0;
 
     const width = ref(100)
@@ -137,7 +137,7 @@
             .attr("fill", "none")
             .attr("fill-opacity", 0.1)
             .attr("stroke-width", 2)
-            .on("pointerenter", function(_event, d) {
+            .on("pointermove", function(_event, d) {
                 d3.select(this).attr("fill", d.color ? d.color : "black")
             })
             .on("pointerleave", function() {
@@ -256,7 +256,12 @@
             const g = svg.append("g")
                 .attr("font-size", 12)
                 .attr("opacity", active && name === selectedColumn ? 1 : 0.7)
-
+                .on("pointerenter", function() {
+                    d3.select(this).attr("opacity", 1)
+                })
+                .on("pointerleave", function() {
+                    d3.select(this).attr("opacity", active && name === selectedColumn ? 1 : 0.7)
+                })
 
             g.append("circle")
                 .attr("cx", dx + diffX)
@@ -265,6 +270,7 @@
                 .attr("fill", "white")
                 .attr("stroke", l.color ? l.color : "black")
                 .attr("stroke-width", name === selectedColumn ? 3 : 2)
+
                 .on("click", function() {
                     emit("click-mini", index, ci[i])
                 })
