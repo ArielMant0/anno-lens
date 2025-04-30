@@ -147,12 +147,13 @@ export function calcDeviation(data, column, type, stats, none=NaN) {
         vd = vd / count.size
     } else {
         const vals = dataToNumbers(data, column, type)
-        vd = deviation(vals) / stats[column].max
+        vd = deviation(vals) / (stats[column].max - stats[column].min)
 
         const tmp = bin()
             .thresholds(stats[column].bins.length)
             .domain([stats[column].min, stats[column].max])
             (vals)
+
         gl = tmp.reduce((acc, d, i) => {
             return acc + vals.length > 0 ?
                 Math.abs((d.length / vals.length) - stats[column].countRel[i]) :

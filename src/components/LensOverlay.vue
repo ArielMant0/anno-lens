@@ -162,7 +162,7 @@
             const ny = by + (-vy / norm) * r
 
             let m;
-            const minDist = r + props.radius*2 + 25
+            const minDist = r*2 + props.radius*4 + 25
 
             if (bx+r+props.radius*2+15 > ttx+width.value-offX*2) {
                 m = 180;

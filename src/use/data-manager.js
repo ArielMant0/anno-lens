@@ -1,6 +1,6 @@
 import { DATA_TYPES, useApp } from "@/stores/app"
-import { bin, deviation, min, max, mean, median, quadtree, scaleLinear, extent, group, polygonHull, polygonCentroid } from "d3"
-import { circleIntersect, dataToNumbers, euclidean, findInCircle, getAttr } from "./util"
+import { bin, deviation, min, mean, median, quadtree, scaleLinear, extent, group, polygonHull, polygonCentroid } from "d3"
+import { circleIntersect, dataToNumbers, findInCircle, getAttr } from "./util"
 import { Lens, LENS_TYPE } from "./Lens"
 
 let _ANNO_ID = 1;
@@ -10,8 +10,8 @@ import MyWorker from '@/worker/feature-worker?worker'
 function calcStats(data, c, filterType) {
     const ord = filterType === DATA_TYPES.ORDINAL || filterType === DATA_TYPES.NOMINAL || filterType === DATA_TYPES.BOOLEAN
     const vals = dataToNumbers(data, c, filterType)
-    let maxVal = max(vals)
-    let value = deviation(vals) / maxVal
+    let [minVal, maxVal] = extent(vals)
+    let value = deviation(vals) / (maxVal - minVal)
 
     let unique = [], count = 0, countRel = 0
     if (ord) {

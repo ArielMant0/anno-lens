@@ -287,7 +287,7 @@
     function getMerged(index, column) {
         const lens = DM.getLens(index)
         const other = lens.hists[column] ? lens.hists[column] : []
-        const data = histG.get(column).concat(other)
+        const data = other.concat(histG.get(column))
         data.sort((a, b) => {
             if (a.x !== b.x) {
                 return a.x - b.x

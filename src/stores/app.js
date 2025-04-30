@@ -26,10 +26,10 @@ export const DATASETS = [
         file: "cereal.dr",
         x: "x",
         y: "y",
-        color: "ratings",
+        color: "rating",
         type: DATA_TYPES.SEQUENTIAL,
-        ignore: ["grain_name", "producer"],
-        meta: ["grain_name"]
+        ignore: ["name"],
+        meta: ["name"]
     },{
         name: "Iris Flowers",
         file: "iris.dr",
