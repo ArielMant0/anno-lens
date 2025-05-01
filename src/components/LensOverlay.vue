@@ -162,9 +162,10 @@
             const ny = by + (-vy / norm) * r
 
             let m;
-            const minDist = r + props.radius*4 + 25
+            const minDist = idx === 0 ? r + 25 : r + props.radius*2 + 25
+            const minStep = idx === 0 ? props.radius : minDist
 
-            if (norm < minDist && (Math.abs(vx) < minDist || Math.abs(vy) < minDist)) {
+            if (norm < minDist && (Math.abs(vx) < minStep || Math.abs(vy) < minStep)) {
                 m = (360 + rad2deg(Math.atan2(ny-by, nx-bx))) % 360
             } else {
                 if (bx+r+props.radius*2+15 > ttx+width.value-offX*2) {
