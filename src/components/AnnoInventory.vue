@@ -111,8 +111,8 @@
 <style scoped>
 .inv-button {
     position: absolute;
-    top: 15px;
-    right: 10px;
+    top: 10px;
+    right: 15px;
 }
 
 .inv-panel {

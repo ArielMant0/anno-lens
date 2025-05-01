@@ -20,13 +20,33 @@
                 class="overlay"
                 :style="{
                     left: (offsetX+padding)+'px',
-                    top: offsetY+'px',
+                    top: (offsetY)+'px',
                     pointerEvents: 'none'
                 }">
                 <g v-for="a in anno" :opacity="active && !selectedAnnos[a.id] ? 0.75 : 1">
-                    <path v-if="a.polygon.length > 1"
+                    <circle v-if="a.polygon.length === 1"
+                        :cx="a.x"
+                        :cy="a.y"
+                        :r="5"
+                        :fill="a.color ? a.color : '#333'"
+                        stroke="black"
+                        stroke-dasharray="4 2"
+                        :stroke-width="selectedAnnos[a.id] ? 3 : 2"
+                        >
+                    </circle>
+                    <line v-else-if="a.polygon.length === 2"
+                        :x1="a.polygon[0][0]"
+                        :y1="a.polygon[0][1]"
+                        :x2="a.polygon[1][0]"
+                        :y2="a.polygon[1][1]"
+                        :stroke-width="selectedAnnos[a.id] ? 3 : 2"
+                        :stroke="a.color ? a.color : 'black'"
+                        stroke-dasharray="4 2"
+                        fill="none">
+                    </line>
+                    <path v-else
                         :d="d3.line().curve(d3.curveCardinalClosed)(a.polygon)"
-                        :stroke-width="selectedAnnos[a.id] ? 3 : 1"
+                        :stroke-width="selectedAnnos[a.id] ? 3 : 2"
                         :stroke="a.color ? a.color : 'black'"
                         stroke-dasharray="4 2"
                         fill-opacity="0.25"

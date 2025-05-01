@@ -68,7 +68,7 @@
 
     const { width } = useWindowSize()
 
-    const size = computed(() => width.value <= 1920 ? 50 : 70)
+    const size = computed(() => width.value <= 1600 ? 40 : 50)
     const offset = computed(() => -15 + (showHotbar.value ? 0 : 50))
 
     let toastId = null;

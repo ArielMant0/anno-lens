@@ -78,6 +78,7 @@ class DataManager {
     }
 
     _enlargePolygon(polygon, centroid) {
+        if (polygon.length < 3) return polygon
         return polygon.map(([px, py]) => {
             const vx = px - centroid[0]
             const vy = py - centroid[1]
@@ -194,10 +195,10 @@ class DataManager {
         // scales for quadtree
         this.x = scaleLinear()
             .domain(extent(data, d => getAttr(d, this.xAttr)))
-            .range([0, width])
+            .range([5, width-5])
         this.y = scaleLinear()
             .domain(extent(data, d => getAttr(d, this.yAttr)))
-            .range([height, 0])
+            .range([height-5, 5])
 
         // calculate quadtree
         this.tree = quadtree()
@@ -221,10 +222,10 @@ class DataManager {
         // scales for quadtree
         this.x = scaleLinear()
             .domain(extent(data, d => getAttr(d, this.xAttr)))
-            .range([0, width])
+            .range([5, width-5])
         this.y = scaleLinear()
             .domain(extent(data, d => getAttr(d, this.yAttr)))
-            .range([height, 0])
+            .range([height-5, 5])
 
         // calculate quadtree
         this.tree = quadtree()

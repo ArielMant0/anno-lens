@@ -1,22 +1,10 @@
 <template>
 <div style="min-height: 90vh; max-height: 95vh; max-width: 100vw;">
-    <div style="width: 100%;" class="d-flex justify-center">
-        <v-select
-            :model-value="dataset"
-            density="compact"
-            style="max-width: 300px;"
-            label="Dataset"
-            item-title="name"
-            item-value="file"
-            hide-details
-            hide-spin-buttons
-            hide-no-data
-            @update:model-value="v => app.setDataset(v)"
-            :items="DATASETS"/>
-    </div>
+
+    <DatasetSelector/>
+
     <div v-if="!loading && data.length > 0" class="d-flex flex-column align-center justify-start mt-8">
         <div class="d-flex mt-2">
-
             <div>
                 <div style="position: relative;">
                     <FeatureMap
@@ -63,8 +51,8 @@
                                 <v-btn size="sm" rounded="sm" density="compact" icon="mdi-magnify" variant="text" @click="editColor = true"/>
                                 <div class="ml-1 mr-1">
                                     {{ chosenColorAttr }}
-                                    <span v-if="!int.fromLens">(default)</span>
                                     <span v-if="colorOverride">(override)</span>
+                                    <span v-else-if="!int.fromLens">(default)</span>
                                 </div>
                                 <v-btn v-if="colorOverride" size="sm" rounded="sm" density="compact" icon="mdi-delete" color="error" variant="text" @click="setColorOverride('')"/>
                             </div>
@@ -113,8 +101,6 @@
 
         </div>
 
-        <ColorPicker v-model="editColor" @select="setColorOverride"/>
-
         <AnnotationOverlay
             target-id="scatter-main"
             :selected="chosenColorAttr"
@@ -135,21 +121,11 @@
             @click-label="onClickLabel"
             :indices="[0, 1]"/>
 
-        <HotBar @annotate="annotate"/>
-
         <AnnoInventory/>
 
-            <!-- <div class="mt-8 d-flex flex-column align-center" style="width: 100%;">
-                <h4>Snapshots</h4>
-                <div v-for="(s, i) in snapshots" :key="'snap_'+i" class="d-flex align-center">
-                    <div class="ml-2 mr-2 text-caption" style="width: 300px;">
-                        <div><b>Dataset:</b> {{ s.dataset }}</div>
-                        <div><b>Lens:</b> {{ Lens.getLensName(s.lens) }}</div>
-                        <div><b>Reference:</b> {{ s.reference }}</div>
-                    </div>
-                    <BarChart :data="s.data" :width="w"/>
-                </div>
-            </div> -->
+        <ColorPicker v-model="editColor" @select="setColorOverride"/>
+
+        <HotBar @annotate="annotate"/>
     </div>
 </div>
 </template>
@@ -177,6 +153,7 @@
     import INV from '@/use/inventory';
     import { useTooltip } from '@/stores/tooltip';
     import ColorPicker from './ColorPicker.vue';
+    import DatasetSelector from './DatasetSelector.vue';
 
     const app = useApp()
     const tt = useTooltip()
