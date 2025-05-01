@@ -64,6 +64,28 @@ class DataManager {
         return points.map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))]))
     }
 
+    _makeCentroid(polygon) {
+        if (polygon.length === 1) {
+            return polygon[0]
+        } else if (polygon.length === 2) {
+            return [
+                polygon[0][0]*0.5 + polygon[1][0]*0.5,
+                polygon[0][1]*0.5 + polygon[1][1]*0.5,
+            ]
+        } else {
+            return polygonCentroid(polygon)
+        }
+    }
+
+    _enlargePolygon(polygon, centroid) {
+        return polygon.map(([px, py]) => {
+            const vx = px - centroid[0]
+            const vy = py - centroid[1]
+            const norm = Math.sqrt(vx*vx + vy*vy)
+            return [px + vx / norm * 5, py + vy / norm * 5]
+        })
+    }
+
     reset() {
         this.tree = null
         this.data = []
@@ -327,7 +349,7 @@ class DataManager {
         const overlap = this.annotations.filter(d => {
             if (exact && d.id === exact.id || d.lensType !== lensType || d.mode !== mode) return false
             const set = lens.ids.intersection(new Set(d.ids))
-            return set.size > 0 && d.columns.length === 1 && startCols.length === 1 && d.columns[0].name === col.name
+            return set.size > 0 && d.columns.length === startCols.length === 1 && d.columns[0].name === col.name
         })
 
         // merge annotations
@@ -365,17 +387,8 @@ class DataManager {
 
             const points = this.data.filter(d => idSet.has(d.id))
             let polygon = this._makePolygon(points)
-            let centroid;
-            if (polygon.length === 1) {
-                centroid = polygon[0]
-            } else if (polygon.length === 2) {
-                centroid = [
-                    polygon[0][0]*0.5 + polygon[1][0]*0.5,
-                    polygon[0][1]*0.5 + polygon[1][1]*0.5,
-                ]
-            } else {
-                centroid = polygonCentroid(polygon)
-            }
+            const centroid = this._makeCentroid(polygon)
+            polygon = this._enlargePolygon(polygon, centroid)
 
             if (polygon.length > 2) {
                 polygon = polygon.map(([px, py]) => {
@@ -401,23 +414,8 @@ class DataManager {
             let idSet = new Set(lens.ids)
             const points = this.data.filter(d => idSet.has(d.id))
             let polygon = this._makePolygon(points)
-            let centroid;
-            if (polygon.length === 1) {
-                centroid = polygon[0]
-            } else if (polygon.length === 2) {
-                centroid = [
-                    polygon[0][0]*0.5 + polygon[1][0]*0.5,
-                    polygon[0][1]*0.5 + polygon[1][1]*0.5,
-                ]
-            } else {
-                centroid = polygonCentroid(polygon)
-                polygon = polygon.map(([px, py]) => {
-                    const vx = px - centroid[0]
-                    const vy = py - centroid[1]
-                    const norm = Math.sqrt(vx*vx + vy*vy)
-                    return [px + vx / norm * 5, py + vy / norm * 5]
-                })
-            }
+            const centroid = this._makeCentroid(polygon)
+            polygon = this._enlargePolygon(polygon, centroid)
 
             addObj = {
                 id: id,
@@ -447,6 +445,54 @@ class DataManager {
         }
     }
 
+    addToAnnotation(id, lensIndex, columnIndex, mode, lensType, color, columnValue=null) {
+
+        const lens = this.getLens(lensIndex)
+        const col = lens.getResult(mode)[columnIndex]
+
+        const anno = this.annotations.find(d => d.id === id)
+        if (!anno || anno.lensType !== lensType) return
+
+        const mergeCols = anno.columns
+        if (!mergeCols.find(d => d.name === col.name && d.color === color && d.value === columnValue)) {
+            mergeCols.push({ name: col.name, color: color, value: columnValue })
+        }
+
+        const idSet = new Set(anno.ids).union(lens.ids)
+        const colCounts = new Map()
+        mergeCols.forEach(c => colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1))
+
+
+        let annoColor, maxCount = 0;
+        colCounts.forEach((theCount, theColor) => {
+            if (theCount > maxCount) {
+                annoColor = theColor
+                maxCount = theCount
+            }
+        })
+
+        const points = this.data.filter(d => idSet.has(d.id))
+        let polygon = this._makePolygon(points)
+        const centroid = this._makeCentroid(polygon)
+        polygon = this._enlargePolygon(polygon, centroid)
+
+        const n = col.name
+        if (!this.annoMap[n]) {
+            this.annoMap[n] = {}
+        }
+        this.annoMap[n][id] = true
+
+        anno.x = centroid[0]
+        anno.y = centroid[1]
+        anno.polygon = polygon
+        anno.columns = mergeCols
+        anno.ids = Array.from(idSet.values())
+        anno.color = annoColor
+
+        this.callbacks.anno.forEach(f => f(anno))
+        this.checkAnnoMerges()
+    }
+
     checkAnnoMerges() {
         const merged = new Set()
 
@@ -462,7 +508,7 @@ class DataManager {
 
                 const int = idsA.intersection(new Set(b.ids))
                 if (int.size === idsA.size || int.size > 0 &&
-                    a.columns.length === 1 && b.columns.length === 1 &&
+                    a.columns.length === b.columns.length &&
                     a.columns[0].name === b.columns[0].name
                 ) {
                     toMerge.push(j)
@@ -501,23 +547,8 @@ class DataManager {
 
             const points = this.data.filter(d => idSet.has(d.id))
             let polygon = this._makePolygon(points)
-            let centroid;
-            if (polygon.length === 1) {
-                centroid = polygon[0]
-            } else if (polygon.length === 2) {
-                centroid = [
-                    polygon[0][0]*0.5 + polygon[1][0]*0.5,
-                    polygon[0][1]*0.5 + polygon[1][1]*0.5,
-                ]
-            } else {
-                centroid = polygonCentroid(polygon)
-                polygon = polygon.map(([px, py]) => {
-                    const vx = px - centroid[0]
-                    const vy = py - centroid[1]
-                    const norm = Math.sqrt(vx*vx + vy*vy)
-                    return [px + vx / norm * 5, py + vy / norm * 5]
-                })
-            }
+            const centroid = this._makeCentroid(polygon)
+            polygon = this._enlargePolygon(polygon, centroid)
 
             mergeCols.forEach(c => {
                 const n = c.name

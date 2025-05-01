@@ -40,7 +40,7 @@
             <div style="z-index: 4999;">
                 <div v-for="a in annoLeft"
                     :key="a.id+'_l_'+annoPos[a.id].index"
-                    class="d-flex align-center"
+                    class="d-flex align-center anno-container"
                     @pointerenter="hoverAnno = a.id"
                     @pointerleave="hoverAnno = null"
                     :style="{
@@ -50,15 +50,31 @@
                         fontSize: '12px',
                     }">
 
-                    <v-btn
-                        class="del-anno"
-                        color="error"
-                        variant="text"
-                        rounded="sm"
-                        size="sm"
-                        icon="mdi-delete"
-                        density="compact"
-                        @click="DM.removeAnnotation(a.id)"/>
+                    <div>
+                        <div>
+                            <v-btn
+                                class="del-anno"
+                                color="error"
+                                variant="text"
+                                rounded="sm"
+                                size="sm"
+                                icon="mdi-delete"
+                                density="compact"
+                                @click="DM.removeAnnotation(a.id)"/>
+                        </div>
+
+                        <div v-for="i in 5">
+                            <v-btn
+                                class="add-anno"
+                                :color="controls.getColor(i+4)"
+                                variant="text"
+                                rounded="sm"
+                                size="sm"
+                                icon="mdi-plus"
+                                density="compact"
+                                @click="annotate(a.id, i+4)"/>
+                        </div>
+                    </div>
 
                     <div
                         class="ma-1 pa-1"
@@ -103,7 +119,7 @@
 
                 <div v-for="a in annoRight"
                     :key="a.id+'_r_'+annoPos[a.id].index"
-                    class="d-flex align-center"
+                    class="d-flex align-center anno-container"
                     @pointerenter="hoverAnno = a.id"
                     @pointerleave="hoverAnno = null"
                     :style="{
@@ -153,15 +169,31 @@
                         </div>
                     </div>
 
-                    <v-btn
-                        class="del-anno"
-                        color="error"
-                        variant="text"
-                        rounded="sm"
-                        size="sm"
-                        icon="mdi-delete"
-                        density="compact"
-                        @click="DM.removeAnnotation(a.id)"/>
+                    <div>
+                        <div>
+                            <v-btn
+                                class="del-anno"
+                                color="error"
+                                variant="text"
+                                rounded="sm"
+                                size="sm"
+                                icon="mdi-delete"
+                                density="compact"
+                                @click="DM.removeAnnotation(a.id)"/>
+                        </div>
+
+                        <div v-for="i in 5">
+                            <v-btn
+                                class="add-anno"
+                                :color="controls.getColor(i+4)"
+                                variant="text"
+                                rounded="sm"
+                                size="sm"
+                                icon="mdi-plus"
+                                density="compact"
+                                @click="annotate(a.id, i+4)"/>
+                        </div>
+                    </div>
                 </div>
             </div>
         </Teleport>
@@ -174,8 +206,12 @@
     import { useMouse, useWindowScroll, useWindowSize } from '@vueuse/core';
     import { computed, onMounted, reactive, watch } from 'vue';
     import { euclidean } from '@/use/util';
+    import { useApp } from '@/stores/app';
+    import { useControls } from '@/stores/controls';
 
+    const app = useApp()
     const mouse = useMouse()
+    const controls = useControls()
 
     const props = defineProps({
         targetId: {
@@ -412,6 +448,17 @@
         anno.value = data
     }
 
+    function annotate(id, index) {
+        DM.addToAnnotation(
+            id,
+            app.activeLens,
+            app.columnIndex,
+            app.refMode,
+            app.lensType,
+            controls.getColor(index)
+        )
+    }
+
     function update() {
         getCoordinates()
         annoFontSize = d3.scaleQuantile(anno.value.map(d => d.columns.map(c => c.count)).flat())
@@ -450,7 +497,8 @@
     position: absolute;
     z-index: 100;
 }
-div:not(:hover) .del-anno {
+.anno-container:not(:hover) .del-anno,
+.anno-container:not(:hover) .add-anno {
     visibility: hidden;
 }
 </style>

@@ -1,4 +1,5 @@
 // Utilities
+import { LENS_TYPE } from '@/use/Lens'
 import { defineStore } from 'pinia'
 
 export const DATA_TYPES = Object.freeze({
@@ -92,6 +93,9 @@ export const useApp = defineStore('app', {
         dataset: "games.dr",
         datasetObj: Object.assign({}, DATASETS[0]),
 
+        refMode: "global",
+        lensType: LENS_TYPE.RARE,
+
         activeLens: 0,
         colorIndex: 0,
         colorIndexSec: 0,
@@ -116,6 +120,7 @@ export const useApp = defineStore('app', {
         datasetColorType: state => state.datasetObj.type,
         datasetX: state => state.datasetObj.x,
         datasetY: state => state.datasetObj.y,
+        columnIndex: state => state.activeLens === 0 ? state.colorIndex : state.colorIndexSec
     },
 
     actions: {

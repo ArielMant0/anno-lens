@@ -189,9 +189,13 @@
         datasetY,
         datasetColor,
 
+        refMode,
+        lensType,
+
         activeLens,
         colorIndex,
         colorIndexSec,
+        columnIndex,
 
         moveLens,
 
@@ -243,26 +247,10 @@
         filterAttr: null,
         filterValues: null,
         filterType: null,
-
-        showAttrMap: null,
-        attrLensPos: {},
-        historyScales: {}
     })
-
-    let historyUpdated = false
-    const history = reactive(new Map())
-    const historyData = computed(() => {
-        const list = []
-        history.forEach((v, k) => list.push({ x: k, y: v }))
-        return list
-    })
-    const snapshots = ref([])
 
     const ready = ref(false)
     const loading = ref(true)
-
-    const refMode = ref("global")
-    const columnIndex = computed(() => activeLens.value === 0 ? colorIndex.value : colorIndexSec.value)
 
     const colorColumn = ref(datasetColor.value)
     const colorColumnSec = ref(datasetColor.value)
@@ -278,21 +266,11 @@
         if (colorOverride.value.length > 0) {
             return colorOverride.value
         }
-
         if (int.fromLens) {
             return colorColumn.value
         }
-        if (int.showAttrMap) {
-            return int.showAttrMap
-        }
 
         return datasetColor.value
-    })
-
-    const lensType = ref(LENS_TYPE.RARE)
-    const numDetails = reactive({
-        local: 3,
-        global: 3
     })
 
     const primaryLens = ref(0)
@@ -410,23 +388,7 @@
         int.fromLens = DM.getLensResults(primaryLens.value, refMode.value).length > 0
 
         if (int.fromLens) {
-            const now = Date.now()
             const lens = DM.getLens(primaryLens.value)
-
-            const n = lens.getResultColumn(refMode.value, colorIndex.value)
-            const val = (history.get(n) || 0) + 1
-
-            int.historyScales[n].domain([0, Math.max(val, int.historyScales[n].domain()[1])])
-            historyUpdated = true
-
-            if (lens.x !== null && lens.y !== null) {
-                int.attrLensPos[n].push({
-                    x: lens.x,
-                    y: lens.y,
-                    time: now,
-                    radius: lensRadius.value
-                })
-            }
 
             const results = lens.getResult(refMode.value)
             if (columnIndex.value >= results.length) {
@@ -440,15 +402,10 @@
             if (activeLens.value === 0) {
                 colorColumn.value = lens.getResultColumn(refMode.value, colorIndex.value)
             }
-
-            numDetails.local = lens.numResults.local
-            numDetails.global = lens.numResults.global
         } else {
             colorColumn.value = datasetColor.value
             colorColumnSec.value = datasetColor.value
             DM.clearLens(secondaryLens.value)
-            numDetails.local = 3
-            numDetails.global = 3
         }
 
         lensTime.value = Date.now()
@@ -562,11 +519,6 @@
         int.columns = []
         int.otherColumns = []
         int.fromLens = false
-        int.showAttrMap = null
-        int.attrLensPos = {}
-        int.historyScales = {}
-        history.clear()
-        historyUpdated = false
         colorIndex.value = 0
         colorIndexSec.value = 0
         colorColumn.value = app.datasetColor
@@ -609,8 +561,6 @@
         columns.value.forEach(c => {
             ct.push(getDataType(points[0], c))
             scales[c] = makeColorScale(points, c, ct.at(-1), theme.current.value.colors.primary)
-            int.historyScales[c] = d3.scaleSequential(d3.interpolateOrRd).domain([0, 1])
-            int.attrLensPos[c] = []
         })
         DM.setScales(scales)
 
