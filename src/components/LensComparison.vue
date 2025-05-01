@@ -11,7 +11,7 @@
                 variant="outlined"/>
         </div>
 
-        <div class="d-flex justify-start align-start" style="max-height: 77vh; overflow-y: auto;">
+        <div class="d-flex justify-start align-start" :style="{ maxHeight: (showHotbar ? 70 : 75)+'vh', overflowY: 'auto'}">
 
             <div :style="{ minWidth: (chartWidth+5)+'px' }">
                 <div style="text-align: center;" class="mb-1 text-dots" :style="{ maxWidth: chartWidth+'px' }">
@@ -36,6 +36,7 @@
                             :y-domain="[0, 1]"
                             color-attr="color"
                             pattern-attr="pattern"
+                            label-attr="group"
                             selectable
                             @click="v => annotate(0, i, v.x)"
                             :width="chartWidth"
@@ -62,6 +63,7 @@
                             :y-domain="[0, 1]"
                             color-attr="color"
                             pattern-attr="pattern"
+                            label-attr="group"
                             :width="chartWidth"
                             :height="chartHeight"/>
                     </div>
@@ -96,6 +98,7 @@
                             :y-domain="[0, 1]"
                             color-attr="color"
                             pattern-attr="pattern"
+                            label-attr="group"
                             selectable
                             @click="v => annotate(1, i, v.x)"
                             :width="chartWidth"
@@ -122,6 +125,7 @@
                             :y-domain="[0, 1]"
                             color-attr="color"
                             pattern-attr="pattern"
+                            label-attr="group"
                             :width="chartWidth"
                             :height="chartHeight"/>
                     </div>
@@ -141,9 +145,11 @@
     import { calcHistogram } from '@/use/util';
     import { useControls } from '@/stores/controls';
     import { storeToRefs } from 'pinia';
+    import { useTooltip } from '@/stores/tooltip';
 
+    const tt = useTooltip()
     const app = useApp()
-    const { activeLens } = storeToRefs(app)
+    const { activeLens, showHotbar } = storeToRefs(app)
 
     const controls = useControls()
 
@@ -269,19 +275,22 @@
             .attr("opacity", 0.25)
             .attr("stroke-width", 4)
             .style("cursor", "pointer")
+            .on("pointermove", function(event, d) {
+                const [mx, my] = d3.pointer(event, document.body)
+                tt.show(`${colsP.value[d[0]]} ⇒ (${d[0]+1}) - (${d[1]+1})`, mx, my)
+            })
             .on("pointerenter", function() {
                 d3.select(this).attr("opacity", 0.75)
             })
             .on("pointerleave", function() {
                 d3.select(this).attr("opacity", 0.25)
+                tt.hide()
             })
             .on("click", function(_event, d) {
                 app.setColorIndex(0, d[0])
                 app.setColorIndex(1, d[1])
                 emit("update")
             })
-            .append("title")
-            .text(d => `${colsP.value[d[0]]}: (${d[0]+1}) - (${d[1]+1})`)
     }
 
     function getMerged(index, column) {
@@ -299,8 +308,10 @@
 
     function read() {
         const limit = props.active ? undefined : 5
+
         const p = DM.getLens(0)
         const s = DM.getLens(1)
+
         colorP.value = p.color ? p.color : "black"
         colorS.value = s.color ? s.color : "black"
         // get column names (in order, for each lens)
@@ -324,7 +335,7 @@
         if (props.active) {
             const allCols = Array.from(histG.keys())
             colsOtherP.value = allCols.filter(c => !inP.has(c))
-            colsOtherS.value = allCols.filter(c => !inS.has(c))
+            colsOtherS.value = inS.size > 0 ? allCols.filter(c => !inS.has(c)) : []
         } else {
             colsOtherP.value = []
             colsOtherS.value = []
@@ -345,7 +356,10 @@
         const data = DM.getData()
         DM.columns.forEach((c, i) => {
             const h = calcHistogram(data, c, DM.types[i], DM.filterStats, DM.scales[c])
-            h.forEach(d => d.pattern = true)
+            h.forEach(d => {
+                d.pattern = true
+                d.group = "global"
+            })
             histG.set(c, h)
         })
     }

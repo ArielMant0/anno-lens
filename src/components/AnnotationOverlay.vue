@@ -317,8 +317,11 @@
             }
         })
 
-        const scale = d3.scaleQuantile(graph.links.map(d => d.value), d3.range(1, 8))
+        const scale = d3.scaleLinear()
+            .domain([1, Math.max(2, d3.max(graph.links, d => d.value))])
+            .range([1, 10])
 
+        actx.strokeStyle = "black"
         actx.globalAlpha = 0.25
         // draw links that connect annotations
         graph.links.forEach(d => {

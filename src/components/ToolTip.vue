@@ -4,8 +4,7 @@
             ref="el"
             class="pa-1"
             rounded="sm"
-            elevation="2"
-            color="#efefef"
+            elevation="4"
             :style="{
                 top: py+'px',
                 left: px+'px',

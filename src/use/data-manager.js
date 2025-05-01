@@ -411,9 +411,6 @@ class DataManager {
                 ]
             } else {
                 centroid = polygonCentroid(polygon)
-            }
-
-            if (polygon.length > 2) {
                 polygon = polygon.map(([px, py]) => {
                     const vx = px - centroid[0]
                     const vy = py - centroid[1]
@@ -514,9 +511,6 @@ class DataManager {
                 ]
             } else {
                 centroid = polygonCentroid(polygon)
-            }
-
-            if (polygon.length > 2) {
                 polygon = polygon.map(([px, py]) => {
                     const vx = px - centroid[0]
                     const vy = py - centroid[1]

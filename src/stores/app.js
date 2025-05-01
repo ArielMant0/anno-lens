@@ -106,6 +106,7 @@ export const useApp = defineStore('app', {
         annoTime: 0,
         featureTime: 0,
 
+        showHotbar: true,
         showInventory: false,
         inventoryTime: 0
     }),

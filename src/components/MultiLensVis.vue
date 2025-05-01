@@ -212,7 +212,7 @@
     const w = computed(() => {
         const ww = wSize.width.value
         const wh = wSize.height.value
-        return Math.max(500, Math.floor(Math.min(ww-850, wh*0.75)))
+        return Math.max(500, Math.floor(Math.min(ww*0.9-850, wh*0.7)))
     })
     const h = computed(() => w.value)
 

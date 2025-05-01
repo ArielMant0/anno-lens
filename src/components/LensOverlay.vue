@@ -162,7 +162,7 @@
             const ny = by + (-vy / norm) * r
 
             let m;
-            const minDist = r*2 + props.radius*4 + 25
+            const minDist = r + props.radius*4 + 25
 
             if (norm < minDist && (Math.abs(vx) < minDist || Math.abs(vy) < minDist)) {
                 m = (360 + rad2deg(Math.atan2(ny-by, nx-bx))) % 360
@@ -172,10 +172,9 @@
                 } else if (bx-r-props.radius*2-15 < ttx) {
                     m = 0;
                 } else {
-                    m = idx === 0 ? 0 : 180
+                    m = bx > ax ? 0 : 180
                 }
             }
-
 
             const onright = m <= 90 || m >= 270
             // debug: show vector lines

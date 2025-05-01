@@ -116,6 +116,11 @@ export class Lens {
             this.ids = new Set(data.map(d => d.id))
             columns.forEach((c, i) => {
                 this.hists[c] = calcHistogram(data, c, types[i], DM.filterStats, DM.scales[c])
+                    .map(d => {
+                        d.group = "lens "+this.id
+                        return d
+                    })
+
                 const [l, g] = calcDeviation(data, c, types[i], DM.filterStats)
                 if (!Number.isNaN(l) && Number.isFinite(l)) {
                     local.push(Object.assign({

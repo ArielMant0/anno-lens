@@ -49,6 +49,9 @@
         patternAttr: {
             type: String,
         },
+        labelAttr: {
+            type: String,
+        },
         fillColor: {
             type: String,
             default: "darkgreen"
@@ -56,6 +59,10 @@
         selectable: {
             type: Boolean,
             default: false
+        },
+        formatY: {
+            type: Function,
+            default: d => Math.round(d*100).toFixed(0) + "%"
         }
     })
 
@@ -67,6 +74,8 @@
     const getY = d => getAttr(d, props.yAttr)
     const getC = d => getAttr(d, props.colorAttr)
     const getP = d => getAttr(d, props.patternAttr)
+
+    const textY = d => props.formatY(getY(d)) + (props.labelAttr ? ` (${getAttr(d, props.labelAttr)})` : "")
 
     function draw() {
         const svg = d3.select(el.value)
@@ -128,9 +137,9 @@
             .data(props.data)
             .join("rect")
             .attr("x", d => x(getX(d)))
-            .attr("y", d => Math.min(y(0)-2, y(getY(d))))
+            .attr("y", d => getY(d) > 0 ? Math.min(y(0)-2, y(getY(d))) : 0)
             .attr("width", x.bandwidth())
-            .attr("height", d => Math.max(2, y(0) - y(getY(d))))
+            .attr("height", d => getY(d) > 0 ? Math.max(2, y(0) - y(getY(d))) : 0)
             .attr("fill", d => {
                 const col = props.colorAttr ? getC(d) : props.fillColor
                 if (props.patternAttr && getP(d)) {
@@ -149,11 +158,11 @@
             })
             .on("pointermove", function(event, d) {
                 const [mx, my] = d3.pointer(event, document.body)
-                const extra = props.title ? props.title+" ➡ " : ""
+                const extra = props.title ? props.title+" ⇒ " : ""
                 if (d.x1) {
-                    tt.show(`${extra}${getX(d)} - ${d.x1}: ${getY(d).toFixed(2)}`, mx, my)
+                    tt.show(`${extra}${getX(d)} - ${d.x1}: ${textY(d)}`, mx, my)
                 } else {
-                    tt.show(`${extra}${getX(d)}: ${getY(d).toFixed(2)}`, mx, my)
+                    tt.show(`${extra}${getX(d)}: ${textY(d)}`, mx, my)
                 }
             })
             .on("pointerleave", function() {
