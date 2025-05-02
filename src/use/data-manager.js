@@ -117,8 +117,8 @@ class DataManager {
         this.getters = dsobj.getters
     }
 
-    addLens(type=LENS_TYPE.RARE, active=true) {
-        this.lenses.push(new Lens(type, active))
+    addLens(radius, type=LENS_TYPE.RARE, active=true) {
+        this.lenses.push(new Lens(radius, type, active))
         return this.lenses.at(-1).id
     }
 
@@ -219,23 +219,50 @@ class DataManager {
     }
 
     resize(width, height) {
+        if (!this.data || this.data.length === 0 || !this.x || !this.y) return
+
+        let rx, ry;
+        if (this.x && this.y) {
+            rx = scaleLinear()
+                .domain(this.x.range())
+                .range([5, width-5])
+
+            ry = scaleLinear()
+                .domain(this.y.range())
+                .range([height-5, 5])
+        }
+
         // scales for quadtree
         this.x = scaleLinear()
-            .domain(extent(data, d => getAttr(d, this.xAttr)))
+            .domain(extent(this.data, d => getAttr(d, this.xAttr)))
             .range([5, width-5])
         this.y = scaleLinear()
-            .domain(extent(data, d => getAttr(d, this.yAttr)))
+            .domain(extent(this.data, d => getAttr(d, this.yAttr)))
             .range([height-5, 5])
 
         // calculate quadtree
         this.tree = quadtree()
             .x(d => this.x(getAttr(d, this.xAttr)))
             .y(d => this.y(getAttr(d, this.yAttr)))
-            .addAll(data)
+            .addAll(this.data)
+
+        if (rx && ry) {
+            this.lenses.forEach((l, i) => {
+                if (!l.x || !l.y) return
+                const lx = rx(l.x), ly = ry(l.y)
+                console.log(l.x, lx, l.x-lx)
+                const points = this.findDataInCircle(lx, ly, l.radius)
+                this.updateLens(i, lx, ly, l.radius, points)
+            })
+        }
 
         // mark as updated
         const app = useApp()
         app.updateData()
+
+        if (rx && ry) {
+            this.callbacks.lens.forEach(f => f())
+        }
     }
 
     computeFeatureMaps(radius, size=10, callback=null) {

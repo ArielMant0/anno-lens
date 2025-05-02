@@ -1,15 +1,23 @@
 <template>
     <div style="height: 100vh;" class="pa-2">
+        <v-overlay v-if="!ready" absolute>
+            <v-progress-circular size="64" indeterminate></v-progress-circular>
+        </v-overlay>
         <MultiLensVis/>
     </div>
 </template>
 
 <script setup>
     import MultiLensVis from '@/components/MultiLensVis.vue';
+    import { useApp } from '@/stores/app';
     import { useControls } from '@/stores/controls';
+    import { storeToRefs } from 'pinia';
     import { onMounted } from 'vue';
 
+    const app = useApp()
     const controls = useControls()
+
+    const { ready } = storeToRefs(app)
 
     onMounted(function() {
         window.addEventListener("keydown", (event) => controls.keyEvent(event))

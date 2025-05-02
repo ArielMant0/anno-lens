@@ -91,7 +91,7 @@
 
                 <div>
                     <LensComparison
-                        :active="!moveLens"
+                        :active="!moveLens || mouseStill"
                         :time="lensTime"
                         :mode="refMode"
                         :selected-column="chosenColorAttr"
@@ -166,6 +166,8 @@
         datasetY,
         datasetColor,
 
+        ready,
+
         refMode,
         lensType,
 
@@ -226,7 +228,6 @@
         filterType: null,
     })
 
-    const ready = ref(false)
     const loading = ref(true)
 
     const colorColumn = ref(datasetColor.value)
@@ -268,6 +269,15 @@
         }
         return d => d < 1 ? "less relevant" : "more relevant"
     })
+
+    const mouseStill = ref(false)
+
+    let windowResize = null, plotResize = null, mouseMove = null;
+    let loop, looptime;
+
+    ////////////////////////////////////////////////////////////////////////////
+    /// Functions
+    ////////////////////////////////////////////////////////////////////////////
 
     function setColorOverride(c="") {
         if (c !== colorOverride.value) {
@@ -426,6 +436,8 @@
 
     function onHover(lx, ly, points, event) {
         if (moveLens.value) {
+            mouseStill.value = false
+            mouseMove = performance.now()
             updateLens(lx, ly)
             applyLens()
         } else if (app.datasetObj.meta) {
@@ -488,6 +500,8 @@
 
     async function init() {
         loading.value = true
+        ready.value = false
+        mouseStill.value = false
 
         data.value = []
         topFeatures.value = []
@@ -502,8 +516,6 @@
         colorColumnSec.value = app.datasetColor
         activeLens.value = primaryLens.value
         moveLens.value = false
-
-        ready.value = false
 
         DM.reset()
 
@@ -530,9 +542,9 @@
         }
 
         // add primary lens
-        DM.addLens(lensType.value, true)
+        DM.addLens(lensRadius.value, lensType.value, true)
         // add secondary lens (for suggestions)
-        DM.addLens(lensType.value, false)
+        DM.addLens(lensRadius.value, lensType.value, false)
 
         const ct = [], scales = {}
         columns.value.forEach(c => {
@@ -582,6 +594,35 @@
         if (DM.getLens(1).numResults[refMode.value] > 0) {
             setActiveLens(Math.abs(1 - activeLens.value))
         }
+    }
+
+    function loopFunc(timestamp) {
+
+        // react to last plot resize
+        const plotDiff = plotResize !== null ? timestamp - plotResize : 0
+        if (plotDiff >= 200 && plotDiff <= 250) {
+            plotResize = null;
+            DM.resize(w.value, h.value)
+            refreshFeatureMaps()
+        }
+
+        // react to last window resize
+        const resizeDiff = windowResize !== null ? timestamp - windowResize : 0
+        if (resizeDiff >= 200 && resizeDiff <= 250) {
+            windowResize = null;
+            // applyLens()
+            lensTime.value = Date.now()
+        }
+
+        // react to mouse down for longer time
+        const mouseDiff = mouseMove !== null ? timestamp - mouseMove : 0
+        if (mouseDiff >= 100 && mouseDiff <= 150) {
+            mouseMove = null;
+            mouseStill.value = true
+        }
+
+        // keep going
+        loop = requestAnimationFrame(loopFunc)
     }
 
     onMounted(function() {
@@ -651,8 +692,15 @@
             annoTime.value = Date.now()
         })
 
+        looptime = Date.now()
+        loop = requestAnimationFrame(loopFunc)
+
         init()
     })
 
     watch(dataset, init)
+
+    watch(() => ([w.value, h.value]), () => plotResize = performance.now())
+
+    watch(() => ([wSize.width.value, wSize.height.value]), () => windowResize = performance.now())
 </script>

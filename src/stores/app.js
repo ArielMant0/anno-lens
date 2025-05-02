@@ -31,60 +31,6 @@ export const DATASETS = [
         type: DATA_TYPES.SEQUENTIAL,
         ignore: ["name"],
         meta: ["name"]
-    },{
-        name: "Iris Flowers",
-        file: "iris.dr",
-        x: "x",
-        y: "y",
-        color: "Species",
-        type: DATA_TYPES.NOMINAL,
-        ignore: [],
-    },{
-        name: "Raisin",
-        file: "raisin.dr",
-        x: "x",
-        y: "y",
-        color: "Class",
-        type: DATA_TYPES.NOMINAL,
-        ignore: [],
-    },{
-        name: "IBM Employee Attrition",
-        file: "ibm-employee-attrition-test.dr",
-        x: "x",
-        y: "y",
-        color: "Attrition",
-        type: DATA_TYPES.NOMINAL,
-        ignore: ["Employee ID"],
-        meta: ["Employee ID"]
-    },{
-        name: "Heart Disease",
-        file: "heart_disease_uci.dr",
-        x: "x",
-        y: "y",
-        color: "sex",
-        type: DATA_TYPES.NOMINAL,
-        ignore: []
-    },{
-        name: "Anxiety Depression",
-        file: "anxiety_depression.dr",
-        x: "x",
-        y: "y",
-        color: "Gender",
-        type: DATA_TYPES.NOMINAL,
-        ignore: [],
-        types: {
-            Social_Support_Score: DATA_TYPES.ORDINAL,
-            Anxiety_Score: DATA_TYPES.ORDINAL,
-            Therapy: DATA_TYPES.NOMINAL,
-            Meditation: DATA_TYPES.NOMINAL,
-            Financial_Stress: DATA_TYPES.ORDINAL,
-            Work_Stress: DATA_TYPES.ORDINAL,
-            Self_Esteem_Score: DATA_TYPES.ORDINAL,
-            Life_Satisfaction_Score: DATA_TYPES.ORDINAL,
-            Loneliness_Score: DATA_TYPES.ORDINAL,
-            Chronic_Illnesses: DATA_TYPES.NOMINAL,
-            Family_History_Mental_Illness: DATA_TYPES.NOMINAL
-        }
     }
 ]
 
@@ -92,6 +38,7 @@ export const useApp = defineStore('app', {
     state: () => ({
         dataset: "games.dr",
         datasetObj: Object.assign({}, DATASETS[0]),
+        ready: false,
 
         refMode: "global",
         lensType: LENS_TYPE.RARE,

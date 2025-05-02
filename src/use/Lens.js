@@ -1,7 +1,5 @@
-import { bin, group } from "d3";
 import DM from "./data-manager";
-import { calcDeviation, calcHistogram, getAttr } from "./util";
-import { DATA_TYPES } from "@/stores/app";
+import { calcDeviation, calcHistogram } from "./util";
 
 let _ID = 1;
 
@@ -13,16 +11,16 @@ export const LENS_TYPES = Object.values(LENS_TYPE)
 
 export class Lens {
 
-    constructor(type=LENS_TYPE.RARE, active=true) {
+    constructor(radius, type=LENS_TYPE.RARE, active=true) {
         this.id = _ID++
         this.type = type
         this.ids = new Set()
         this.results = { local: [], global: [] }
         this.numResults = { local: 0, global: 0 }
         this.hists = {}
-        this.x = null
-        this.y = null
-        this.radius = null
+        this.x = radius
+        this.y = radius
+        this.radius = radius
         this.color = active ? "red" : "black"
         this.active = active;
     }
