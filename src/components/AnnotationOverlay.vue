@@ -24,34 +24,36 @@
                     pointerEvents: 'none'
                 }">
                 <g v-for="a in anno" :opacity="active && !selectedAnnos[a.id] ? 0.75 : 1">
-                    <circle v-if="a.polygon.length === 1"
-                        :cx="a.x"
-                        :cy="a.y"
-                        :r="5"
-                        :fill="a.color ? a.color : '#333'"
-                        stroke="black"
-                        stroke-dasharray="4 2"
-                        :stroke-width="selectedAnnos[a.id] ? 3 : 2"
-                        >
-                    </circle>
-                    <line v-else-if="a.polygon.length === 2"
-                        :x1="a.polygon[0][0]"
-                        :y1="a.polygon[0][1]"
-                        :x2="a.polygon[1][0]"
-                        :y2="a.polygon[1][1]"
-                        :stroke-width="selectedAnnos[a.id] ? 3 : 2"
-                        :stroke="a.color ? a.color : 'black'"
-                        stroke-dasharray="4 2"
-                        fill="none">
-                    </line>
-                    <path v-else
-                        :d="d3.line().curve(d3.curveCardinalClosed)(a.polygon)"
-                        :stroke-width="selectedAnnos[a.id] ? 3 : 2"
-                        :stroke="a.color ? a.color : 'black'"
-                        stroke-dasharray="4 2"
-                        fill-opacity="0.25"
-                        :fill="selectedAnnos[a.id] ? (a.color ? a.color : 'black') : 'none'">
-                    </path>
+                    <g v-for="(p, idx) in a.polygon" :key="a.id+'_'+idx">
+                        <circle v-if="p.length === 1"
+                            :cx="p[0]"
+                            :cy="p[1]"
+                            :r="5"
+                            :fill="a.color ? a.color : '#333'"
+                            stroke="black"
+                            stroke-dasharray="4 2"
+                            :stroke-width="selectedAnnos[a.id] ? 3 : 2"
+                            >
+                        </circle>
+                        <line v-else-if="props.length === 2"
+                            :x1="p[0][0]"
+                            :y1="p[0][1]"
+                            :x2="p[1][0]"
+                            :y2="p[1][1]"
+                            :stroke-width="selectedAnnos[a.id] ? 3 : 2"
+                            :stroke="a.color ? a.color : 'black'"
+                            stroke-dasharray="4 2"
+                            fill="none">
+                        </line>
+                        <path v-else
+                            :d="d3.line().curve(d3.curveCardinalClosed)(p)"
+                            :stroke-width="selectedAnnos[a.id] ? 3 : 2"
+                            :stroke="a.color ? a.color : 'black'"
+                            stroke-dasharray="4 2"
+                            fill-opacity="0.25"
+                            :fill="selectedAnnos[a.id] ? (a.color ? a.color : 'black') : 'none'">
+                        </path>
+                    </g>
                 </g>
             </svg>
         </Teleport>
@@ -63,6 +65,10 @@
                     class="d-flex align-center anno-container"
                     @pointerenter="hoverAnno = a.id"
                     @pointerleave="hoverAnno = null"
+                    draggable="true"
+                    @dragstart="onDragAnno(a)"
+                    @dragover.prevent="onDragOver"
+                    @drop.prevent="onDropAnno(a)"
                     :style="{
                         position: 'absolute',
                         left: (offsetX+getAnnotationPos(a.id, true)[0]-25)+'px',
@@ -142,6 +148,10 @@
                     class="d-flex align-center anno-container"
                     @pointerenter="hoverAnno = a.id"
                     @pointerleave="hoverAnno = null"
+                    draggable="true"
+                    @dragstart="onDragAnno(a)"
+                    @dragover.prevent="onDragOver"
+                    @drop.prevent="onDropAnno(a)"
                     :style="{
                         position: 'absolute',
                         left: (offsetX+getAnnotationPos(a.id, true)[0])+'px',
@@ -283,7 +293,7 @@
 
     let actx, annoFontSize = () => 14
 
-    let targetRect = null;
+    let targetRect = null, dragAnno = null;
 
     const graph = {
         nodes: [],
@@ -303,7 +313,7 @@
 
         const mx = mouse.x.value - offsetX.value - props.padding
         const my = mouse.y.value - offsetY.value
-        anno.value.forEach(a => obj[a.id] = isSelected(a) || inside && d3.polygonContains(a.polygon, [mx, my]))
+        anno.value.forEach(a => obj[a.id] = isSelected(a) || inside && a.polygon.some(p => d3.polygonContains(p, [mx, my])))
         return obj
     })
     const selectedColums = computed(() => {
@@ -318,6 +328,23 @@
         emit("select-color", name)
     }
 
+    function onDragAnno(anno) {
+        dragAnno = anno
+    }
+
+    function onDropAnno(anno) {
+        if (dragAnno !== null) {
+            // trigger merge
+            if (dragAnno.id !== anno.id) {
+                DM.mergeAnnotations(anno.id, dragAnno.id)
+            }
+            dragAnno = null
+        }
+    }
+
+    function onDragOver(event) {
+        event.dataTransfer.dropEffect = "move"
+    }
 
     function getAnnotationPos(id, usePadding=false) {
         const pos = annoPos.value[id]
@@ -365,11 +392,13 @@
             if (selectedAnnos.value[a.id]) {
                 // draw links that connect annotations labels and polygons
                 actx.strokeStyle = a.color ? a.color : "black"
-                actx.beginPath()
                 const coords = getAnnotationPos(a.id)
                 const off = 0.5 * (annoPos.value[a.id].side === "left" ? annoMeta.sizeL : annoMeta.sizeR)
-                path([[a.x, a.y], [coords[0], coords[1]+off]])
-                actx.stroke()
+                a.centroid.forEach(c => {
+                    actx.beginPath()
+                    path([c, [coords[0], coords[1]+off]])
+                    actx.stroke()
+                })
             }
         })
 

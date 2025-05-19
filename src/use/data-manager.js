@@ -1,6 +1,6 @@
 import { DATA_TYPES, useApp } from "@/stores/app"
 import { bin, deviation, min, mean, median, quadtree, scaleLinear, extent, group, polygonHull, polygonCentroid } from "d3"
-import { circleIntersect, dataToNumbers, findInCircle, getAttr } from "./util"
+import { circleIntersect, dataToNumbers, euclidean, findInCircle, getAttr } from "./util"
 import { Lens, LENS_TYPE } from "./Lens"
 
 let _ANNO_ID = 1;
@@ -49,6 +49,40 @@ function calcStats(data, c, filterType) {
     }
 }
 
+function split(points, polygon) {
+    const c = polygonCentroid(polygon)
+    let minDist = Number.MAX_VALUE
+    let point = null
+
+    if (points.length <= 2) return [points]
+
+    points.forEach(p => {
+        const d = euclidean(p[0], p[1], c[0], c[1])
+        if (d < minDist) {
+            minDist = d;
+            point = p
+        }
+    })
+
+    if (point !== null && minDist >= 15) {
+        const a = [], b = [];
+        points.forEach(p => {
+            const dC = euclidean(p[0], p[1], c[0], c[1])
+            const dP = euclidean(p[0], p[1], point[0], point[1])
+            if (dP < dC) {
+                a.push(p)
+            } else {
+                b.push(p)
+            }
+        })
+
+        return split(a, polygonHull(a)).concat(split(b, polygonHull(b)))
+            .filter(d => d.length > 0)
+    }
+
+    return [polygon]
+}
+
 class DataManager {
 
     constructor() {
@@ -58,10 +92,20 @@ class DataManager {
     }
 
     _makePolygon(points) {
+        let polygon;
         if (points.length > 2) {
-            return polygonHull(points.map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))])))
+            polygon = split(points, polygonHull(points))
+        } else {
+            polygon = [points]
         }
-        return points.map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))]))
+
+        const centroid = polygon.map(p => this._makeCentroid(p))
+
+        for (let i = 0; i < polygon.length; ++i) {
+            polygon[i] = this._enlargePolygon(polygon[i], centroid[i])
+        }
+
+        return { polygon, centroid }
     }
 
     _makeCentroid(polygon) {
@@ -413,25 +457,15 @@ class DataManager {
                 }
             })
 
-            const points = this.data.filter(d => idSet.has(d.id))
-            let polygon = this._makePolygon(points)
-            const centroid = this._makeCentroid(polygon)
-            polygon = this._enlargePolygon(polygon, centroid)
-
-            if (polygon.length > 2) {
-                polygon = polygon.map(([px, py]) => {
-                    const vx = px - centroid[0]
-                    const vy = py - centroid[1]
-                    const norm = Math.sqrt(vx*vx + vy*vy)
-                    return [px + vx / norm * 5, py + vy / norm * 5]
-                })
-            }
+            const points = this.data.filter(d => idSet.has(d.id)).map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))]))
+            const { polygon, centroid } = this._makePolygon(points)
 
             addObj = {
                 id: id,
-                x: centroid[0],
-                y: centroid[1],
+                x: mean(centroid, c => c[0]),
+                y: mean(centroid, c => c[1]),
                 polygon: polygon,
+                centroid: centroid,
                 mode: mode,
                 lensType: lensType,
                 columns: mergeCols,
@@ -439,21 +473,20 @@ class DataManager {
                 color: annoColor
             }
         } else {
-            let idSet = new Set(lens.ids)
-            const points = this.data.filter(d => idSet.has(d.id))
-            let polygon = this._makePolygon(points)
-            const centroid = this._makeCentroid(polygon)
-            polygon = this._enlargePolygon(polygon, centroid)
+            const idSet = new Set(lens.ids)
+            const points = this.data.filter(d => idSet.has(d.id)).map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))]))
+            const { polygon, centroid } = this._makePolygon(points)
 
             addObj = {
                 id: id,
-                x: centroid[0],
-                y: centroid[1],
+                x: mean(centroid, c => c[0]),
+                y: mean(centroid, c => c[1]),
+                centroid: centroid,
                 polygon: polygon,
                 mode: mode,
                 lensType: lensType,
                 columns: [{ name: col.name, color: color, value: columnValue }],
-                ids: Array.from(idSet.values()),
+                ids: lens.ids,
                 color: color
             }
         }
@@ -499,10 +532,8 @@ class DataManager {
             }
         })
 
-        const points = this.data.filter(d => idSet.has(d.id))
-        let polygon = this._makePolygon(points)
-        const centroid = this._makeCentroid(polygon)
-        polygon = this._enlargePolygon(polygon, centroid)
+        const points = this.data.filter(d => idSet.has(d.id)).map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))]))
+        const { polygon, centroid } = this._makePolygon(points)
 
         const n = col.name
         if (!this.annoMap[n]) {
@@ -539,64 +570,103 @@ class DataManager {
                     a.columns.length === b.columns.length &&
                     a.columns[0].name === b.columns[0].name
                 ) {
-                    toMerge.push(j)
+                    toMerge.push(b)
                     merged.add(b.id)
                 }
             }
 
-            let idSet = new Set(idsA)
-            let mergeCols = a.columns
-            const colSet = new Map(mergeCols.map(d => ([d.name, d.value])))
-            const colCounts = new Map()
-            mergeCols.forEach(c => colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1))
+            const newAnno = this._merge(a, toMerge)
 
-            toMerge.forEach(j => {
-                const b = this.annotations[j]
-                idSet = idSet.union(new Set(b.ids))
-                b.columns.forEach(c => {
-                    delete this.annoMap[c.name][b.id]
-                    if (colSet.has(c.name) && colSet.get(c.name) === columnValue) {
-                        colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1)
-                    } else {
-                        mergeCols.push({ name: c.name, color: c.color, value: c.value })
-                        colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1)
-                        colSet.set(c.name, c.value)
-                    }
-                })
-            })
-
-            let annoColor, maxCount = 0;
-            colCounts.forEach((theCount, theColor) => {
-                if (theCount > maxCount) {
-                    annoColor = theColor;
-                    maxCount = theCount
-                }
-            })
-
-            const points = this.data.filter(d => idSet.has(d.id))
-            let polygon = this._makePolygon(points)
-            const centroid = this._makeCentroid(polygon)
-            polygon = this._enlargePolygon(polygon, centroid)
-
-            mergeCols.forEach(c => {
-                const n = c.name
-                if (!this.annoMap[n]) {
-                    this.annoMap[n] = {}
-                }
-                this.annoMap[n][a.id] = true
-            })
-
-            a.x = centroid[0]
-            a.y = centroid[1]
-            a.polygon = polygon
-            a.columns = mergeCols
-            a.color = annoColor
-            a.ids = Array.from(idSet.values())
+            a.x = newAnno.x
+            a.y = newAnno.y
+            a.polygon = newAnno.polygon
+            a.centroid = newAnno.centroid
+            a.columns = newAnno.columns
+            a.color = newAnno.color
+            a.ids = newAnno.ids
         }
 
         if (merged.size > 0) {
             this.annotations = this.annotations.filter(d => !merged.has(d.id))
             this.callbacks.anno.forEach(f => f())
+        }
+    }
+
+    mergeAnnotations(idA, idB) {
+        const a = this.annotations.find(d => d.id === idA)
+        const b = this.annotations.find(d => d.id === idB)
+        if (a && b && idA !== idB) {
+            // merge these two annotations
+            const newAnno = this._merge(a, [b])
+            // update annotation a
+            a.x = newAnno.x
+            a.y = newAnno.y
+            a.polygon = newAnno.polygon
+            a.centroid = newAnno.centroid
+            a.columns = newAnno.columns
+            a.color = newAnno.color
+            a.ids = newAnno.ids
+
+            // remove annotation b from list
+            this.annotations = this.annotations.filter(d => d.id !== idB)
+            // call anno callbacks
+            this.callbacks.anno.forEach(f => f())
+        }
+    }
+
+    _merge(a, others) {
+
+        let idSet = new Set(a.ids)
+        let mergeCols = a.columns
+        const colSet = new Map(mergeCols.map(d => ([d.name, d.value])))
+        const colCounts = new Map()
+        mergeCols.forEach(c => colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1))
+
+        others.forEach(b => {
+            idSet = idSet.union(new Set(b.ids))
+            b.columns.forEach(c => {
+                delete this.annoMap[c.name][b.id]
+                if (colSet.has(c.name)) {
+                    colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1)
+                } else {
+                    mergeCols.push({ name: c.name, color: c.color, value: c.value })
+                    colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1)
+                    colSet.set(c.name, c.value)
+                }
+            })
+        })
+
+        let annoColor, maxCount = 0;
+        colCounts.forEach((theCount, theColor) => {
+            if (theCount > maxCount) {
+                annoColor = theColor;
+                maxCount = theCount
+            }
+        })
+
+        const points = this.data.filter(d => idSet.has(d.id)).map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))]))
+        const { polygon, centroid } = this._makePolygon(points)
+
+        mergeCols.forEach(c => {
+            const n = c.name
+            if (!this.annoMap[n]) {
+                this.annoMap[n] = {}
+            }
+            this.annoMap[n][a.id] = true
+        })
+
+        return {
+            id: a.id,
+            mode: a.mode,
+            lensType: a.lensType,
+            color: a.color,
+            x: mean(centroid, c => c[0]),
+            y: mean(centroid, c => c[1]),
+            polygon: polygon,
+            centroid: centroid,
+            columns: mergeCols,
+            color: annoColor,
+            ids: Array.from(idSet.values())
         }
     }
 
