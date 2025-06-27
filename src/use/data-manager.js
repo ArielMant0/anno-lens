@@ -50,6 +50,9 @@ function calcStats(data, c, filterType) {
 }
 
 function split(points, polygon) {
+    if (points.length < 3) {
+        return [polygon]
+    }
     const c = polygonCentroid(polygon)
     let minDist = Number.MAX_VALUE
     let point = null
@@ -76,8 +79,16 @@ function split(points, polygon) {
             }
         })
 
-        return split(a, polygonHull(a)).concat(split(b, polygonHull(b)))
-            .filter(d => d.length > 0)
+        let tmp = []
+        if (a.length > 0 && b.length > 0) {
+            tmp = split(a, polygonHull(a)).concat(split(b, polygonHull(b)))
+        } else if (b.length > 0) {
+            tmp = split(b, polygonHull(b))
+        } else if (a.length > 0) {
+            tmp = split(a, polygonHull(a))
+        }
+
+        return tmp.filter(d => d.length > 0)
     }
 
     return [polygon]
