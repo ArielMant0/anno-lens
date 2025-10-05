@@ -154,6 +154,8 @@
     import { useTooltip } from '@/stores/tooltip';
     import ColorPicker from './ColorPicker.vue';
     import DatasetSelector from './DatasetSelector.vue';
+    import { llmComparison, llmSummary } from '@/use/llm-interface';
+    import { toast } from 'vue3-toastify';
 
     const app = useApp()
     const tt = useTooltip()
@@ -274,6 +276,7 @@
 
     let windowResize = null, plotResize = null, mouseMove = null;
     let loop, looptime;
+    let llmToastSum = null, llmToastComp = null
 
     ////////////////////////////////////////////////////////////////////////////
     /// Functions
@@ -462,6 +465,53 @@
         }
         updateLens(lx, ly)
         applyLens()
+        if (!moveLens.value) {
+            if (llmToastSum !== null) toast.remove(llmToastSum)
+            if (llmToastComp !== null) toast.remove(llmToastComp)
+            const loadToast = toast.loading("analyzing lens data..")
+            const cols = DM.columns.concat(app.datasetObj.meta)
+            const dataA = act.getResultData()
+                .map(d => {
+                    const obj = {}
+                    cols.forEach(c => {
+                        if (typeof d[c] !== "boolean" || d[c] === true) {
+                            obj[c] = d[c]
+                        }
+                    })
+                    return obj
+                })
+
+            llmSummary(dataA)
+            .then(result => {
+                toast.remove(loadToast)
+                llmToastSum = toast.success(result.answer, { autoClose: false })
+            })
+
+            const other = DM.getLens(activeLens.value === primaryLens.value ?
+                secondaryLens.value :
+                primaryLens.value)
+
+            if (other) {
+                const dataB = other.getResultData()
+                    .map(d => {
+                        const obj = {}
+                        cols.forEach(c => {
+                            if (typeof d[c] !== "boolean" || d[c] === true) {
+                                obj[c] = d[c]
+                            }
+                        })
+                        return obj
+                    })
+
+                llmComparison(dataA, dataB)
+                .then(result => {
+                    toast.remove(loadToast)
+                    llmToastComp = toast.success(result.answer, { autoClose: false })
+                })
+            }
+
+
+        }
         lensMoveTime.value = Date.now()
     }
     function onClickLensOverlay(id) {

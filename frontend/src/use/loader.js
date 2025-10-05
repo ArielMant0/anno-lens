@@ -10,6 +10,7 @@ export function useLoader() {
     }
 
     async function get(path, params=null, headers=null) {
+        const options = {}
         if (params) { options.params = params }
         if (headers) { options.headers = headers }
         const response = await axios.get(url(path), options);
@@ -17,6 +18,7 @@ export function useLoader() {
     }
 
     async function post(path, body, params=null, headers=null) {
+        const options = {}
         if (params) { options.params = params }
         if (headers) { options.headers = headers }
         const response = await axios.post(url(path), body, options);
