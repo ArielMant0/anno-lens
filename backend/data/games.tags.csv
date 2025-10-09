@@ -1,0 +1,265 @@
+id,name,description
+1035,ai: commandable,the game has AI companions that can be commanded by the player (fully or partially)
+1036,ai: uncommandable,"the game has AI companions that CANNOT be commanded by the player
+
+includes all types of companions as long as it is not only an escort mission and the companion follows the player"
+1037,auto: assemble,"automation is directly build/assembled, usually some kind of machine
+
+something can only count as automation if it could also be done manually by the player in some other way, with the automation therefore replacing manual labor (preferably introducing a certain depth)"
+1038,auto: configure,"automation is configured but not directly build/assembled
+
+something can only count as automation if it could also be done manually by the player in some other way, with the automation therefore replacing manual labor (preferably introducing a certain depth)"
+1050,character editor,"the game has a character editor which allows the player to personalize the character they play to some degree (age, gender, name, class, race, ..)"
+1051,chunk: continuous,"there are no clear boundaries in the game world, there are seamless transitions between different game parts"
+1052,chunk: package wise,"there are clear boundaries in the game world, different game parts can be named (or even separately chosen to play again)"
+1054,com: chat wheel,"players can post premade messages to a chat, usually by using a wheel where they can choose between a set of available messages
+
+This acts as a barrier for toxicity and does not require devs to implement chat filters."
+1055,com: external,"players communicate outside of the game, e.g. because they are in the same location or by using other software"
+1056,com: free drawing,"players can draw to communicate with other players, e.g. by drawing on a map to indicate where something is"
+1057,com: free gestures,players can communicate via free gestures (most likely only VR games)
+1058,com: gestures,players can communicate using a set of predefined gestures their character can make
+1059,com: markers and pings,"players can communicate through markers and pings, i.e., small symbolic representations "
+1060,com: npc and npc,NPCs talk to each other (e.g. ambient dialog or cutscenes) which can act as a source of information for the player
+1061,com: npc and player,"NPCs communicate with the player (not their in-game character), e.g. in a tutorial. This can include narrators."
+1062,com: npc and playercharacter,"The players can communicate with NPCs via their in-game character, e.g. to gather information, complete quests, trade resources or just chat"
+1063,com: proximity communication,"Communication is bound to a location, e.g. players can only hear each other when they are close to each other in the game world.
+This is allowed to be tagged for single player games."
+1064,com: soundboard,"players can communicate through a sound board, e.g., through a set of predefined spoken lines (voiced by someone else)"
+1065,com: text chat,players can communicate through a text chat
+1066,com: voice chat,players can communicate through a voice chat
+1075,dd: arrow indicator,players are shown a direction through an arrow indicator to help them navigate
+1076,dd: compass,players can navigate with the help of a compass
+1077,dd: ingame path trail,"directions are given through a path that is overlayed on the game world, e.g. to show players which way they must go"
+1079,enact violence,players solve problems or progress by enacting violence like killing creatures and defeating enemies
+1080,exp: heterogeneous,players get a diverse game experience because the game activities are very different
+1081,exp: homogeneous,"players get a more homogeneous game experience, the core game activities ""feel"" the same"
+1085,game object personalization,"players can personalize game objects, e.g., through naming, coloring or cosmetics (clothing, hair styles)"
+1089,ginfo: dialog,players need to collect relevant information by talking to NPCs
+1090,ginfo: exploration,"players need to gather information by investigating their environment in the hopes of finding something, e.g. new items, an NPCs to talk to, etc."
+1091,ginfo: lookup,"players need to gather information by looking up information in the game (looking at letters, looking at the quest log) - this does not include *searching*"
+1092,ginfo: remember self,"players need to remember gathered information themselves, since the game does not track it"
+1093,ginfo: scouting,"players need to collect information by (repeatedly) investigating an area, e.g. to check that nothing is there or to get information on an enemy"
+1094,ginfo: text search,players can search through information by specifying search terms
+1095,goc: critical failure,"the game is over when the player fails critically, e.g. death, which resets to a previous point in the game, thereby losing any progress between this point and the critical failure"
+1096,goc: none,"there is no direct game over condition, e.g., because the game continues after the story ends (Minecraft) or because there was no end to begin with (endless mode)"
+1097,goc: permadeath,"When the player dies, the game resets to the start, as is common for rogue-like games. This does not include games where the player can simply load, that would just be a critical failure."
+1098,goc: reach endpoint,"The game ends when a certain point is reached, e.g., the conclusion of the main quest. A game ending means that the game can not be played further without starting anew."
+1099,info: arrange,players can spatially arrange information
+1100,info: connect,"players can (visually) connect pieces of information, e.g. via red strings like a graph"
+1101,info: distribute,players must distribute information amongst themselves to tackle problems (multiplayer only)
+1102,info: mark/tag,"players can tag information, which can be abstract or concrete, e.g. by tagging video clips based on their content"
+1103,info: other,placeholder for any missing tags to organize information
+1104,info: record,"players can record information themselves, e.g. with a text note"
+1105,info: visibility,"players can (visually) hide information not relevant to the current problem, e.g. by clicking an item to reduce its rendering opacity
+
+this does not include being able to show or hide information in windows, e.g. a quest log"
+1107,int: highlight,"visual highlights, e.g. for status changes, important entities, etc."
+1108,int: new data,"the game communicates that new data is available to the player, e.g., a new quest, new log entry, new armor, etc."
+1110,int: visual aid,the game has visual aids (mostly for navigation) like ledges that are painted in a particular color to indicate that they can be climbed on
+1115,map: drawing,players can draw on a map
+1116,map: minimap,the game includes a minimap version of a larger map
+1117,map: path trail,path trails are shown on a map
+1118,map: place symbols,"players can place symbols on the map, e.g. location markers"
+1119,map: quicktravel,"players can use something (icon) on a map to quickly travel to other locations
+
+NOTICE: A game feature is only quicktravel if the player could also travel the same distance in a slower way e.g. walking by foot vs clicking on the minimap."
+1120,map: symbols,"the game includes a map (at all), usually with symbols that provide information on specific locations"
+1121,mech: card game,The game has mechanics based around card games. This can be actual card games or just prominent elements of card games.
+1122,mech: challenges,"the game has (optional) content intended to challenge players' skill, e.g. challenge dungeons"
+1123,mech: change game speed,"players can change the speed of the game, e.g., through slow motion/bullet time, by having a tactical pause or directly controling the speed (slower/faster)"
+1124,mech: combos,"the game has combos in some sense, e.g., when players successfully chain or combine (specific) attacks, when players can craft combos, etc."
+1125,mech: configurable quick access,The player can configure some type of quick access. This could be a hotbar or a radial menu where items/skills can be assigned.
+1126,mech: other,for any missing tags related to mechanics
+1127,mech: physical save points,"there are physical objects in the game where the player can save and/or rest, optionally with replenishing their health
+
+saving can mean creating a new save file or getting a new checkpoint"
+1128,mech: place & arrange,"players can place and arrange objects inside the game world, usually employed for building or moving units"
+1129,mech: predefined notes,"the game provides information in the form of notes, audio diaries, encylopedias, letters, etc."
+1130,mech: quest tracker display,players can see their current quest objectives/tasks displayed on the screen (automatically or by setting a quest as active)
+1131,mech: queue,"players can queue specific actions like movement or more complex commands; does not count if the game only internally uses a queue, it needs to be visually present or possible to see for the player"
+1132,mech: quicktime events,the game contains events that require players to press a specific button in a given time window; can have bad consequences if failed
+1133,mech: skilltree & upgrades,"the game includes systems, like a skill or research tree, where upgrades are successively unlocked by the player"
+1134,mech: stealth,"the game has stealth mechanics like sneaking, wearing disguises or stealing"
+1135,mech: transform,"players can transform things inside the game into other things, e.g. crafting (this does not including paying for things with money)"
+1136,mech: vehicles & mounts,"players can use vehicles or mounts (e.g., horses, dragons, etc.) to traverse the world: these must  1. have their own controls and 2. be an alternative way of moving. Should apply to almost everything where the player controls a vehicle or mount."
+1139,mini: busywork,"minigames that consist of busywork (see ""busywork"" tag), e.g. trivial and repetitive tasks
+
+minigames are generally expected to be different from the main game - for example in terms of input/movement"
+1140,mini: logic,"includes minigames that can primarily be solved by employing logic, e.g Towers of Hanoi
+
+minigames are generally expected to be different from the main game - for example in terms of input/movement"
+1141,mini: luck,"minigames that are luck based like flipping a coin
+
+minigames are generally expected to be different from the main game - for example in terms of input/movement"
+1142,mini: skill,"includes minigames that can primarily be solved through skill, e.g clicking objects in a short time frame in the correct order
+
+minigames are generally expected to be different from the main game - for example in terms of input/movement"
+1143,mini: strategy,"minigames that require the player to do some strategic thinking
+
+minigames are generally expected to be different from the main game - for example in terms of input/movement"
+1146,misc: collectibles,the game has collectible items that players can collect during gameplay and that are usually displayed in a gallery somewhere
+1147,misc: community content,"the game allows for community content (e.g., via the steam workshop)"
+1148,misc: difficulty settings,the game allows players to customize the difficulty by selecting a difficulty level or customized game settings that influence difficulty
+1149,misc: educational,The game includes educational content that directly aims to be educational. This does not include when information/architecture is based on the real-world but just part of the game as such. There must be obvious intent to educate.
+1150,misc: secrets,"the game includes content that is hidden or not easily accessible, e.g. easter eggs, treasures, special endings .."
+1151,misc: tutorial,the game includes a tutorial of some kind (can be big or small)
+1152,mng: compose team,"players need to compose a team of units
+
+requires that units influence each other e.g. in terms of interaction"
+1153,mng: consumables,"players need to manage consumable resources like money, materials, potions, etc."
+1154,mng: inventory,"players need to manage their inventory , which is limited by space or weight (choose which items to keep)"
+1155,mng: items,"players need to manage which items they use, buy, equip, etc."
+1156,mng: skills,"players need to manage skills, e.g., when to use a skill, when to upgrade it or which skills to equip"
+1157,mng: time,"players need to manage time, e.g., because the game has other systems based around time"
+1158,mng: units,players need to manage mutliple units
+1159,mul: couch coop,"(cooperative) multiplayer that is played in the same location, using a single device"
+1160,mul: leave game objects,players can leave behind objects in the shared (multiplayer) world
+1161,mul: leave text,players can add (persistent) text to a shared (multiplayer) game world
+1162,mul: local multiplayer,"multiplayer that is played in the same network (LAN), using multiple devices"
+1163,mul: online multiplayer,multiplayer that is played online (using multiple devices)
+1166,ord: branches,"game contents can be experienced/accessed in a branched order, i.e., there are different options but still some restrictions"
+1167,ord: linear,game contents can only be experienced/accessed in a predetermined linear order
+1168,ord: open,"game contents can be experienced/accessed in any order, e.g., in open-world games"
+1172,pc: discovery,"personal challenge based on discovery of new information about the story, game world, characters, etc."
+1173,pc: emotional challenges,personal challenge based on emotional reactions to story developments or other parts of the game
+1174,pc: labor or busywork,personal challenge based on simply having to do a lot of work
+1175,pc: logic challenges,personal challenge based on using logic to find correct solutions
+1176,pc: memory,personal challenge based on remembering vital information
+1177,pc: moral challenges,personal challenge based around the morality of events in the game
+1178,pc: other,any other unique challenges
+1179,pc: skill or dexterity,personal challenge based on mastering a skill (usually hand-eye coordination) to a certain degree
+1180,pc: strategy challenges,"personal challenge based on problems of a strategic nature, e.g. players must manage resources and make plans to overcome challenges"
+1189,rep: gameplay branches,"the game provides mechanics that result in different ways of playing the game (e.g. skilltree)
+
+this does not apply to scenarios where the core gameplay is the same but with a slightly different flavor (e.g. pokemon)"
+1190,rep: meta progression,"players progress after finishing a game/match (e.g. increasing a character level in multiplayer games, etc.)"
+1191,rep: narrative branches,"players can make different choices for the narrative, resulting in different outcomes"
+1192,rep: scoring system,game includes a scoring or ranking system that may motivate players to replay (sections of) the game
+1193,rep: unlock content,"players unlock new content after finishing the game or a run of the game, e.g. new levels, new cosmetics, new game modes, story elements, etc."
+1196,res: apply logic,"players must apply logic for problem-solving, e.g., for abstract puzzles"
+1197,res: apply physics,"problem solving involves systems and rules based on physics, e.g. jump-and-run or more complex puzzles"
+1198,res: combine information,"players need to combine gathered information, it's less about applying logic and more about trying to find (loose) connections"
+1199,res: learn or apply language,"merge tags:
+apply preknown language, body language, learn programming, learn unknown language"
+1200,res: process of elimination,problem-solving is partially based on process of elimination
+1201,res: social deduction,players need to engage in social deduction for problem-solving
+1202,res: strategic planning,"players must devise an appropriate strategy to solve problems, weighing different options and uncertainty"
+1204,rnd: ability outcome,the outcome of an ability/skill is randomized to some degree
+1205,rnd: ability select,which abilities can be selected is randomized to some degree
+1206,rnd: agents,how (AI) agents are spawned or how they behave is randomized to some degree
+1207,rnd: enemies,how enemies are spawned or how they behave is randomized to some degree
+1208,rnd: events,random events can occur during gameplay (e.g. natural disasters or NPC quests)
+1209,rnd: loot,"loot (items that enemies drop or that can be found in chests) is randomized to some degree, e.g., using a loot table"
+1210,rnd: world generation,"the game world is randomly generated to some degree, e.g., procedural generation"
+1211,rpt: grinding,"players can progress by grinding, this is very similar to busywork since players continuously do the same activity, e.g. kill a specific enemy type.
+
+can be motivated internally (players want to level-up) or because the game difficulty forces them to by not providing other means of progressing"
+1212,rpt: practicing,players may want to practice to tackle a (skill) challenge or simply get better
+1213,rpt: trial and error,"players solve problems via trial and error since they can just try out different solution strategies without penalty (or with reloading)
+
+NOTICE: only tag this when this is a viable strategy"
+1214,sch: blueprint,"players can define or build blueprints that function as a planning help.
+This can for example refer to a UI in which the player can plan what he wishes to do in the future."
+1215,sch: copy-paste,players can use copy-paste features for building for example selecting an area that is copied to another location.
+1216,sch: recipe,"the game includes recipes, e.g., for crafting
+A recipe would contain a list of items that are required for crafting."
+1217,sch: template,players can define (building) templates to reuse at another point in time. For example when creating a building and saving it to be build a second time later on.
+1219,set-g: adventure,"similar to adventure stories, where some venture is undertaken by the protagonist (think Indiana Jones, Tomb Raider, ..)"
+1220,set-g: comedy & parody,"the game has a comedic tone, not taking itself too seriously or explicitly aiming to be funny"
+1221,set-g: crime & mystery,"mystery stories, like detective fiction or crime thrillers"
+1222,set-g: fantasy,"contains many typical fantasy elements (magic, elves, dragons)"
+1223,set-g: horror & gore,the story/gameplay features (psychological) horror and/or gore
+1224,set-g: other,
+1225,set-g: post apocalypse,"the story is set in a post-apocalypse (zombies, nuclear bomb, ecocide, ..)"
+1226,set-g: science fiction,"science fiction story that is usually set in a futurist scenario with evolved technology (space ships, FTL travel, ..)"
+1227,set-g: space western,futuristic space settings meets western elements (e.g. space cowboys)
+1228,set-g: steampunk,setting inspired by the victorian era with a heavy focus on steam-based machines
+1229,set-g: western,"contains typical western elements like cowboys, sheriffs, and 19th century architecture/technology"
+1230,set-g: zombie apocalypse,set in an apocalypse caused by zombies
+1231,set-s: africa,game location is set in (fictional) africa
+1232,set-s: americas,game location is set in (fictional) north or south america
+1233,set-s: asia,game location is set in (fictional) asia
+1234,set-s: europe,game location is set in (fictional) europe
+1235,set-s: nature,game location is mostly in nature (so not around human settlements)
+1236,set-s: other,
+1237,set-s: sea,game location is set at sea (can also be a ship)
+1238,set-s: space,game location is set in outer space
+1239,set-s: space ship,game is set on a space ship
+1240,set-s: underwater,game is largely set underwater
+1241,set-s: urban,"game is set in urban areas (cities, villages)"
+1242,set-t: antiquity,game is set in a (fictional) time from 800 b.c to 500
+1243,set-t: early modern age,"game is set in a (fictional) time from 1500–1800, early modern period, between middle ages and modern period"
+1244,set-t: futuristic,game is set in a (fictional) futuristic time
+1245,set-t: middle ages,game is set in a (fictional) time from 500 to 1500
+1246,set-t: modern times,game is set in a (fictional) modern times starting around the 20th century
+1247,set-t: other,
+1252,sim: daily routines,agents in the game have simulated daily routines
+1253,sim: day-night cycle,the game includes a day/night cycle or meaningful connection of daytime to other game mechanics
+1254,sim: economy,the game features a simulated (even if simple) economy with supply and demand
+1255,sim: needs,"the game simulates needs of people, animals, plants, etc."
+1256,sim: seasons & weather,the game simulates weather or seasons in some way meaningful to other game mechanics
+1259,spn: marker,the game provides markers in the game world to support spatial navigation
+1260,spn: object quicktravel,"players can quicktravel using objects in the game world like portals, teleport scrolls, gates, etc."
+1261,spn: other,any other type of spatial navigation
+1262,spn: pings,players can support spatial navigation through pings (likely only multiplayer)
+1263,struc: cyclic,"the game has a cyclic structure, i.e., it can (or should) be played multiple times for a good player experience"
+1264,struc: match based,"the game is match-based, i.e., each play session consists of 1 or more matches that are clearly separated from each other
+
+the most prominent examples can be found in multiplayer games (e.g. DotA 2 or Counter Strike)"
+1265,struc: turnbased,"(some) parts of the game are structured in a turn-based manner, usually related to combat"
+1267,subversion: game mechanics,the game subverts known conventions around game mechanics
+1268,subversion: storytelling,the game subverts conventions around storytelling practices
+1270,top: aliens,"the game tackles topics/issues related to aliens, be they friendly or hostile"
+1271,top: art,the game tackles topics/issues related to art
+1272,top: colonialization,the game tackles topics/issues related to colonization
+1274,top: conquest,the game tackles topics/issues related to (violent) conquest
+1275,top: creatures,"the game tackles topics/issues related to creatures, which are fantastical or otherworldly lifeforms that need not be hostile"
+1277,top: discrimination,"the game tackles topics/issues related to discrimination (racism, sexism, ..)"
+1278,top: economy,"the game tackles topics/issues related to the economy, e.g. how people are affected by it differently"
+1279,top: ecosystems,"the game tackles topics/issues related to ecosystems, e.g. how they work or how they can end up collapsing"
+1280,top: family & friends,the game tackles topics/issues related to family and friendship
+1282,top: free will,the game tackles topics/issues related to free will
+1283,top: gods,"the game tackles topics/issues related to gods, can be in the form of mythology or other"
+1284,top: grief & loss,the game tackles topics/issues related to grief and loss
+1285,top: language,"the game tackles topics/issues related to language, e.g. how we communicate with language and how that shapes culture"
+1286,top: machine intelligence,the game tackles topics/issues related to machine intelligence
+1287,top: magic,the game tackles topics/issues related to magic and the supernatural
+1288,top: monsters,"the game tackles topics/issues related to monsters, e.g. hostile creatures that aim to hurt people"
+1289,top: music,the game tackles topics/issues related to music
+1290,top: other,"for any missing topics, e.g. technology"
+1291,top: parenthood,"the game tackles topics/issues related to parenthood, be they from the parent's or the child's perspective"
+1293,top: plants,the game tackles topics/issues related to plant life
+1294,top: power struggle,"the game tackles topics/issues related to power struggles, e.g. between neighboring countries, families, etc."
+1295,top: religion,"the game tackles topics/issues related to religion, e.g. spirituality and the workings of organized religion"
+1296,top: romantic love,"the game tackles topics/issues related to romantic love, e.g. falling in love, romantic relationships, etc."
+1297,top: sanity,the game tackles topics/issues related to sanity and mental health
+1298,top: settlement,the game tackles topics/issues related to founding/building/maintaining a settlement
+1299,top: sports,the game tackles topics/issues related to sports
+1301,top: synthetic life,"the game tackles topics/issues related to synthetic life, usually created by people"
+1302,top: time,"the game tackles topics/issues related to time, e.g. when the player needs to achieve something in a specific amount of time, or when a groundhog day scenario is at play"
+1303,top: violence,"the game tackles topics/issues related to violence, e.g. why/how/when people inflict violence upon each other"
+1304,top: war,the game tackles topics/issues related to war
+1307,ui: accessibility,"UI settings for accessibility, e.g., a color-blind mode"
+1308,ui: sandbox,UI sandbox that allows players to freely organize the layout
+1309,vis: bars,"the game contains bar-based visualizations, e.g. health bars"
+1310,vis: charts,"the game contains charts (axes + data), e.g. a line chart showing number of slain enemies over time"
+1311,vis: graphs,"the game contains graph-like visualizations of data in the game, e.g. a skilltree"
+1312,vis: icons & symbols,the game contains icons or symbols that encode game-relevant data (cannot be JUST interface elements)
+1313,vis: matrix & tables,the game contains matrix-like visualizations or tables of data
+1314,vis: other,all types of visualizations that do not fall into one of the other categories
+1315,vis: overlay,the game visualizes data through an overlay
+1317,vision: cones,vision works through cones (visible)
+1318,vision: fog of war,"game has fog of war, i.e., vision is limited to some area around players and other items/units/objects that give vision
+this can include unexplored areas on a map being hidden"
+1319,vision: other,game includes some other form of vision model
+1321,wyd: building,"the player does a lot of building, e.g. a city, machines, etc."
+1322,wyd: crafting,"the player does a lot of crating, e.g weapons, potions, spells, furniture, meals, etc."
+1323,wyd: detective work,"the player does activities related to detective work, e.g. talking to witnesses, gathering evidence, connecting pieces of information, etc."
+1324,wyd: exploring,the player does a lot of exploring of the game (world)
+1325,wyd: farming,"the player does a lot of farming, e.g. buying and sowing crops, watering them and harvesting"
+1326,wyd: fighting,"the player does a lot of fighting, be it melee or ranged, against some type of enemy"
+1327,wyd: managing,"the player does a lot of managing, e.g. hiring and firing employees, starting machines, buying supplies, ordering units around, etc."
+1328,wyd: platforming,"the player does a lot of platforming, e.g. jumping between platforms"
+1329,wyd: puzzling,"the player does a lot of puzzling, e.g. they need to solve logic riddles"
+1330,wyd: racing,the player does a lot of racing with some kind of vehicle/mount

@@ -6,6 +6,7 @@ import { Lens, LENS_TYPE } from "./Lens"
 let _ANNO_ID = 1;
 
 import MyWorker from '@/worker/feature-worker?worker'
+import { llmExtract } from "./llm-interface";
 
 function calcStats(data, c, filterType) {
     const ord = filterType === DATA_TYPES.ORDINAL || filterType === DATA_TYPES.NOMINAL || filterType === DATA_TYPES.BOOLEAN
@@ -435,6 +436,9 @@ class DataManager {
             return set.size > 0 && d.columns.length === startCols.length === 1 && d.columns[0].name === col.name
         })
 
+        const app = useApp()
+        const cols = this.columns.concat(app.datasetObj.meta)
+
         // merge annotations
         if (exact || overlap.length > 0) {
 
@@ -483,6 +487,21 @@ class DataManager {
                 ids: Array.from(idSet.values()),
                 color: annoColor
             }
+
+            const dataA = this.data.filter(d => idSet.has(d.id))
+                .map(d => {
+                    const obj = {}
+                    cols.forEach(c => {
+                        if (typeof d[c] !== "boolean" || d[c] === true) {
+                            obj[c] = d[c]
+                        }
+                    })
+                    return obj
+                })
+            // ask the LLM what it says about this data
+            llmExtract("interesting", dataA, this.stats)
+                .then(reply => console.log(reply))
+
         } else {
             const idSet = new Set(lens.ids)
             const points = this.data.filter(d => idSet.has(d.id)).map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))]))
@@ -500,6 +519,20 @@ class DataManager {
                 ids: lens.ids,
                 color: color
             }
+
+            const dataA = this.data.filter(d => idSet.has(d.id))
+                .map(d => {
+                    const obj = {}
+                    cols.forEach(c => {
+                        if (typeof d[c] !== "boolean" || d[c] === true) {
+                            obj[c] = d[c]
+                        }
+                    })
+                    return obj
+                })
+            // ask the LLM what it says about this data
+            llmExtract("interesting", dataA, this.stats)
+                .then(reply => console.log(reply))
         }
 
         addObj.columns.forEach(c => {
