@@ -22,7 +22,7 @@
     import { storeToRefs } from 'pinia'
 
     const app = useApp()
-    const { moveLens } = storeToRefs(app)
+    const { moveLens, mouseStill } = storeToRefs(app)
 
     const props = defineProps({
         target: {
@@ -105,6 +105,7 @@
     function draw() {
         if (DM.lenses.length === 0) return
         const lenses = props.indices
+            .filter(i => i === 0 || i === props.activeLens || mouseStill.value)
             .map(i => DM.lenses[i])
             .filter(d => d.x !== null && d.y !== null)
 
@@ -120,7 +121,6 @@
         })
 
         if (lenses.length === 0) return
-
 
         const lg = svg.append("g")
             .selectAll(".lens")
@@ -162,7 +162,7 @@
             const ny = by + (-vy / norm) * r
 
             let m;
-            const minDist = idx === 0 ? r + 25 : r + props.radius*2 + 25
+            const minDist = idx === 0 ? r + 20 : r + props.radius*2 + 20
             const minStep = idx === 0 ? props.radius : minDist
 
             if (norm < minDist && (Math.abs(vx) < minStep || Math.abs(vy) < minStep)) {
@@ -423,6 +423,7 @@
     onMounted(update)
 
     watch(props, update)
+    watch(mouseStill, update)
     watch(width, update)
     watch(height, update)
 

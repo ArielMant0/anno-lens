@@ -9,7 +9,7 @@
                 <div style="position: relative;">
                     <FeatureMap
                         :column="chosenColorAttr"
-                        :hide="int.filterAttr!==null"
+                        :hide="int.filterAttr !== null || !mouseStill"
                         :mode="refMode"
                         :lens-type="lensType"
                         :time="featureTime"
@@ -29,7 +29,7 @@
                         :y-attr="datasetY"
                         :color-attr="chosenColorAttr"
                         :color-scale="int.scales[chosenColorAttr]"
-                        :radius="3"
+                        :radius="4"
                         :width="w"
                         :height="h"
                         show-lens
@@ -177,6 +177,7 @@
         columnIndex,
 
         moveLens,
+        mouseStill,
 
         annoTime,
         featureTime,
@@ -270,10 +271,8 @@
         return d => d < 1 ? "less relevant" : "more relevant"
     })
 
-    const mouseStill = ref(false)
-
-    let windowResize = null, plotResize = null, mouseMove = null;
-    let loop, looptime;
+    let windowResize = null, plotResize = null, mouseMove = null
+    let loop, looptime
 
     ////////////////////////////////////////////////////////////////////////////
     /// Functions
@@ -436,8 +435,8 @@
 
     function onHover(lx, ly, points, event) {
         if (moveLens.value) {
-            mouseStill.value = false
             mouseMove = performance.now()
+            mouseStill.value = false
             updateLens(lx, ly)
             applyLens()
         } else if (app.datasetObj.meta) {
@@ -616,7 +615,7 @@
 
         // react to mouse down for longer time
         const mouseDiff = mouseMove !== null ? timestamp - mouseMove : 0
-        if (mouseDiff >= 100 && mouseDiff <= 150) {
+        if (mouseDiff >= 60 && mouseDiff <= 120) {
             mouseMove = null;
             mouseStill.value = true
         }
