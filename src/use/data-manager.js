@@ -49,15 +49,21 @@ function calcStats(data, c, filterType) {
     }
 }
 
+function getHull(points) {
+    if (points.length <= 3) {
+        return points
+    }
+    return polygonHull(points)
+}
+
 function split(points, polygon) {
-    if (points.length < 3) {
+    if (points.length <= 3) {
         return [polygon]
     }
-    const c = polygonCentroid(polygon)
-    let minDist = Number.MAX_VALUE
-    let point = null
 
-    if (points.length <= 2) return [points]
+    let point = null
+    let minDist = Number.MAX_VALUE
+    const c = polygonCentroid(polygon)
 
     points.forEach(p => {
         const d = euclidean(p[0], p[1], c[0], c[1])
@@ -80,15 +86,18 @@ function split(points, polygon) {
         })
 
         let tmp = []
-        if (a.length > 0 && b.length > 0) {
-            tmp = split(a, polygonHull(a)).concat(split(b, polygonHull(b)))
+        // make sure we only calculate a hull with enough points
+        if (a.length > 2 && b.length > 2) {
+            tmp = split(a, getHull(a)).concat(split(b, getHull(b)))
+        } else if (a.length > 0 && b.length > 0) {
+            tmp = [getHull(points)]
         } else if (b.length > 0) {
-            tmp = split(b, polygonHull(b))
+            tmp = split(b, getHull(b))
         } else if (a.length > 0) {
-            tmp = split(a, polygonHull(a))
+            tmp = split(a, getHull(a))
         }
 
-        return tmp.filter(d => d.length > 0)
+        return tmp.filter(d => d && d.length > 0)
     }
 
     return [polygon]
