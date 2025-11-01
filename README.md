@@ -1,11 +1,32 @@
-# AnnoLens
+# AnnoLens (IEEE VIS 2025)
 
-AnnoLens is an interactive visual analytics system that uses lens-based guidance to enable exploration and annotation.
+AnnoLens is an interactive visual analytics system that uses lens-based guidance to enable exploration and annotation,
+as presented at IEEE VIS 2025 short paper track. The paper and supplemental material are available on OSF: [https://osf.io/zpu6c/](https://osf.io/zpu6c/).
+
+How to cite:
+```
+Franziska Becker, Steffen Koch, and Tanja Blascheck. AnnoLens: Exploration and Annotation through Lens-Based Guidance. 2025 IEEE Visualization and Visual Analytics (VIS). IEEE. 2025.
+```
+
+BibTex:
+```bibtex
+@inproceedings{becker:anno:2025,
+  title={AnnoLens: Exploration and Annotation through Lens-Based Guidance},
+  author={Becker, Franziska and Koch, Steffen and Blascheck, Tanja},
+  booktitle={2025 IEEE Visualization and Visual Analytics (VIS)},
+  pages={1--5},
+  year={2025},
+  organization={IEEE}
+}
+
+```
+
+
 
 ## Demo
 
 You can play with AnnoLens at [https://arielmant0.github.io/anno-lens/](https://arielmant0.github.io/anno-lens/).
-It is recommended to use Chrome or Firefox to get the best experience.
+It is recommended to use **Chrome** to get the best experience.
 
 ## Manual
 

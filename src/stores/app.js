@@ -19,7 +19,7 @@ export const DATASETS = [
         x: "x",
         y: "y",
         color: "enact violence",
-        type: DATA_TYPES.NOMINAL,
+        type: DATA_TYPES.BOOLEAN,
         ignore: ["name", "cluster"],
         meta: ["name"]
     },{
