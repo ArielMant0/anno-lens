@@ -59,7 +59,18 @@
         </Teleport>
 
         <Teleport to="body">
-            <div style="z-index: 4999;">
+            <div style="z-index: 4999;" class="anno-group">
+                <div v-if="annoLeft.length === 0 && targetRect !== null"
+                    class="anno-placeholder"
+                    :style="{
+                        position: 'absolute',
+                        left: offsetX+'px',
+                        top: offsetY+'px',
+                        minWidth: padding+'px',
+                        minHeight: annoMeta.sizeL+'px'
+                    }"
+                    >
+                </div>
                 <div v-for="a in annoLeft"
                     :key="a.id+'_l_'+annoPos[a.id].index"
                     class="d-flex align-center anno-container"
@@ -71,7 +82,7 @@
                     @drop.prevent="onDropAnno(a)"
                     :style="{
                         position: 'absolute',
-                        left: (offsetX+getAnnotationPos(a.id, true)[0]-25)+'px',
+                        left: (offsetX+getPlaceholderPos('left')-25)+'px',
                         top: (offsetY+getAnnotationPos(a.id, true)[1])+'px',
                         fontSize: '12px',
                     }">
@@ -143,6 +154,17 @@
                     </div>
                 </div>
 
+                <div v-if="annoRight.length === 0 && targetRect !== null"
+                    class="anno-placeholder"
+                    :style="{
+                        position: 'absolute',
+                        left: (offsetX+getPlaceholderPos('right')-5)+'px',
+                        top: offsetY+'px',
+                        minWidth: padding+'px',
+                        minHeight: annoMeta.sizeL+'px'
+                    }"
+                    >
+                </div>
                 <div v-for="a in annoRight"
                     :key="a.id+'_r_'+annoPos[a.id].index"
                     class="d-flex align-center anno-container"
@@ -346,6 +368,14 @@
         event.dataTransfer.dropEffect = "move"
     }
 
+    function getPlaceholderPos(side) {
+        switch(side) {
+            case "left": return -5
+            default:
+            case "right": return props.padding + targetRect.width + 5
+        }
+    }
+
     function getAnnotationPos(id, usePadding=false) {
         const pos = annoPos.value[id]
         if (!pos) return [0, 0]
@@ -492,6 +522,8 @@
             annoPos.value = []
             annoLeft.value = []
             annoRight.value = []
+            annoMeta.sizeL = targetRect.height
+            annoMeta.sizeR = targetRect.height
         }
 
         anno.value = data
@@ -546,6 +578,11 @@
     position: absolute;
     z-index: 100;
 }
+
+.anno-placeholder {
+    background-color: #ededed;
+}
+
 .anno-container:not(:hover) .del-anno,
 .anno-container:not(:hover) .add-anno {
     visibility: hidden;

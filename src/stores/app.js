@@ -52,6 +52,8 @@ export const useApp = defineStore('app', {
         hoverX: 0,
         hoverY: 0,
 
+        annoWidth: 120,
+
         dataTime: 0,
         lensTime: 0,
         lensMoveTime: 0,

@@ -1,14 +1,16 @@
 # AnnoLens (IEEE VIS 2025)
 
 AnnoLens is an interactive visual analytics system that uses lens-based guidance to enable exploration and annotation,
-as presented at IEEE VIS 2025 short paper track. The paper and supplemental material are available on OSF: [https://osf.io/zpu6c/](https://osf.io/zpu6c/).
+as presented at [IEEE VIS 2025 short paper track](https://ieeevis.org/year/2025/program/paper_2b485865-8584-417a-bd55-5a961dcff5ef.html). The paper and supplemental material are available on OSF: [https://osf.io/zpu6c/](https://osf.io/zpu6c/).
 
-How to cite:
-```
-Franziska Becker, Steffen Koch, and Tanja Blascheck. AnnoLens: Exploration and Annotation through Lens-Based Guidance. 2025 IEEE Visualization and Visual Analytics (VIS). IEEE. 2025.
-```
+<div style="margin-bottom: 2em; margin-top: 0;">
+<b>How to cite:</b>
 
-BibTex:
+Becker, Franziska and Koch, Steffen and Blascheck, Tanja. "AnnoLens: Exploration and Annotation through Lens-Based Guidance". 2025 IEEE Visualization and Visual Analytics (VIS). IEEE. 2025.
+</div>
+
+
+**BibTex:**
 ```bibtex
 @inproceedings{becker:anno:2025,
   title={AnnoLens: Exploration and Annotation through Lens-Based Guidance},
@@ -21,12 +23,16 @@ BibTex:
 
 ```
 
-
-
 ## Demo
 
-You can play with AnnoLens at [https://arielmant0.github.io/anno-lens/](https://arielmant0.github.io/anno-lens/).
-It is recommended to use **Chrome** to get the best experience.
+You can play around with AnnoLens at [https://arielmant0.github.io/anno-lens/](https://arielmant0.github.io/anno-lens/).
+**Chrome** is recommended to get the best experience.
+
+## Related Publication
+
+The games tagging dataset in the demo was taken from the following paper, with the data available on OSF at [https://osf.io/fhgm6/](https://osf.io/fhgm6/):
+
+Becker, Franziska and Warnking, René and Brückler, Hendrik and Blascheck, Tanja. "Beyond Entertainment: An Investigation of Externalization Design in Video Games." Computer Graphics Forum. 2025. doi: [https://doi.org/10.1111/cgf.70124](https://doi.org/10.1111/cgf.70124)
 
 ## Manual
 

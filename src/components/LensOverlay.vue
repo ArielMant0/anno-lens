@@ -162,7 +162,7 @@
             const ny = by + (-vy / norm) * r
 
             let m;
-            const minDist = idx === 0 ? r + 20 : r + props.radius*2 + 20
+            const minDist = idx === 0 ? r + 20 : r + props.radius*2 + 25
             const minStep = idx === 0 ? props.radius : minDist
 
             if (norm < minDist && (Math.abs(vx) < minStep || Math.abs(vy) < minStep)) {

@@ -13,14 +13,15 @@
                         :mode="refMode"
                         :lens-type="lensType"
                         :time="featureTime"
-                        style="margin: 0px 170px;"
+                        :style="{ margin: `0px ${annoWidth+20}px` }"
                         :width="w"
                         :height="h"/>
 
                     <ScatterPlot
                         ref="scatter"
                         id="scatter-main"
-                        style="position: absolute; top: 0; left: 0; margin: 0px 170px;"
+                        style="position: absolute; top: 0; left: 0;"
+                        :style="{ margin: `0px ${annoWidth+20}px` }"
                         :data="data"
                         :selected="dataF"
                         :time="dataTime"
@@ -29,7 +30,7 @@
                         :y-attr="datasetY"
                         :color-attr="chosenColorAttr"
                         :color-scale="int.scales[chosenColorAttr]"
-                        :radius="4"
+                        :radius="3"
                         :width="w"
                         :height="h"
                         show-lens
@@ -105,6 +106,7 @@
             target-id="scatter-main"
             :selected="chosenColorAttr"
             @select-color="setColorOverride"
+            :padding="annoWidth"
             :time="annoTime"
             :active="!moveLens"/>
 
@@ -179,6 +181,8 @@
         moveLens,
         mouseStill,
 
+        annoWidth,
+
         annoTime,
         featureTime,
         dataTime,
@@ -196,7 +200,7 @@
     const w = computed(() => {
         const ww = wSize.width.value
         const wh = wSize.height.value
-        return Math.max(500, Math.floor(Math.min(ww*0.9-850, wh*0.7)))
+        return Math.max(500, Math.floor(Math.min(ww*0.9-525-(annoWidth.value*2), wh*0.775)))
     })
     const h = computed(() => w.value)
 
@@ -613,9 +617,9 @@
             lensTime.value = Date.now()
         }
 
-        // react to mouse down for longer time
+        // react to mouse not moving for longer time
         const mouseDiff = mouseMove !== null ? timestamp - mouseMove : 0
-        if (mouseDiff >= 60 && mouseDiff <= 120) {
+        if (mouseDiff >= 15) { // && mouseDiff <= 120) {
             mouseMove = null;
             mouseStill.value = true
         }
