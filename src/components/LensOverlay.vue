@@ -105,7 +105,7 @@
     function draw() {
         if (DM.lenses.length === 0) return
         const lenses = props.indices
-            .filter(i => i === 0 || i === props.activeLens || mouseStill.value)
+            // .filter(i => i === 0 || i === props.activeLens || mouseStill.value)
             .map(i => DM.lenses[i])
             .filter(d => d.x !== null && d.y !== null)
 
@@ -423,7 +423,7 @@
     onMounted(update)
 
     watch(props, update)
-    watch(mouseStill, update)
+    // watch(mouseStill, update)
     watch(width, update)
     watch(height, update)
 

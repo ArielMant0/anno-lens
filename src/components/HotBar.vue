@@ -1,5 +1,5 @@
 <template>
-    <div class="hotbar" :style="{ transform: 'translate(-50%,'+offset+'px)', textAlign: 'center' }">
+    <div class="hotbar" :style="{ transform: 'translate(-110%,'+offset+'px)', textAlign: 'center' }">
 
         <v-btn
             class="hide-btn mb-1"

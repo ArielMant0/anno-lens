@@ -11,7 +11,7 @@
                 variant="outlined"/>
         </div>
 
-        <div class="d-flex justify-start align-start" :style="{ maxHeight: (showHotbar ? 70 : 75)+'vh', overflowY: 'auto'}">
+        <div class="d-flex justify-start align-start" :style="{ maxHeight: '75vh', overflowY: 'auto'}">
 
             <div :style="{ minWidth: (chartWidth+5)+'px' }">
                 <div style="text-align: center;" class="mb-1 text-dots" :style="{ maxWidth: chartWidth+'px' }">
