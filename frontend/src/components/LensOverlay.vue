@@ -65,6 +65,10 @@
             type: Number,
             default: 0
         },
+        drawMini: {
+            type: Boolean,
+            default: false
+        }
     })
 
     const emit = defineEmits(["click-lens", "click-mini", "click-label"])
@@ -200,36 +204,40 @@
             return [(360 + m + (onright ? -55 : 55)) % 360, m, (360 + m + (onright ? 55 : -55)) % 360]
         }
 
-        const degrees = [
-            sec !== null ?
-                getDegrees(ttx+sec.x, tty+sec.y, ttx+prim.x, tty+prim.y, prim.radius, 0).map(deg2rad) :
-                [305, 0, 55].map(deg2rad),
-            sec !== null ?
-                getDegrees(ttx+prim.x, tty+prim.y, ttx+sec.x, tty+sec.y, sec.radius, 1).map(deg2rad) :
-                [],
-        ]
+        if (props.drawMini) {
+            
+            const degrees = [
+                sec !== null ?
+                    getDegrees(ttx+sec.x, tty+sec.y, ttx+prim.x, tty+prim.y, prim.radius, 0).map(deg2rad) :
+                    [305, 0, 55].map(deg2rad),
+                sec !== null ?
+                    getDegrees(ttx+prim.x, tty+prim.y, ttx+sec.x, tty+sec.y, sec.radius, 1).map(deg2rad) :
+                    [],
+            ]
 
-        const colorColumn = prim.getResultColumn(props.mode, props.indexPrimary)
-        const selectedColumn = props.activeLens === 1 ?
-            sec.getResultColumn(props.mode, props.indexSecondary) :
-            colorColumn
+            const colorColumn = prim.getResultColumn(props.mode, props.indexPrimary)
+            const selectedColumn = props.activeLens === 1 ?
+                sec.getResultColumn(props.mode, props.indexSecondary) :
+                colorColumn
 
-        // draw additional vis
-        switch(props.drawMode) {
-            default:
-            case "scatter":
-                drawScatter(prim, degrees[0], 0, selectedColumn, colorColumn)
-                if (sec !== null) {
-                    drawScatter(sec, degrees[1], 1, selectedColumn, colorColumn)
-                }
-                break
-            case "chart":
-                drawMicroVis(prim, degrees[0], 0, selectedColumn, colorColumn)
-                if (sec !== null) {
-                    drawMicroVis(sec, degrees[1], 1, selectedColumn, colorColumn)
-                }
-                break
+            // draw additional vis
+            switch(props.drawMode) {
+                default:
+                case "scatter":
+                    drawScatter(prim, degrees[0], 0, selectedColumn, colorColumn)
+                    if (sec !== null) {
+                        drawScatter(sec, degrees[1], 1, selectedColumn, colorColumn)
+                    }
+                    break
+                case "chart":
+                    drawMicroVis(prim, degrees[0], 0, selectedColumn, colorColumn)
+                    if (sec !== null) {
+                        drawMicroVis(sec, degrees[1], 1, selectedColumn, colorColumn)
+                    }
+                    break
+            }
         }
+
     }
 
     function drawScatter(l, radian, index, selectedColumn, colorColumn) {

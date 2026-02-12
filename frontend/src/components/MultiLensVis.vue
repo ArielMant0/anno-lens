@@ -89,14 +89,12 @@
                     </div>
                 </div>
 
-                <div>
-                    <LensComparison
-                        :active="!moveLens || mouseStill"
-                        :time="lensTime"
-                        :mode="refMode"
-                        :selected-column="chosenColorAttr"
-                        @update="applyLens"/>
-                </div>
+                <DataHistograms
+                    :active="!moveLens || mouseStill"
+                    :time="lensTime"
+                    :mode="refMode"
+                    :selected-column="chosenColorAttr"
+                    @update="applyLens"/>
             </div>
 
         </div>
@@ -119,7 +117,7 @@
             @click-lens="onClickLensOverlay"
             @click-mini="onClickMini"
             @click-label="onClickLabel"
-            :indices="[0, 1]"/>
+            :indices="[0]"/>
 
         <AnnoInventory/>
 
@@ -156,6 +154,7 @@
     import DatasetSelector from './DatasetSelector.vue';
     import { llmComparison, llmSummary } from '@/use/llm-interface';
     import { toast } from 'vue3-toastify';
+import DataHistograms from './DataHistograms.vue';
 
     const app = useApp()
     const tt = useTooltip()
@@ -465,9 +464,15 @@
         }
         updateLens(lx, ly)
         applyLens()
+
+        // TODO: debug, disable AI
+        return
+
         if (!moveLens.value) {
+
             if (llmToastSum !== null) toast.remove(llmToastSum)
             if (llmToastComp !== null) toast.remove(llmToastComp)
+            
             const loadToast = toast.loading("analyzing lens data..")
             const cols = DM.columns.concat(app.datasetObj.meta)
             const dataA = act.getResultData()
@@ -482,10 +487,10 @@
                 })
 
             llmSummary(dataA)
-            .then(result => {
-                toast.remove(loadToast)
-                llmToastSum = toast.success(result.answer, { autoClose: false })
-            })
+                .then(result => {
+                    toast.remove(loadToast)
+                    llmToastSum = toast.success(result.answer, { autoClose: false })
+                })
 
             const other = DM.getLens(activeLens.value === primaryLens.value ?
                 secondaryLens.value :
@@ -504,10 +509,10 @@
                     })
 
                 llmComparison(dataA, dataB)
-                .then(result => {
-                    toast.remove(loadToast)
-                    llmToastComp = toast.success(result.answer, { autoClose: false })
-                })
+                    .then(result => {
+                        toast.remove(loadToast)
+                        llmToastComp = toast.success(result.answer, { autoClose: false })
+                    })
             }
 
 
@@ -594,7 +599,7 @@
         // add primary lens
         DM.addLens(lensRadius.value, lensType.value, true)
         // add secondary lens (for suggestions)
-        DM.addLens(lensRadius.value, lensType.value, false)
+        // DM.addLens(lensRadius.value, lensType.value, false)
 
         const ct = [], scales = {}
         columns.value.forEach(c => {

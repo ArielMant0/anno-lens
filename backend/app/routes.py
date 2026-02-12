@@ -10,7 +10,7 @@ from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.prompts import PromptTemplate
 from langchain.agents import create_agent
-from langchain_ollama.llms import OllamaLLM
+# from langchain_ollama.llms import OllamaLLM
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
