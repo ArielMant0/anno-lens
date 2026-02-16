@@ -56,10 +56,13 @@ export const useApp = defineStore('app', {
         lensMoveTime: 0,
         annoTime: 0,
         featureTime: 0,
+        selectionTime: 0,
 
         showHotbar: true,
         showInventory: false,
-        inventoryTime: 0
+        inventoryTime: 0,
+
+        llmLoading: false
     }),
 
     getters: {
@@ -98,6 +101,11 @@ export const useApp = defineStore('app', {
 
         updateLensData() {
             this.lensTime = Date.now()
+            this.selectionTime = this.lensTime
         },
+
+        setLLMLoading(value) {
+            this.llmLoading = value === true
+        }
     }
 })

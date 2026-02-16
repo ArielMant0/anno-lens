@@ -20,7 +20,12 @@ export async function llmExtract(keyword, data, global, limit=5) {
     return loader.post("extract", { keyword: keyword, global: global, limit: limit, data: data })
 }
 
-export async function llmFree(prompt) {
+export async function llmFree(prompt, limit=50) {
     const loader = useLoader()
-    return loader.post("free", { prompt: prompt })
+    return loader.post("free", { prompt: prompt, limit: limit })
+}
+
+export async function llmFreeWithData(prompt, data, limit=50) {
+    const loader = useLoader()
+    return loader.post("free_data", { prompt: prompt, limit: limit, data: data  })
 }

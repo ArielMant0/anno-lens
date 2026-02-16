@@ -1,4 +1,5 @@
 import { polygonCentroid, polygonHull } from "d3"
+import { euclidean } from "../util"
 
 export function polygonSplit(points, polygon) {
     if (points.length < 3) {

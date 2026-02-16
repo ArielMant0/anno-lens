@@ -1,4 +1,5 @@
-import { findInCircle } from "../util";
+import { mean } from "d3";
+import { findInCircle, getAttr } from "../util";
 import { makePolygon } from "./polygon";
 
 let _SEL_ID = 1;
@@ -15,6 +16,27 @@ class Selection {
         this.id = `sel_${_SEL_ID++}`
         this.type = type
         this.data = new Set(data)
+
+        this.x = 0
+        this.y = 0
+        this.polygon = []
+        this.centroid = []
+    }
+
+    calculatePolygon(data, xAttr, yAttr, x, y) {
+        if (this.data.size > 0) {
+            const xy = data.filter(d => this.data.has(d.id)).map(d => ([x(getAttr(d, xAttr)), y(getAttr(d, yAttr))]))
+            const { polygon, centroid } = makePolygon(xy)
+            this.x = mean(centroid, c => c[0]),
+            this.y = mean(centroid, c => c[1])
+            this.centroid = centroid
+            this.polygon = polygon
+        } else {
+            this.x = 0
+            this.y = 0
+            this.centroid = []
+            this.polygon = []
+        }
     }
 
     filter(data) {
@@ -48,21 +70,8 @@ export class LensSelection extends Selection {
 
 export class LassoSelection extends Selection {
 
-    constructor(data=[], polygon=null) {
+    constructor(data=[], lasso=null) {
         super(SELECTION_TYPE.LASSO, data)
-        if (polygon === null) {
-            this.calcPolygon()
-        } else {
-            this.polygon = polygon
-        }
-    }
-
-    calcPolygon() {
-        if (this.data.length > 0) {
-            const { polygon } = makePolygon(this.data)
-            this.polygon = polygon
-        } else {
-            this.polygon = []
-        }
+        this.lasso = []
     }
 }

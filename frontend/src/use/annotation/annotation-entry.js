@@ -1,5 +1,11 @@
 let _ENTRY_ID = 1;
 
+export const ENTRY_TYPE = Object.freeze({
+    DATAPOINT: 1,
+    COLUMN: 2,
+    ANNOTATION: 3,
+})
+
 export const ANNO_SOURCE = Object.freeze({
     USER: 1,
     AI: 2,

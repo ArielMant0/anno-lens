@@ -6,9 +6,9 @@ import { Lens, LENS_TYPE } from "./Lens"
 let _ANNO_ID = 1;
 
 import MyWorker from '@/worker/feature-worker?worker'
-import { llmExtract } from "./llm-interface";
 import { LensSelection } from "./selection/selection";
 import Annotation from "./annotation/annotation";
+import { TextEntry } from "./annotation/annotation-entry";
 
 function calcStats(data, c, filterType) {
     const ord = filterType === DATA_TYPES.ORDINAL || filterType === DATA_TYPES.NOMINAL || filterType === DATA_TYPES.BOOLEAN
@@ -105,6 +105,10 @@ class DataManager {
         // TODO: update lens selection
         this.selections[index].update(x, y, r)
         this.selections[index].apply(this.tree)
+        // TODO: reset temporary annotation (save to history?)
+        if (this.tmpAnno !== null) {
+            this.tmpAnno = null
+        }
     }
 
     clearLens(index) {
@@ -317,6 +321,41 @@ class DataManager {
         return [lenses[0]]
     }
 
+    getMatchingAnnotations(limit=0) {
+        const ids = this.selections[0].data
+
+        if (limit === 1) {
+            // return temporary annotation if it matches
+            if (this.tmpAnno && this.tmpAnno.hasDataOverlap(ids)) {
+                return this.tmpAnno
+            }
+            const match = this.annotations.find(d => d.hasDataOverlap(ids))
+            return match ? match : null
+        } else if (limit > 1) {
+            const matches = []
+            // add temporary annotation if it matches
+            if (this.tmpAnno && this.tmpAnno.hasDataOverlap(ids)) {
+                matches.push(this.tmpAnno)
+            }
+            // add other annotations until the limit is reached
+            for (let i = 0; i < this.annotations.length && matches.length <= limit; ++i) {
+                const d = this.annotations[i]
+                if (d.hasDataOverlap(ids)) {
+                    matches.push(d)
+                }
+            }
+            return matches.length > 0 ? matches : null
+        } else {
+            let matches = []
+            // add temporary annotation if it matches
+            if (this.tmpAnno && this.tmpAnno.hasDataOverlap(ids)) {
+                matches.push(this.tmpAnno)
+            }
+            matches = matches.concat(this.annotations.filter(d => d.hasDataOverlap(ids)))
+            return matches.length > 0 ? matches : null
+        }
+    }
+
     findDataInCircle(x, y, radius) {
         return findInCircle(this.tree, x, y, radius)
     }
@@ -329,6 +368,27 @@ class DataManager {
         return this.data.filter(filter)
     }
 
+    annotateText(text, src, entities=[]) {
+        // no data is selected, so make no annotation
+        if (this.selections.length === 0) return
+
+        if (this.tmpAnno !== null) {
+            // if we have an unsaved annotation, add the entry to it
+            this.tmpAnno.addEntry(new TextEntry(this.tmpAnno, text, src, entities))
+        } else {
+            // otherwise, create a new unsaved annotation
+            let ids = new Set()
+            this.selections.forEach(s => {
+                ids = ids.union(s.data)
+                s.calculatePolygon(this.data, this.xAttr, this.yAttr, this.x, this.y)
+            })
+            this.tmpAnno = new Annotation(ids, this.selections.slice(0), "Tmp Anno")
+            this.tmpAnno.addEntry(new TextEntry(this.tmpAnno, text, src, entities))
+        }
+
+        this.callbacks.anno.forEach(f => f(this.tmpAnno))
+    }
+
     annotate(entry) {
 
         // no data is selected, so make no annotation
@@ -339,9 +399,12 @@ class DataManager {
             this.tmpAnno.addEntry(entry)
         } else {
             // otherwise, create a new unsaved annotation
-            const ids = new Set()
-            this.selections.forEach(d => ids = ids.union(d.data))
-            this.tmpAnno = new Annotation(ids)
+            let ids = new Set()
+            this.selections.forEach(s => {
+                ids = ids.union(s.data)
+                s.calculatePolygon(this.data, this.xAttr, this.yAttr, this.x, this.y)
+            })
+            this.tmpAnno = new Annotation(ids, this.selections.slice(0), "Tmp Anno")
             this.tmpAnno.addEntry(entry)
         }
 
@@ -507,7 +570,7 @@ class DataManager {
                 this.callbacks.anno.forEach(f => f(anno))
             }
         }
-        
+
         // ------------------------------------------------------------- //
         // ------------------------ OLD CODE --------------------------- //
         // ------------------------------------------------------------- //

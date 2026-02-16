@@ -60,6 +60,22 @@ def free():
     return jsonify({ "answer": answer.content })
 
 
+@bp.post('/free_data')
+def free_with_data():
+    template = request.json["prompt"]+". Use no more than {limit} words: {data}. Only reply with the answer, nothing else."
+    prompt = PromptTemplate(
+        input_variables=["limit", "data"],
+        template=template
+    )
+    formatted_data = json.dumps(request.json["data"], indent=2)
+    chain = prompt | model
+    answer = chain.invoke({
+        "data": formatted_data,
+        "limit": request.json["limit"]
+    })
+    return jsonify({ "answer": answer.content })
+
+
 @bp.post('/extract')
 def extract():
     template = "Extract {limit} columns from the data subset that could be described as {keyword} relative to the global dataset characteristics. Subset: {data}. Global characteristics: {global}. Only reply with the column names and an explanation, nothing else."

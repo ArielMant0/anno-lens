@@ -117,27 +117,19 @@
                             maxWidth: padding+'px',
                         }">
 
-                        <div v-for="c in a.columns" class="d-flex">
+                        <div class="d-flex">
                             <v-btn
                                 color="error"
                                 variant="text"
                                 rounded="sm"
                                 size="sm"
                                 icon="mdi-close"
-                                density="compact"
-                                @click="DM.removeAnnotationColumn(a.id, c.name)"/>
+                                density="compact"/>
 
                             <div
                                 class="text-dots cursor-pointer"
-                                @pointerenter="hoverAnnoCol = c.name"
-                                @pointerleave="hoverAnnoCol = null"
-                                @click="selectColor(c.name)"
-                                :style="{
-                                    color: c.color,
-                                    fontWeight: selectedColums[c.name] ? 'bold' : 'normal',
-                                    maxWidth: (padding-15)+'px'
-                                }">
-                                {{ c.name }} <span v-if="c.value !== null">({{ c.value }})</span>
+                                :style="{ maxWidth: (padding-15)+'px' }">
+                                {{ a.label }}
                             </div>
                         </div>
                     </div>
@@ -174,27 +166,19 @@
                             maxWidth: padding+'px',
                         }">
 
-                        <div v-for="c in a.columns" class="d-flex">
+                        <div class="d-flex">
                             <v-btn
                                 color="error"
                                 variant="text"
                                 rounded="sm"
                                 size="sm"
                                 icon="mdi-close"
-                                density="compact"
-                                @click="DM.removeAnnotationColumn(a.id, c.name)"/>
+                                density="compact"/>
 
                             <div
                                 class="text-dots cursor-pointer"
-                                @pointerenter="hoverAnnoCol = c.name"
-                                @pointerleave="hoverAnnoCol = null"
-                                @click="selectColor(c.name)"
-                                :style="{
-                                    color: c.color,
-                                    fontWeight: selectedColums[c.name] ? 'bold' : 'normal',
-                                    maxWidth: (padding-15)+'px'
-                                }">
-                                {{ c.name }} <span v-if="c.value !== null">({{ c.value }})</span>
+                                :style="{ maxWidth: (padding-15)+'px' }">
+                                {{ a.label }}
                             </div>
                         </div>
                     </div>
@@ -291,7 +275,7 @@
         sizeR: 15,
     })
 
-    let actx, annoFontSize = () => 14
+    let actx, annoFontSize = () => 12
 
     let targetRect = null, dragAnno = null;
 
@@ -313,14 +297,15 @@
 
         const mx = mouse.x.value - offsetX.value - props.padding
         const my = mouse.y.value - offsetY.value
-        anno.value.forEach(a => obj[a.id] = isSelected(a) || inside && a.polygon.some(p => d3.polygonContains(p, [mx, my])))
+        anno.value.forEach(a => obj[a.id] = isSelected(a))// || inside && a.polygon.some(p => d3.polygonContains(p, [mx, my])))
         return obj
     })
     const selectedColums = computed(() => {
         const obj = {}
-        anno.value.forEach(a => {
-            a.columns.forEach(c => obj[c.name] = isSelectedColumn(c.name))
-        })
+        DM.columns.forEach(c => obj[c] = false)
+        // anno.value.forEach(a => {
+        //     a.columns.forEach(c => obj[c.name] = isSelectedColumn(c.name))
+        // })
         return obj
     })
 
@@ -368,7 +353,9 @@
     }
 
     function isSelected(annotation) {
-        return hoverAnno.value === annotation.id || annotation.columns.some(c => isSelectedColumn(c.name))
+        return hoverAnno.value === annotation.id //||
+            // annotation.hasColumn(props.selected) ||
+            // annotation.hasColumn(hoverAnnoCol.value)
     }
     function isSelectedColumn(name) {
         return props.selected === name || hoverAnnoCol.value === name
@@ -419,6 +406,8 @@
 
     function calcLabelPositions() {
         const data = DM.getAnnotations().map(d => Object.assign({}, d))
+
+        console.log(data)
 
         if (data.length > 0) {
             // default size
@@ -486,6 +475,7 @@
             annoMeta.sizeL = sizeL
             annoMeta.sizeR = sizeR
             annoPos.value = annoPosData
+            console.log(onLeft, onRight)
             annoLeft.value = onLeft
             annoRight.value = onRight
         } else {
@@ -510,24 +500,26 @@
 
     function update() {
         getCoordinates()
-        annoFontSize = d3.scaleQuantile(anno.value.map(d => d.columns.map(c => c.count)).flat())
-            .range([16, 14, 12, 10, 8])
-        drawLinks()
+        // annoFontSize = d3.scaleQuantile(anno.value.map(d => d.columns.map(c => c.count)).flat())
+            // .range([16, 14, 12, 10, 8])
+        annoFontSize = () => 12
+        // drawLinks()
     }
     function init() {
         getCoordinates()
         calcLabelPositions()
-        const { nodes, links } = DM.getAnnotationConnections()
-        graph.nodes = nodes
-        graph.links = links
-        graph.links.forEach(d => {
-            const s = graph.nodes.find(n => n.id === d.source)
-            const t = graph.nodes.find(n => n.id === d.target)
-            d.coords = [[s.x, s.y], [t.x, t.y]]
-        })
-        annoFontSize = d3.scaleQuantile(anno.value.map(d => d.columns.map(c => c.count)).flat())
-            .range([16, 14, 12, 10, 8])
-        drawLinks()
+        // const { nodes, links } = DM.getAnnotationConnections()
+        // graph.nodes = nodes
+        // graph.links = links
+        // graph.links.forEach(d => {
+        //     const s = graph.nodes.find(n => n.id === d.source)
+        //     const t = graph.nodes.find(n => n.id === d.target)
+        //     d.coords = [[s.x, s.y], [t.x, t.y]]
+        // })
+        annoFontSize = () => 12
+        // annoFontSize = d3.scaleQuantile(anno.value.map(d => d.columns.map(c => c.count)).flat())
+            // .range([16, 14, 12, 10, 8])
+        // drawLinks()
     }
 
     onMounted(init)
@@ -536,8 +528,8 @@
     watch(wSize.width, getCoordinates)
     watch(wSize.height, getCoordinates)
     watch(scroll.y, update)
-    watch(() => props.active, drawLinks)
-    watch(selectedAnnos, drawLinks)
+    // watch(() => props.active, drawLinks)
+    // watch(selectedAnnos, drawLinks)
 
 </script>
 

@@ -42,7 +42,7 @@
                 </div>
             </div>
 
-            <div class="ml-4" style="min-width: 525px;">
+            <div class="ml-4" style="min-width: 525px; max-width: 525px;">
 
                 <div class="d-flex justify-space-between">
                     <div>
@@ -88,6 +88,8 @@
                         <v-progress-circular indeterminate size="30"></v-progress-circular>
                     </div>
                 </div>
+
+                <AnnoInspector/>
 
                 <DataHistograms
                     :active="!moveLens || mouseStill"
@@ -152,9 +154,11 @@
     import { useTooltip } from '@/stores/tooltip';
     import ColorPicker from './ColorPicker.vue';
     import DatasetSelector from './DatasetSelector.vue';
-    import { llmComparison, llmSummary } from '@/use/llm-interface';
+    import { llmComparison, llmFreeWithData, llmSummary } from '@/use/llm-interface';
     import { toast } from 'vue3-toastify';
-import DataHistograms from './DataHistograms.vue';
+    import DataHistograms from './DataHistograms.vue';
+    import AnnoInspector from './AnnoInspector.vue';
+    import { ANNO_SOURCE } from '@/use/annotation/annotation-entry';
 
     const app = useApp()
     const tt = useTooltip()
@@ -397,7 +401,7 @@ import DataHistograms from './DataHistograms.vue';
             DM.clearLens(secondaryLens.value)
         }
 
-        lensTime.value = Date.now()
+        app.updateLensData()
     }
 
     function updateLens(lx, ly, resetOnChange=true) {
@@ -472,7 +476,7 @@ import DataHistograms from './DataHistograms.vue';
 
             if (llmToastSum !== null) toast.remove(llmToastSum)
             if (llmToastComp !== null) toast.remove(llmToastComp)
-            
+
             const loadToast = toast.loading("analyzing lens data..")
             const cols = DM.columns.concat(app.datasetObj.meta)
             const dataA = act.getResultData()
@@ -540,7 +544,7 @@ import DataHistograms from './DataHistograms.vue';
             colorIndexSec.value = columnIndex;
             colorColumnSec.value = lens.getResultColumn(refMode.value, columnIndex)
         }
-        lensTime.value = Date.now()
+        app.updateLensData()
     }
 
     function onClickLabel(lensIndex, columnIndex) {
@@ -666,7 +670,7 @@ import DataHistograms from './DataHistograms.vue';
         if (resizeDiff >= 200 && resizeDiff <= 250) {
             windowResize = null;
             // applyLens()
-            lensTime.value = Date.now()
+            app.updateLensData()
         }
 
         // react to mouse down for longer time
@@ -695,15 +699,16 @@ import DataHistograms from './DataHistograms.vue';
 
         controls.setKeyMappingLocked(2, "s", "swap", swapLenses)
         controls.setKeyMappingLocked(3, "s", "save", function() {
-            const graph = DM.getAnnotationConnections()
-            graph.links.forEach(d => {
-                const s = graph.nodes.find(n => n.id === d.source)
-                const t = graph.nodes.find(n => n.id === d.target)
-                d.coords = [[s.x, s.y], [t.x, t.y]]
-            })
+            DM.saveTmpAnnotation()
+            // const graph = DM.getAnnotationConnections()
+            // graph.links.forEach(d => {
+            //     const s = graph.nodes.find(n => n.id === d.source)
+            //     const t = graph.nodes.find(n => n.id === d.target)
+            //     d.coords = [[s.x, s.y], [t.x, t.y]]
+            // })
 
-            INV.add(dataset.value, DM.getAnnotations(), graph.links)
-            DM.clearAnnotations()
+            // INV.add(dataset.value, DM.getAnnotations(), graph.links)
+            // DM.clearAnnotations()
         }, ["ctrl"])
 
         controls.setKeyMappingLocked(4, "m", "mode", function() {
@@ -716,8 +721,22 @@ import DataHistograms from './DataHistograms.vue';
 
         // annotation hotkeys
         const annoFunc = keymap => annotate(keymap.color)
-        controls.setKeyMapping(5, "1", "rare", annoFunc)
-        controls.setKeyMapping(6, "2", "common", annoFunc)
+        controls.setKeyMapping(5, "1", "summarize", function() {
+            app.setLLMLoading(true)
+            llmSummary(DM.getLensData(0))
+                .then(response => {
+                    DM.annotateText(response.answer, ANNO_SOURCE.AI)
+                    app.setLLMLoading(false)
+                })
+        })
+        controls.setKeyMapping(6, "2", "label", function() {
+            app.setLLMLoading(true)
+            llmFreeWithData("Provide a fitting label for these data points.", DM.getLensData(0), 6)
+                .then(response => {
+                    DM.annotateText(response.answer, ANNO_SOURCE.AI)
+                    app.setLLMLoading(false)
+                })
+        })
         controls.setKeyMapping(7, "3", "interesting", annoFunc)
         controls.setKeyMapping(8, "4", "weird", annoFunc)
         controls.setKeyMapping(9, "5", "misc", annoFunc)
@@ -740,12 +759,10 @@ import DataHistograms from './DataHistograms.vue';
         })
 
         DM.onLens(() => {
-            lensTime.value = Date.now()
+            app.updateLensData()
             lensMoveTime.value = Date.now()
         })
-        DM.onAnnotation(() => {
-            annoTime.value = Date.now()
-        })
+        DM.onAnnotation(() => annoTime.value = Date.now())
 
         looptime = Date.now()
         loop = requestAnimationFrame(loopFunc)

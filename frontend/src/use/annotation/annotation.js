@@ -1,13 +1,35 @@
+import { ENTRY_TYPE } from "./annotation-entry"
+
 let _ANNO_ID = 1
 
 export default class Annotation {
 
-    constructor(data=[]) {
+    constructor(data, selection, label="Annotation") {
         this.id = `anno_${_ANNO_ID++}`
-        this.data = data
+        this.label = label
+        this.data = new Set(data)
         this.entries = []
         this.timeCreated = Date.now()
         this.timeUpdated = this.timeCreated
+
+        this.selection = selection
+        this.color = "black"
+    }
+
+    get polygon() {
+        return this.selection[0].polygon
+    }
+
+    get centroid() {
+        return this.selection[0].centroid
+    }
+
+    get x() {
+        return this.selection[0].x
+    }
+
+    get y() {
+        return this.selection[0].y
     }
 
     update(time) {
@@ -26,4 +48,13 @@ export default class Annotation {
             this.entries.splice(idx, 1)
         }
     }
+
+    hasDataOverlap(otherIds) {
+        return this.data.intersection(otherIds).size > 0
+    }
+
+    hasColumn(column) {
+        return this.entries.some(d => d.type === ENTRY_TYPE.COLUMN && d.name === column)
+    }
+
 }
