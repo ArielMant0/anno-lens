@@ -7,6 +7,8 @@ let _ANNO_ID = 1;
 
 import MyWorker from '@/worker/feature-worker?worker'
 import { llmExtract } from "./llm-interface";
+import { LensSelection } from "./selection/selection";
+import Annotation from "./annotation/annotation";
 
 function calcStats(data, c, filterType) {
     const ord = filterType === DATA_TYPES.ORDINAL || filterType === DATA_TYPES.NOMINAL || filterType === DATA_TYPES.BOOLEAN
@@ -50,97 +52,12 @@ function calcStats(data, c, filterType) {
     }
 }
 
-function split(points, polygon) {
-    if (points.length < 3) {
-        return [polygon]
-    }
-    const c = polygonCentroid(polygon)
-    let minDist = Number.MAX_VALUE
-    let point = null
-
-    if (points.length <= 2) return [points]
-
-    points.forEach(p => {
-        const d = euclidean(p[0], p[1], c[0], c[1])
-        if (d < minDist) {
-            minDist = d;
-            point = p
-        }
-    })
-
-    if (point !== null && minDist >= 15) {
-        const a = [], b = [];
-        points.forEach(p => {
-            const dC = euclidean(p[0], p[1], c[0], c[1])
-            const dP = euclidean(p[0], p[1], point[0], point[1])
-            if (dP < dC) {
-                a.push(p)
-            } else {
-                b.push(p)
-            }
-        })
-
-        let tmp = []
-        if (a.length > 0 && b.length > 0) {
-            tmp = split(a, polygonHull(a)).concat(split(b, polygonHull(b)))
-        } else if (b.length > 0) {
-            tmp = split(b, polygonHull(b))
-        } else if (a.length > 0) {
-            tmp = split(a, polygonHull(a))
-        }
-
-        return tmp.filter(d => d.length > 0)
-    }
-
-    return [polygon]
-}
-
 class DataManager {
 
     constructor() {
         this.filterIds = new Set()
         this.callbacks = { lens: [], anno: [] }
         this.reset()
-    }
-
-    _makePolygon(points) {
-        let polygon;
-        if (points.length > 2) {
-            polygon = split(points, polygonHull(points))
-        } else {
-            polygon = [points]
-        }
-
-        const centroid = polygon.map(p => this._makeCentroid(p))
-
-        for (let i = 0; i < polygon.length; ++i) {
-            polygon[i] = this._enlargePolygon(polygon[i], centroid[i])
-        }
-
-        return { polygon, centroid }
-    }
-
-    _makeCentroid(polygon) {
-        if (polygon.length === 1) {
-            return polygon[0]
-        } else if (polygon.length === 2) {
-            return [
-                polygon[0][0]*0.5 + polygon[1][0]*0.5,
-                polygon[0][1]*0.5 + polygon[1][1]*0.5,
-            ]
-        } else {
-            return polygonCentroid(polygon)
-        }
-    }
-
-    _enlargePolygon(polygon, centroid) {
-        if (polygon.length < 3) return polygon
-        return polygon.map(([px, py]) => {
-            const vx = px - centroid[0]
-            const vy = py - centroid[1]
-            const norm = Math.sqrt(vx*vx + vy*vy)
-            return [px + vx / norm * 5, py + vy / norm * 5]
-        })
     }
 
     reset() {
@@ -156,6 +73,7 @@ class DataManager {
         this.filterIds.clear()
 
         this.lenses = []
+        this.selections = []
 
         this.width = 0
         this.height = 0
@@ -165,6 +83,7 @@ class DataManager {
         this.lensMaps = null
 
         this.annotations = []
+        this.tmpAnno = null
         this.annoMap = {}
         _ANNO_ID = 1
     }
@@ -175,12 +94,17 @@ class DataManager {
 
     addLens(radius, type=LENS_TYPE.RARE, active=true) {
         this.lenses.push(new Lens(radius, type, active))
+        // TODO: add selection for lens
+        this.selections.push(new LensSelection())
         return this.lenses.at(-1).id
     }
 
     updateLens(index, x, y, r, subset) {
         if (!this.lenses[index]) return
         this.lenses[index].apply(x, y, r, subset, this.columns, this.types)
+        // TODO: update lens selection
+        this.selections[index].update(x, y, r)
+        this.selections[index].apply(this.tree)
     }
 
     clearLens(index) {
@@ -306,7 +230,6 @@ class DataManager {
             this.lenses.forEach((l, i) => {
                 if (!l.x || !l.y) return
                 const lx = rx(l.x), ly = ry(l.y)
-                console.log(l.x, lx, l.x-lx)
                 const points = this.findDataInCircle(lx, ly, l.radius)
                 this.updateLens(i, lx, ly, l.radius, points)
             })
@@ -406,194 +329,240 @@ class DataManager {
         return this.data.filter(filter)
     }
 
-    annotate(lensIndex, columnIndex, mode, lensType, color, columnValue=null) {
+    annotate(entry) {
 
-        const lens = this.getLens(lensIndex)
-        const col = lens.getResult(mode)[columnIndex]
+        // no data is selected, so make no annotation
+        if (this.selections.length === 0) return
 
-        const exact = this.annotations.find(d => {
-            if (d.lensType !== lensType || d.mode !== mode) return false
-            const set = lens.ids.union(new Set(d.ids))
-            return set.size === d.ids.length && set.size === lens.ids.size
-        })
-
-        const id = _ANNO_ID++
-        let addObj, startCols;
-
-        if (exact !== undefined) {
-            startCols = exact.columns
-            if (!startCols.find(d => d.name === col.name && d.color === color && d.value === columnValue)) {
-                startCols.push({ name: col.name, color: color, value: columnValue })
-            }
-            this.annotations.splice(this.annotations.findIndex(a => a.id === exact.id), 1)
+        if (this.tmpAnno !== null) {
+            // if we have an unsaved annotation, add the entry to it
+            this.tmpAnno.addEntry(entry)
         } else {
-            startCols = [{ name: col.name, color: color, value: columnValue }]
+            // otherwise, create a new unsaved annotation
+            const ids = new Set()
+            this.selections.forEach(d => ids = ids.union(d.data))
+            this.tmpAnno = new Annotation(ids)
+            this.tmpAnno.addEntry(entry)
         }
 
-        const overlap = this.annotations.filter(d => {
-            if (exact && d.id === exact.id || d.lensType !== lensType || d.mode !== mode) return false
-            const set = lens.ids.intersection(new Set(d.ids))
-            return set.size > 0 && d.columns.length === startCols.length === 1 && d.columns[0].name === col.name
-        })
+        this.callbacks.anno.forEach(f => f(this.tmpAnno))
 
-        const app = useApp()
-        const cols = this.columns.concat(app.datasetObj.meta)
+        // ------------------------------------------------------------- //
+        // ------------------------ OLD CODE --------------------------- //
+        // ------------------------------------------------------------- //
 
-        // merge annotations
-        if (exact || overlap.length > 0) {
+        // const lens = this.getLens(lensIndex)
+        // const col = lens.getResult(mode)[columnIndex]
 
-            const colSet = new Map(startCols.map(d => ([d.name, d.value])))
-            let idSet = new Set(lens.ids)
-            let mergeCols = startCols;
+        // const exact = this.annotations.find(d => {
+        //     if (d.lensType !== lensType || d.mode !== mode) return false
+        //     const set = lens.ids.union(new Set(d.ids))
+        //     return set.size === d.ids.length && set.size === lens.ids.size
+        // })
 
-            const colCounts = new Map()
-            mergeCols.forEach(c => colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1))
+        // const id = _ANNO_ID++
+        // let addObj, startCols;
 
-            overlap.forEach(d => {
-                this.annotations.splice(this.annotations.findIndex(a => a.id === d.id), 1)
-                idSet = idSet.union(new Set(d.ids))
-                d.columns.forEach(c => {
-                    delete this.annoMap[c.name][d.id]
-                    if (colSet.has(c.name) && colSet.get(c.name) === columnValue) {
-                        colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1)
-                    } else {
-                        mergeCols.push({ name: c.name, color: c.color, value: c.value })
-                        colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1)
-                        colSet.set(c.name, c.value)
-                    }
-                })
-            })
+        // if (exact !== undefined) {
+        //     startCols = exact.columns
+        //     if (!startCols.find(d => d.name === col.name && d.color === color && d.value === columnValue)) {
+        //         startCols.push({ name: col.name, color: color, value: columnValue })
+        //     }
+        //     this.annotations.splice(this.annotations.findIndex(a => a.id === exact.id), 1)
+        // } else {
+        //     startCols = [{ name: col.name, color: color, value: columnValue }]
+        // }
 
-            let annoColor, maxCount = 0;
-            colCounts.forEach((theCount, theColor) => {
-                if (theCount > maxCount) {
-                    annoColor = theColor
-                    maxCount = theCount
-                }
-            })
+        // const overlap = this.annotations.filter(d => {
+        //     if (exact && d.id === exact.id || d.lensType !== lensType || d.mode !== mode) return false
+        //     const set = lens.ids.intersection(new Set(d.ids))
+        //     return set.size > 0 && d.columns.length === startCols.length === 1 && d.columns[0].name === col.name
+        // })
 
-            const points = this.data.filter(d => idSet.has(d.id)).map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))]))
-            const { polygon, centroid } = this._makePolygon(points)
+        // const app = useApp()
+        // const cols = this.columns.concat(app.datasetObj.meta)
 
-            addObj = {
-                id: id,
-                x: mean(centroid, c => c[0]),
-                y: mean(centroid, c => c[1]),
-                polygon: polygon,
-                centroid: centroid,
-                mode: mode,
-                lensType: lensType,
-                columns: mergeCols,
-                ids: Array.from(idSet.values()),
-                color: annoColor
-            }
+        // // merge annotations
+        // if (exact || overlap.length > 0) {
 
-            const dataA = this.data.filter(d => idSet.has(d.id))
-                .map(d => {
-                    const obj = {}
-                    cols.forEach(c => {
-                        if (typeof d[c] !== "boolean" || d[c] === true) {
-                            obj[c] = d[c]
-                        }
-                    })
-                    return obj
-                })
-            // ask the LLM what it says about this data
-            llmExtract("interesting", dataA, this.stats)
-                .then(reply => console.log(reply))
+        //     const colSet = new Map(startCols.map(d => ([d.name, d.value])))
+        //     let idSet = new Set(lens.ids)
+        //     let mergeCols = startCols;
 
-        } else {
-            const idSet = new Set(lens.ids)
-            const points = this.data.filter(d => idSet.has(d.id)).map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))]))
-            const { polygon, centroid } = this._makePolygon(points)
+        //     const colCounts = new Map()
+        //     mergeCols.forEach(c => colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1))
 
-            addObj = {
-                id: id,
-                x: mean(centroid, c => c[0]),
-                y: mean(centroid, c => c[1]),
-                centroid: centroid,
-                polygon: polygon,
-                mode: mode,
-                lensType: lensType,
-                columns: [{ name: col.name, color: color, value: columnValue }],
-                ids: lens.ids,
-                color: color
-            }
+        //     overlap.forEach(d => {
+        //         this.annotations.splice(this.annotations.findIndex(a => a.id === d.id), 1)
+        //         idSet = idSet.union(new Set(d.ids))
+        //         d.columns.forEach(c => {
+        //             delete this.annoMap[c.name][d.id]
+        //             if (colSet.has(c.name) && colSet.get(c.name) === columnValue) {
+        //                 colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1)
+        //             } else {
+        //                 mergeCols.push({ name: c.name, color: c.color, value: c.value })
+        //                 colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1)
+        //                 colSet.set(c.name, c.value)
+        //             }
+        //         })
+        //     })
 
-            const dataA = this.data.filter(d => idSet.has(d.id))
-                .map(d => {
-                    const obj = {}
-                    cols.forEach(c => {
-                        if (typeof d[c] !== "boolean" || d[c] === true) {
-                            obj[c] = d[c]
-                        }
-                    })
-                    return obj
-                })
-            // ask the LLM what it says about this data
-            llmExtract("interesting", dataA, this.stats)
-                .then(reply => console.log(reply))
-        }
+        //     let annoColor, maxCount = 0;
+        //     colCounts.forEach((theCount, theColor) => {
+        //         if (theCount > maxCount) {
+        //             annoColor = theColor
+        //             maxCount = theCount
+        //         }
+        //     })
 
-        addObj.columns.forEach(c => {
-            const n = c.name
-            if (!this.annoMap[n]) {
-                this.annoMap[n] = {}
-            }
-            this.annoMap[n][id] = true
-        })
+        //     const points = this.data.filter(d => idSet.has(d.id)).map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))]))
+        //     const { polygon, centroid } = this._makePolygon(points)
 
-        if (addObj) {
-            this.annotations.push(addObj)
-            this.callbacks.anno.forEach(f => f(addObj))
-            this.checkAnnoMerges()
-        }
+        //     addObj = {
+        //         id: id,
+        //         x: mean(centroid, c => c[0]),
+        //         y: mean(centroid, c => c[1]),
+        //         polygon: polygon,
+        //         centroid: centroid,
+        //         mode: mode,
+        //         lensType: lensType,
+        //         columns: mergeCols,
+        //         ids: Array.from(idSet.values()),
+        //         color: annoColor
+        //     }
+
+        //     const dataA = this.data.filter(d => idSet.has(d.id))
+        //         .map(d => {
+        //             const obj = {}
+        //             cols.forEach(c => {
+        //                 if (typeof d[c] !== "boolean" || d[c] === true) {
+        //                     obj[c] = d[c]
+        //                 }
+        //             })
+        //             return obj
+        //         })
+        //     // ask the LLM what it says about this data
+        //     llmExtract("interesting", dataA, this.stats)
+        //         .then(reply => console.log(reply))
+
+        // } else {
+        //     const idSet = new Set(lens.ids)
+        //     const points = this.data.filter(d => idSet.has(d.id)).map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))]))
+        //     const { polygon, centroid } = this._makePolygon(points)
+
+        //     addObj = {
+        //         id: id,
+        //         x: mean(centroid, c => c[0]),
+        //         y: mean(centroid, c => c[1]),
+        //         centroid: centroid,
+        //         polygon: polygon,
+        //         mode: mode,
+        //         lensType: lensType,
+        //         columns: [{ name: col.name, color: color, value: columnValue }],
+        //         ids: lens.ids,
+        //         color: color
+        //     }
+
+        //     const dataA = this.data.filter(d => idSet.has(d.id))
+        //         .map(d => {
+        //             const obj = {}
+        //             cols.forEach(c => {
+        //                 if (typeof d[c] !== "boolean" || d[c] === true) {
+        //                     obj[c] = d[c]
+        //                 }
+        //             })
+        //             return obj
+        //         })
+        //     // ask the LLM what it says about this data
+        //     llmExtract("interesting", dataA, this.stats)
+        //         .then(reply => console.log(reply))
+        // }
+
+        // addObj.columns.forEach(c => {
+        //     const n = c.name
+        //     if (!this.annoMap[n]) {
+        //         this.annoMap[n] = {}
+        //     }
+        //     this.annoMap[n][id] = true
+        // })
+
+        // if (addObj) {
+        //     this.annotations.push(addObj)
+        //     this.callbacks.anno.forEach(f => f(addObj))
+        //     this.checkAnnoMerges()
+        // }
     }
 
-    addToAnnotation(id, lensIndex, columnIndex, mode, lensType, color, columnValue=null) {
+    addToAnnotation(id, entry) {
 
-        const lens = this.getLens(lensIndex)
-        const col = lens.getResult(mode)[columnIndex]
-
-        const anno = this.annotations.find(d => d.id === id)
-        if (!anno || anno.lensType !== lensType) return
-
-        const mergeCols = anno.columns
-        if (!mergeCols.find(d => d.name === col.name && d.color === color && d.value === columnValue)) {
-            mergeCols.push({ name: col.name, color: color, value: columnValue })
-        }
-
-        const idSet = new Set(anno.ids).union(lens.ids)
-        const colCounts = new Map()
-        mergeCols.forEach(c => colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1))
-
-
-        let annoColor, maxCount = 0;
-        colCounts.forEach((theCount, theColor) => {
-            if (theCount > maxCount) {
-                annoColor = theColor
-                maxCount = theCount
+        if (this.tmpAnno !== null && this.tmpAnno.id === id) {
+            // add an entry to the currently unsaved annotation
+            this.tmpAnno.addEntry(entry)
+            this.callbacks.anno.forEach(f => f(tmpAnno))
+        } else {
+            // look for the matching annotation
+            const anno = this.annotations.find(d => d.id === id)
+            if (anno !== null) {
+                anno.addEntry(entry)
+                this.callbacks.anno.forEach(f => f(anno))
             }
-        })
-
-        const points = this.data.filter(d => idSet.has(d.id)).map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))]))
-        const { polygon, centroid } = this._makePolygon(points)
-
-        const n = col.name
-        if (!this.annoMap[n]) {
-            this.annoMap[n] = {}
         }
-        this.annoMap[n][id] = true
+        
+        // ------------------------------------------------------------- //
+        // ------------------------ OLD CODE --------------------------- //
+        // ------------------------------------------------------------- //
 
-        anno.x = centroid[0]
-        anno.y = centroid[1]
-        anno.polygon = polygon
-        anno.columns = mergeCols
-        anno.ids = Array.from(idSet.values())
-        anno.color = annoColor
+        // const lens = this.getLens(lensIndex)
+        // const col = lens.getResult(mode)[columnIndex]
 
-        this.callbacks.anno.forEach(f => f(anno))
-        this.checkAnnoMerges()
+        // const anno = this.annotations.find(d => d.id === id)
+        // if (!anno || anno.lensType !== lensType) return
+
+        // const mergeCols = anno.columns
+        // if (!mergeCols.find(d => d.name === col.name && d.color === color && d.value === columnValue)) {
+        //     mergeCols.push({ name: col.name, color: color, value: columnValue })
+        // }
+
+        // const idSet = new Set(anno.ids).union(lens.ids)
+        // const colCounts = new Map()
+        // mergeCols.forEach(c => colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1))
+
+
+        // let annoColor, maxCount = 0;
+        // colCounts.forEach((theCount, theColor) => {
+        //     if (theCount > maxCount) {
+        //         annoColor = theColor
+        //         maxCount = theCount
+        //     }
+        // })
+
+        // const points = this.data.filter(d => idSet.has(d.id)).map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))]))
+        // const { polygon, centroid } = this._makePolygon(points)
+
+        // const n = col.name
+        // if (!this.annoMap[n]) {
+        //     this.annoMap[n] = {}
+        // }
+        // this.annoMap[n][id] = true
+
+        // anno.x = centroid[0]
+        // anno.y = centroid[1]
+        // anno.polygon = polygon
+        // anno.columns = mergeCols
+        // anno.ids = Array.from(idSet.values())
+        // anno.color = annoColor
+
+        // this.callbacks.anno.forEach(f => f(anno))
+        // this.checkAnnoMerges()
+    }
+
+    saveTmpAnnotation() {
+        if (this.tmpAnno !== null) {
+            this.annotations.push(this.tmpAnno)
+            this.tmpAnno = null
+            const anno = this.annotations.at(-1)
+            this.callbacks.anno.forEach(f => f(anno))
+        }
     }
 
     checkAnnoMerges() {
