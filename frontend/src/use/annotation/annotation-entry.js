@@ -1,17 +1,11 @@
 let _ENTRY_ID = 1;
 
-export const ENTRY_TYPE = Object.freeze({
-    DATAPOINT: 1,
-    COLUMN: 2,
-    ANNOTATION: 3,
-})
-
-export const ANNO_SOURCE = Object.freeze({
+export const ENTRY_SOURCE = Object.freeze({
     USER: 1,
     AI: 2,
 });
 
-export const ANNO_TYPE = Object.freeze({
+export const ENTRY_TYPE = Object.freeze({
     TEXT: 1,
     VIS: 2,
 });
@@ -34,29 +28,53 @@ class AnnotationEntry {
 export class TextEntry extends AnnotationEntry {
 
     constructor(annotation, text, src, entities=[]) {
-        super(annotation, ANNO_TYPE.TEXT, src)
+        super(annotation, ENTRY_TYPE.TEXT, src)
         this.text = text
-        this.entities = entities
+        this.entities = []
+        this.addEntities(entities, false)
     }
 
     update(text, entities=[]) {
         this.text = text
-        this.entities = entities
+        this.addEntities(entities)
+    }
+
+    hasEntity(type, id) {
+        return this.entities.some(d => d.type === type && d.id === id)
     }
 
     addText(text) {
         this.text += text
     }
 
-    addEntities(entities) {
+    addEntities(entities, update=true) {
+        const before = this.entities.length
         const tmp = this.entities.concat(entities)
-        const entitySet = new Set()
+        const entitySet = {}
         this.entities = tmp.filter(d => {
-            if (entitySet.has(d.id)) {
+            // create empty set for this type of entity
+            if (!entitySet[d.type]) {
+                entitySet[d.type] = new Set()
+            }
+            // entity already exists
+            if (entitySet[d.type].has(d.id)) {
                 return false
             }
-            entitySet.add(d.id)
+            // add this entity to the list
+            entitySet[d.type].add(d.id)
             return true
         })
+
+        if (update && this.entities.length !== before) {
+            this.annotation.update()
+        }
+    }
+
+    removeEntity(id, type) {
+        const index = this.entities.find(d => d.type === type && d.id === id)
+        if (index >= 0) {
+            this.entities.splice(index, 1)
+            this.annotation.update()
+        }
     }
 }

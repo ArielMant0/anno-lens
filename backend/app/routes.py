@@ -8,7 +8,7 @@ from typing import List
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
 from langchain.agents import create_agent
 # from langchain_ollama.llms import OllamaLLM
 from langchain_openai import ChatOpenAI
@@ -18,9 +18,17 @@ from pydantic import BaseModel, Field
 model = ChatOpenAI(model="gpt-4.1-mini", api_key=config.OPENAI_API_KEY)
 
 
-class ColumnList(BaseModel):
-    """A list of columns for tabular data."""
+class ColumnExtraction(BaseModel):
+    """A list of columns for tabular data and an explanation for their choice."""
+    explanation: str = Field(description="The explanation")
     columns: List[str] = Field(description="The list of column names")
+
+
+class ColumnLinearCombination(BaseModel):
+    """A list of weighted columns for tabular data and an explanation for their choice."""
+    explanation: str = Field(description="The explanation")
+    columns: List[str] = Field(description="The list of column names")
+    weights: dict = Field(description="The dictionary containing weights for selected columns")
 
 
 class ColDescRetriever(BaseRetriever):
@@ -56,21 +64,27 @@ class ColDescRetriever(BaseRetriever):
 
 @bp.post('/free')
 def free():
-    answer = model.invoke(request.prompt+". Only reply with the answer contents, nothing else.")
+    template = request.prompt+". Use no more than {limit} words. Only reply with the answer contents, nothing else."
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a data analyst."),
+        ("human", template)
+    ])
+    chain = prompt | model
+    answer = chain.invoke({ "limit": request.json["limit"] })
     return jsonify({ "answer": answer.content })
 
 
 @bp.post('/free_data')
 def free_with_data():
-    template = request.json["prompt"]+". Use no more than {limit} words: {data}. Only reply with the answer, nothing else."
-    prompt = PromptTemplate(
-        input_variables=["limit", "data"],
-        template=template
-    )
-    formatted_data = json.dumps(request.json["data"], indent=2)
+    template = request.json["prompt"]+". Use no more than {limit} words. Data: {data}. Only reply with the answer, nothing else."
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a data analyst."),
+        ("human", template)
+    ])
+
     chain = prompt | model
     answer = chain.invoke({
-        "data": formatted_data,
+        "data": request.json["data"],
         "limit": request.json["limit"]
     })
     return jsonify({ "answer": answer.content })
@@ -78,41 +92,70 @@ def free_with_data():
 
 @bp.post('/extract')
 def extract():
-    template = "Extract {limit} columns from the data subset that could be described as {keyword} relative to the global dataset characteristics. Subset: {data}. Global characteristics: {global}. Only reply with the column names and an explanation, nothing else."
-    prompt = PromptTemplate(
-        input_variables=["limit", "data", "keyword", "global"],
-        template=template
-    )
-    formatted_data = json.dumps(request.json["data"], indent=2)
-    formatted_global = json.dumps(request.json["global"], indent=2)
+    template = "Extract {number} columns from the data subset that could be described as {keyword} relative to the global dataset characteristics. Explain your choice using no more than {limit} words. Data subset: {data}. Global characteristics: {global}. Only reply with the column names and explanation, nothing else."
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a data analyst."),
+        ("human", template)
+    ])
 
     agent = create_agent(
         model=model,
-        response_format=ColumnList  # Auto-selects ProviderStrategy
+        response_format=ColumnExtraction  # Auto-selects ProviderStrategy
     )
 
     chain = prompt | agent
     answer = chain.invoke({
-        "data": formatted_data,
-        "global": formatted_global,
+        "data": request.json["data"],
+        "global": request.json["global"],
+        "number": request.json["number"],
         "limit": request.json["limit"],
         "keyword": request.json["keyword"]
     })
-    print(answer.structured_response)
-    return jsonify({ "answer": answer.structured_response.columns })
+
+    return jsonify({
+        "answer": answer["structured_response"].explanation,
+        "columns": answer["structured_response"].columns
+    })
+
+
+@bp.post('/combine')
+def combine():
+    template = "Provide a linear combination of columns from the data subset that represents {keyword} data points. Explain your choice using no more than {limit} words."
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a data analyst."),
+        ("human", template)
+    ])
+
+    agent = create_agent(
+        model=model,
+        response_format=ColumnLinearCombination  # Auto-selects ProviderStrategy
+    )
+
+    chain = prompt | agent
+    answer = chain.invoke({
+        "limit": request.json["limit"],
+        "keyword": request.json["keyword"]
+    })
+
+    return jsonify({
+        "answer": answer["structured_response"].explanation,
+        "columns": answer["structured_response"].columns,
+        "weights": answer["structured_response"].weights
+    })
 
 
 @bp.post('/summary')
 def summary():
-    template = "Summarize the following data (passed as JSON) using no more than {limit} words: {data}. Only reply with the summary, nothing else."
-    prompt = PromptTemplate(
-        input_variables=["limit", "data"],
-        template=template
-    )
-    formatted_data = json.dumps(request.json["data"], indent=2)
+    template = "Summarize important characteristics of the data using no more than {limit} words. Data: {data}. Only reply with the summary, nothing else."
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a data analyst."),
+        ("human", template)
+    ])
     chain = prompt | model
     answer = chain.invoke({
-        "data": formatted_data,
+        "data": request.json["data"],
         "limit": request.json["limit"]
     })
     return jsonify({ "answer": answer.content })
@@ -122,14 +165,13 @@ def summary():
 def summaryfunction():
     # TODO: adapt this prompt to return a structured linear combination of columns
     template = "Summarize the following data (passed as JSON) using no more than {limit} words: {data}."
-    prompt = PromptTemplate(
-        input_variables=["limit", "data"],
-        template=template
-    )
-    formatted_data = json.dumps(request.json["data"], indent=2)
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a data analyst."),
+        ("human", template)
+    ])
     chain = prompt | model
     answer = chain.invoke({
-        "data": formatted_data,
+        "data": request.json["data"],
         "limit": request.json["limit"]
     })
     return jsonify({ "answer": answer.content })
@@ -138,16 +180,14 @@ def summaryfunction():
 @bp.post('/comparison')
 def comparison():
     template = "Summarize the differences between the following two sets of data (passed as JSON) using no more than {limit} words. Primary: {dataA}. Secondary: {dataB}. Only reply with the differences, nothing else."
-    prompt = PromptTemplate(
-        input_variables=["limit", "dataA", "dataB"],
-        template=template
-    )
-    dataA = json.dumps(request.json["dataA"], indent=2)
-    dataB = json.dumps(request.json["dataB"], indent=2)
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a data analyst."),
+        ("human", template)
+    ])
     chain = prompt | model
     answer = chain.invoke({
-        "dataA": dataA,
-        "dataB": dataB,
+        "dataA": request.json["dataA"],
+        "dataB": request.json["dataB"],
         "limit": request.json["limit"]
     })
     return jsonify({ "answer": answer.content })

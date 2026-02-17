@@ -5,17 +5,16 @@
             <v-progress-circular size="32" indeterminate></v-progress-circular>
         </div>
 
-        <div v-for="anno in annos" :key="anno.id+'_'+anno.timeUpdated" class="pa-2">
-            <div>
+        <div v-for="anno in annos" :key="anno.id+'_'+anno.timeUpdated" class="pa-1 pt-2">
+            <div class="ml-2">
                 <span style="font-weight: bold;">{{ anno.label }}</span> <span class="text-caption">({{ anno.data.size }}<v-icon size="small">mdi-scatter-plot</v-icon>)</span>
             </div>
-            <div class="pa-1 text-caption">
-                <div v-for="e in anno.entries">
-                    <div v-if="e.type === ANNO_TYPE.TEXT">
-                        <p>{{ e.text }}</p>
-                    </div>
-                </div>
-            </div>
+
+            <AnnotationEntry v-for="e in anno.entries"
+                :key="e.id"
+                :data="e"
+                @remove="anno.removeEntry(e.id)"
+                />
         </div>
     </v-sheet>
 </template>
@@ -25,7 +24,7 @@
     import { storeToRefs } from 'pinia';
     import DM from '@/use/data-manager';
     import { onMounted, ref, watch } from 'vue';
-    import { ANNO_TYPE } from '@/use/annotation/annotation-entry';
+    import AnnotationEntry from './AnnotationEntry.vue';
 
     const app = useApp()
     const { selectionTime, annoTime, llmLoading } = storeToRefs(app)

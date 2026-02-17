@@ -356,6 +356,10 @@ class DataManager {
         }
     }
 
+    getTmpAnnotation() {
+        return this.tmpAnno
+    }
+
     findDataInCircle(x, y, radius) {
         return findInCircle(this.tree, x, y, radius)
     }
@@ -368,9 +372,17 @@ class DataManager {
         return this.data.filter(filter)
     }
 
+    trigger(name) {
+        if (this.callbacks[name]) {
+            this.callbacks[name].forEach(f => f())
+        }
+    }
+
     annotateText(text, src, entities=[]) {
         // no data is selected, so make no annotation
         if (this.selections.length === 0) return
+
+        console.log(this.tmpAnno)
 
         if (this.tmpAnno !== null) {
             // if we have an unsaved annotation, add the entry to it
@@ -382,7 +394,7 @@ class DataManager {
                 ids = ids.union(s.data)
                 s.calculatePolygon(this.data, this.xAttr, this.yAttr, this.x, this.y)
             })
-            this.tmpAnno = new Annotation(ids, this.selections.slice(0), "Tmp Anno")
+            this.tmpAnno = new Annotation(ids, this.selections.map(s => s.copy()), "Tmp Anno")
             this.tmpAnno.addEntry(new TextEntry(this.tmpAnno, text, src, entities))
         }
 
@@ -404,7 +416,7 @@ class DataManager {
                 ids = ids.union(s.data)
                 s.calculatePolygon(this.data, this.xAttr, this.yAttr, this.x, this.y)
             })
-            this.tmpAnno = new Annotation(ids, this.selections.slice(0), "Tmp Anno")
+            this.tmpAnno = new Annotation(ids, this.selections.map(s => s.copy()), "Tmp Anno")
             this.tmpAnno.addEntry(entry)
         }
 

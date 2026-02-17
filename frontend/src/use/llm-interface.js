@@ -15,9 +15,24 @@ export async function llmSummaryFunction(data, limit=30) {
     return loader.post("summaryfunction", { limit: limit, data: data })
 }
 
-export async function llmExtract(keyword, data, global, limit=5) {
+export async function llmExtract(keyword, data, global, number=5, limit=30) {
     const loader = useLoader()
-    return loader.post("extract", { keyword: keyword, global: global, limit: limit, data: data })
+    return loader.post("extract", {
+        keyword: keyword,
+        data: data,
+        global: global,
+        number: number,
+        limit: limit,
+    })
+}
+
+export async function llmCombine(keyword, columns, limit=30) {
+    const loader = useLoader()
+    return loader.post("combine", {
+        keyword: keyword,
+        columns: columns,
+        limit: limit,
+    })
 }
 
 export async function llmFree(prompt, limit=50) {

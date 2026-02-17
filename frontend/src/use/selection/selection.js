@@ -23,20 +23,32 @@ class Selection {
         this.centroid = []
     }
 
+    copy() {
+        const s = new Selection(this.type, this.data)
+        s.x = this.x
+        s.y = this.y
+        s.polygon = this.polygon.map(p => p.slice())
+        s.centroid = this.centroid.map(c => c.slice())
+        return s
+    }
+
     calculatePolygon(data, xAttr, yAttr, x, y) {
         if (this.data.size > 0) {
             const xy = data.filter(d => this.data.has(d.id)).map(d => ([x(getAttr(d, xAttr)), y(getAttr(d, yAttr))]))
-            const { polygon, centroid } = makePolygon(xy)
-            this.x = mean(centroid, c => c[0]),
-            this.y = mean(centroid, c => c[1])
-            this.centroid = centroid
-            this.polygon = polygon
-        } else {
-            this.x = 0
-            this.y = 0
-            this.centroid = []
-            this.polygon = []
+            if (xy.length > 0) {
+                const { polygon, centroid } = makePolygon(xy)
+                this.x = mean(centroid, c => c[0])
+                this.y = mean(centroid, c => c[1])
+                this.centroid = centroid
+                this.polygon = polygon
+                return
+            }
         }
+        // default values
+        this.x = 0
+        this.y = 0
+        this.centroid = []
+        this.polygon = []
     }
 
     filter(data) {

@@ -1,4 +1,4 @@
-import { ENTRY_TYPE } from "./annotation-entry"
+import { ENTITY_TYPE } from "./entity"
 
 let _ANNO_ID = 1
 
@@ -13,7 +13,7 @@ export default class Annotation {
         this.timeUpdated = this.timeCreated
 
         this.selection = selection
-        this.color = "black"
+        this.color = "red"
     }
 
     get polygon() {
@@ -32,7 +32,8 @@ export default class Annotation {
         return this.selection[0].y
     }
 
-    update(time) {
+    update(time=null) {
+        time = time ? time : Date.now()
         if (time > this.timeUpdated) {
             this.timeUpdated = time
         }
@@ -54,7 +55,7 @@ export default class Annotation {
     }
 
     hasColumn(column) {
-        return this.entries.some(d => d.type === ENTRY_TYPE.COLUMN && d.name === column)
+        return this.entries.some(d => d.hasEntity(ENTITY_TYPE.COLUMN, column))
     }
 
 }

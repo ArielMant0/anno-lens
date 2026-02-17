@@ -60,9 +60,14 @@
 
         <Teleport to="body">
             <div style="z-index: 4999;">
-                <div v-for="a in annoLeft"
+                <AnnotationPanel v-for="a in annoLeft"
                     :key="a.id+'_l_'+annoPos[a.id].index"
-                    class="d-flex align-center anno-container"
+                    :data="a"
+                    :selected="selectedAnnos[a.id]"
+                    :padding="padding"
+                    :min-height="annoMeta.sizeL-2"
+                    :max-height="annoMeta.sizeL-2"
+                    side="left"
                     @pointerenter="hoverAnno = a.id"
                     @pointerleave="hoverAnno = null"
                     draggable="true"
@@ -74,70 +79,17 @@
                         left: (offsetX+getAnnotationPos(a.id, true)[0]-25)+'px',
                         top: (offsetY+getAnnotationPos(a.id, true)[1])+'px',
                         fontSize: '12px',
-                    }">
+                    }"/>
 
-                    <div>
-                        <div>
-                            <v-btn
-                                class="del-anno"
-                                color="error"
-                                variant="text"
-                                rounded="sm"
-                                size="sm"
-                                icon="mdi-delete"
-                                density="compact"
-                                @click="DM.removeAnnotation(a.id)"/>
-                        </div>
 
-                        <div v-for="i in 5">
-                            <v-btn
-                                class="add-anno"
-                                :color="controls.getColor(i+4)"
-                                variant="text"
-                                rounded="sm"
-                                size="sm"
-                                icon="mdi-plus"
-                                density="compact"
-                                @click="annotate(a.id, i+4)"/>
-                        </div>
-                    </div>
-
-                    <div
-                        class="ma-1 pa-1"
-                        :style="{
-                            border: (selectedAnnos[a.id] ? 2 : 1) + 'px solid black',
-                            borderRadius: '4px',
-                            opacity: selectedAnnos[a.id] ? 1 : 0.75,
-                            overflowX: 'hidden',
-                            overflowY: 'auto',
-                            minHeight: (annoMeta.sizeL-2)+'px',
-                            maxHeight: (annoMeta.sizeL-2)+'px',
-                            fontSize: '12px',
-                            minWidth: padding+'px',
-                            maxWidth: padding+'px',
-                        }">
-
-                        <div class="d-flex">
-                            <v-btn
-                                color="error"
-                                variant="text"
-                                rounded="sm"
-                                size="sm"
-                                icon="mdi-close"
-                                density="compact"/>
-
-                            <div
-                                class="text-dots cursor-pointer"
-                                :style="{ maxWidth: (padding-15)+'px' }">
-                                {{ a.label }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div v-for="a in annoRight"
+                <AnnotationPanel v-for="a in annoRight"
                     :key="a.id+'_r_'+annoPos[a.id].index"
-                    class="d-flex align-center anno-container"
+                    :data="a"
+                    :selected="selectedAnnos[a.id]"
+                    :padding="padding"
+                    :min-height="annoMeta.sizeR-2"
+                    :max-height="annoMeta.sizeR-2"
+                    side="right"
                     @pointerenter="hoverAnno = a.id"
                     @pointerleave="hoverAnno = null"
                     draggable="true"
@@ -149,66 +101,7 @@
                         left: (offsetX+getAnnotationPos(a.id, true)[0])+'px',
                         top: (offsetY+getAnnotationPos(a.id, true)[1])+'px',
                         fontSize: '12px',
-                    }">
-
-                    <div
-                        class="ma-1 pa-1"
-                        :style="{
-                            border: (selectedAnnos[a.id] ? 2 : 1) + 'px solid black',
-                            borderRadius: '4px',
-                            opacity: selectedAnnos[a.id] ? 1 : 0.75,
-                            overflowX: 'hidden',
-                            overflowY: 'auto',
-                            minHeight: (annoMeta.sizeR-2)+'px',
-                            maxHeight: (annoMeta.sizeR-2)+'px',
-                            fontSize: '12px',
-                            minWidth: padding+'px',
-                            maxWidth: padding+'px',
-                        }">
-
-                        <div class="d-flex">
-                            <v-btn
-                                color="error"
-                                variant="text"
-                                rounded="sm"
-                                size="sm"
-                                icon="mdi-close"
-                                density="compact"/>
-
-                            <div
-                                class="text-dots cursor-pointer"
-                                :style="{ maxWidth: (padding-15)+'px' }">
-                                {{ a.label }}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div>
-                            <v-btn
-                                class="del-anno"
-                                color="error"
-                                variant="text"
-                                rounded="sm"
-                                size="sm"
-                                icon="mdi-delete"
-                                density="compact"
-                                @click="DM.removeAnnotation(a.id)"/>
-                        </div>
-
-                        <div v-for="i in 5">
-                            <v-btn
-                                class="add-anno"
-                                :color="controls.getColor(i+4)"
-                                variant="text"
-                                rounded="sm"
-                                size="sm"
-                                icon="mdi-plus"
-                                density="compact"
-                                @click="annotate(a.id, i+4)"/>
-                        </div>
-                    </div>
-                </div>
+                    }"/>
             </div>
         </Teleport>
     </div>
@@ -222,6 +115,8 @@
     import { euclidean } from '@/use/util';
     import { useApp } from '@/stores/app';
     import { useControls } from '@/stores/controls';
+    import { ENTRY_TYPE } from '@/use/annotation/annotation-entry';
+import AnnotationPanel from './AnnotationPanel.vue';
 
     const app = useApp()
     const mouse = useMouse()
@@ -405,9 +300,7 @@
     }
 
     function calcLabelPositions() {
-        const data = DM.getAnnotations().map(d => Object.assign({}, d))
-
-        console.log(data)
+        const data = DM.getAnnotations().slice(0)//.map(d => Object.assign({}, d))
 
         if (data.length > 0) {
             // default size

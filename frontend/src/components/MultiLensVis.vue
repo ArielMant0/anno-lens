@@ -143,22 +143,21 @@
     import { findInCircle, getAttr, getDataType, makeColorScale } from '@/use/util';
     import FeatureMap from './vis/FeatureMap.vue';
     import { useTheme } from 'vuetify';
-    import AnnotationOverlay from './AnnotationOverlay.vue';
+    import AnnotationOverlay from './annotation/AnnotationOverlay.vue';
     import LensOverlay from './LensOverlay.vue';
-    import LensComparison from './LensComparison.vue';
     import { useWindowSize } from '@vueuse/core';
     import HotBar from './HotBar.vue';
     import { useControls } from '@/stores/controls';
     import AnnoInventory from './AnnoInventory.vue';
-    import INV from '@/use/inventory';
     import { useTooltip } from '@/stores/tooltip';
     import ColorPicker from './ColorPicker.vue';
     import DatasetSelector from './DatasetSelector.vue';
-    import { llmComparison, llmFreeWithData, llmSummary } from '@/use/llm-interface';
+    import { llmCombine, llmComparison, llmExtract, llmFreeWithData, llmSummary } from '@/use/llm-interface';
     import { toast } from 'vue3-toastify';
     import DataHistograms from './DataHistograms.vue';
-    import AnnoInspector from './AnnoInspector.vue';
-    import { ANNO_SOURCE } from '@/use/annotation/annotation-entry';
+    import AnnoInspector from './annotation/AnnoInspector.vue';
+    import { ColumnEntity } from '@/use/annotation/entity';
+    import { ENTRY_SOURCE } from '@/use/annotation/annotation-entry';
 
     const app = useApp()
     const tt = useTooltip()
@@ -700,15 +699,6 @@
         controls.setKeyMappingLocked(2, "s", "swap", swapLenses)
         controls.setKeyMappingLocked(3, "s", "save", function() {
             DM.saveTmpAnnotation()
-            // const graph = DM.getAnnotationConnections()
-            // graph.links.forEach(d => {
-            //     const s = graph.nodes.find(n => n.id === d.source)
-            //     const t = graph.nodes.find(n => n.id === d.target)
-            //     d.coords = [[s.x, s.y], [t.x, t.y]]
-            // })
-
-            // INV.add(dataset.value, DM.getAnnotations(), graph.links)
-            // DM.clearAnnotations()
         }, ["ctrl"])
 
         controls.setKeyMappingLocked(4, "m", "mode", function() {
@@ -725,7 +715,7 @@
             app.setLLMLoading(true)
             llmSummary(DM.getLensData(0))
                 .then(response => {
-                    DM.annotateText(response.answer, ANNO_SOURCE.AI)
+                    DM.annotateText(response.answer, ENTRY_SOURCE.AI)
                     app.setLLMLoading(false)
                 })
         })
@@ -733,12 +723,42 @@
             app.setLLMLoading(true)
             llmFreeWithData("Provide a fitting label for these data points.", DM.getLensData(0), 6)
                 .then(response => {
-                    DM.annotateText(response.answer, ANNO_SOURCE.AI)
+                    const anno = DM.getTmpAnnotation()
+                    if (anno) {
+                        anno.label = response.answer
+                        anno.update()
+                        DM.trigger("anno")
+                    }
+                    // DM.annotateText(response.answer, ENTRY_SOURCE.AI)
                     app.setLLMLoading(false)
                 })
         })
-        controls.setKeyMapping(7, "3", "interesting", annoFunc)
-        controls.setKeyMapping(8, "4", "weird", annoFunc)
+        controls.setKeyMapping(7, "3", "unique", function() {
+            app.setLLMLoading(true)
+            const global = Object.entries(DM.stats).map(([name, obj]) => {
+                obj.name = name
+                return obj
+            })
+            llmExtract("unique", DM.getLensData(0), global)
+                .then(response => {
+                    const entities = response.columns.map(c => {
+                        return new ColumnEntity(c)
+                    })
+                    DM.annotateText(response.answer, ENTRY_SOURCE.AI, entities)
+                    app.setLLMLoading(false)
+                })
+        })
+        controls.setKeyMapping(8, "4", "combine", function() {
+            app.setLLMLoading(true)
+            llmCombine("fast-paced", DM.columns)
+                .then(response => {
+                    const entities = response.columns.map(c => {
+                        return new ColumnEntity(c, response.weights[c])
+                    })
+                    DM.annotateText(response.answer, ENTRY_SOURCE.AI, entities)
+                    app.setLLMLoading(false)
+                })
+        })
         controls.setKeyMapping(9, "5", "misc", annoFunc)
 
         window.addEventListener("wheel", function(event) {
