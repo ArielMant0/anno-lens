@@ -16,3 +16,22 @@
 .valid-target {
     cursor: pointer;
 }
+
+.rot-border {
+    stroke-width: 3;
+    animation: rot-border 1.2s ease-in-out infinite;
+}
+
+@keyframes rot-border {
+    0% {
+        stroke-width: 2;
+        transform: rotateZ(360deg);
+    }
+    50% {
+        stroke-width: 5;
+    }
+    100% {
+        stroke-width: 2;
+        transform: rotateZ(360deg);
+    }
+}

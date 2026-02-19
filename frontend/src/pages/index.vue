@@ -9,7 +9,7 @@
 </template>
 
 <script setup>
-    import TargetingOverlay from '@/components/annotation/TargetingOverlay.vue';
+    import TargetingOverlay from '@/components/TargetingOverlay.vue';
     import MultiLensVis from '@/components/MultiLensVis.vue';
     import { useApp } from '@/stores/app';
     import { useControls } from '@/stores/controls';
