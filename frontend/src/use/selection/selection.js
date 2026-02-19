@@ -5,14 +5,15 @@ import { makePolygon } from "./polygon";
 let _SEL_ID = 1;
 
 export const SELECTION_TYPE = Object.freeze({
+    NONE: 0,
     LENS: 1,
     LASSO: 2,
     BRUSH: 3,
 })
 
-class Selection {
+export class Selection {
 
-    constructor(type, data=[]) {
+    constructor(type=SELECTION_TYPE.NONE, data=[]) {
         this.id = `sel_${_SEL_ID++}`
         this.type = type
         this.data = new Set(data)
@@ -21,6 +22,20 @@ class Selection {
         this.y = 0
         this.polygon = []
         this.centroid = []
+    }
+
+    static dataUnion(selections) {
+        if (selections.length === 1) return selections[0]
+        let int = new Set()
+        selections.forEach(s => int = int.union(s.data))
+        return new Selection(SELECTION_TYPE.NONE, int)
+    }
+
+    static dataIntersection(selections) {
+        if (selections.length === 1) return selections[0]
+        let int = new Set()
+        selections.forEach(s => int = int.intersection(s.data))
+        return new Selection(SELECTION_TYPE.NONE, int)
     }
 
     copy() {

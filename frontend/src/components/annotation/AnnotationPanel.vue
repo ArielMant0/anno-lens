@@ -34,11 +34,11 @@
                 opacity: selected ? 1 : 0.75,
                 overflowX: 'hidden',
                 overflowY: 'auto',
-                minHeight: minHeight+'px',
-                maxHeight: maxHeight+'px',
+                minHeight: minh,
+                maxHeight: maxh,
                 fontSize: '12px',
-                minWidth: padding+'px',
-                maxWidth: padding+'px',
+                minWidth: w,
+                maxWidth: w,
             }">
 
             <div class="d-flex">
@@ -52,13 +52,15 @@
 
                 <div
                     class="text-dots cursor-pointer"
-                    :style="{ maxWidth: (padding-15)+'px', fontWeight: 'bold' }">
+                    :data-target-type="ACTION_TARGET.DATA"
+                    :data-target-id="data.getSelectionIds().join(',')"
+                    :style="{ maxWidth: (w-15)+'px', fontWeight: 'bold' }">
                     {{ data.label }}
                 </div>
 
             </div>
 
-            <AnnotationEntry v-for="entry in data.entries"
+            <AnnotationEntryPanel v-for="entry in data.entries"
                 :key="entry.id"
                 :data="entry"
                 @remove="data.removeEntry(entry.id)"
@@ -95,9 +97,10 @@
 <script setup>
     import { useControls } from '@/stores/controls';
     import Annotation from '@/use/annotation/annotation';
-    import { ENTRY_TYPE } from '@/use/annotation/annotation-entry';
     import DM from '@/use/data-manager';
-import AnnotationEntry from './AnnotationEntry.vue';
+    import AnnotationEntryPanel from './AnnotationEntryPanel.vue';
+    import { computed } from 'vue';
+    import { ACTION_TARGET } from '@/use/annotation/action-target';
 
     const props = defineProps({
         data: {
@@ -106,27 +109,31 @@ import AnnotationEntry from './AnnotationEntry.vue';
         },
         side: {
             type: String,
-            required: true
+            default: ""
         },
         selected: {
             type: Boolean,
             default: false
         },
         minHeight: {
-            type: Number,
-            default: 120
+            type: [String, Number],
+            default: "auto"
         },
         maxHeight: {
-            type: Number,
-            default: 120
+            type: [String, Number],
+            default: "auto"
         },
-        padding: {
+        width: {
             type: Number,
-            default: 4
+            default: 200
         },
     })
 
     const controls = useControls()
+
+    const minh = computed(() => props.minHeight + (typeof props.minHeight === "string" ? "" : "px"))
+    const maxh = computed(() => props.maxHeight + (typeof props.maxHeight === "string" ? "" : "px"))
+    const w = computed(() => props.width + "px")
 
 </script>
 

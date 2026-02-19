@@ -36,8 +36,8 @@ export const DATASETS = [
 
 export const useApp = defineStore('app', {
     state: () => ({
-        dataset: "games.dr",
-        datasetObj: Object.assign({}, DATASETS[0]),
+        dataset: "cereal.dr",
+        datasetObj: Object.assign({}, DATASETS[1]),
         ready: false,
 
         refMode: "global",

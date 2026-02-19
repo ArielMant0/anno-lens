@@ -20,6 +20,7 @@
     import { deg2rad, getAttr, rad2deg } from '@/use/util'
     import { useApp } from '@/stores/app'
     import { storeToRefs } from 'pinia'
+    import { ACTION_TARGET } from '@/use/annotation/action-target'
 
     const app = useApp()
     const { moveLens } = storeToRefs(app)
@@ -95,6 +96,7 @@
 
     function update() {
         const el = document.querySelector("#"+props.target)
+        if (!el) return
         const rect = el.getBoundingClientRect()
         width.value = rect.width + offX*2
         height.value = rect.height + offY*2
@@ -134,6 +136,8 @@
             .attr("transform", d => `translate(${offX+d.x},${offY+d.y})`)
 
         lg.append("circle")
+            .attr("data-target-type", ACTION_TARGET.DATA)
+            .attr("data-target-id", DM.selections[0].id) // TODO: hardcoded because lens and lens selection are split
             .attr("cx", 0)
             .attr("cy", 0)
             .attr("r", d => d.radius)

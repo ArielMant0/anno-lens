@@ -11,9 +11,66 @@ const COLORS5_2 = ["#619b8a", "#a1c181", "#f0b51d", "#fe8435", "#233d4d"]
 
 export const SIZE = 5
 
+export class KeyMapping {
+
+    constructor(index, key, label, callback, modifiers=[], locked=false, color=null, maxTargets=0, targetTypes=[]) {
+        this.id = index
+        this.key = key
+        this.label = label
+        this.maxTargets = maxTargets
+        this.targetTypes = targetTypes
+        this.callback = callback
+        this.modifiers = modifiers
+        this.locked = locked
+        this.color = color
+    }
+
+    copy() {
+        return new KeyMapping(
+            this.index,
+            this.key,
+            this.label,
+            this.callback,
+            this.modifiers.slice(),
+            this.locked,
+            this.color,
+            this.maxTargets,
+            this.targetTypes.slice()
+        )
+    }
+
+    lock() {
+        this.locked = true
+    }
+
+    unlock() {
+        this.locked = false
+    }
+
+    matches(key, modifiers) {
+        return (key === this.key || key.toLowerCase() === this.key) &&
+            modifiers.length === this.modifiers.length &&
+            modifiers.every(m => this.modifiers.includes(m)) &&
+            this.modifiers.every(m => modifiers.includes(m))
+    }
+
+    isValidTarget(type) {
+        if (this.targetTypes.length === 0 || this.maxTargets === 0) return true
+        return this.targetTypes.includes(type)
+    }
+
+    execute(args) {
+        this.callback(args)
+    }
+}
+
 export const useControls = defineStore('controls', {
     state: () => ({
         mappings: new Array(SIZE*2),
+        activeMapping: null,
+        activeMappingId: null,
+        activeTargets: [],
+
         recording: false,
         recordMessage: "",
         recordTarget: null,
@@ -21,6 +78,11 @@ export const useControls = defineStore('controls', {
         recordCallback: null,
         trigger: null
     }),
+
+    getters: {
+        hasActive: state => state.activeMapping !== null,
+        canTarget: state => state.activeMapping !== null && state.activeMapping.maxTargets > state.activeTargets.length
+    },
 
     actions: {
 
@@ -49,38 +111,38 @@ export const useControls = defineStore('controls', {
             return array
         },
 
-        setKeyMapping(index, key, label, callback, modifiers=[]) {
+        setKeyMapping(index, key, label, callback, modifiers=[], maxTargets=0, targetTypes=[]) {
             if (index < SIZE || index >= this.mappings.length) return
-            this.mappings[index] = {
-                id: index,
-                key: key,
-                label: label,
-                callback: callback,
-                modifiers: modifiers,
-                locked: false,
-                color: this.getColor(index)
-            }
+            this.mappings[index] = new KeyMapping(
+                index,
+                key,
+                label,
+                callback,
+                modifiers,
+                false,
+                this.getColor(index),
+                maxTargets,
+                targetTypes
+            )
         },
 
-        setKeyMappingLocked(index, key, label, callback, modifiers=[]) {
+        setKeyMappingLocked(index, key, label, callback, modifiers=[], maxTargets=0, targetTypes=[]) {
             if (index < 0 || index >= SIZE) return
-            this.mappings[index] = {
-                id: index,
-                key: key,
-                label: label,
-                callback: callback,
-                modifiers: modifiers,
-                locked: true,
-            }
+            this.mappings[index] = new KeyMapping(
+                index,
+                key,
+                label,
+                callback,
+                modifiers,
+                true,
+                null,
+                maxTargets,
+                targetTypes
+            )
         },
 
         mappingFromHotkey(key, modifiers=[], ignoreIndex=[]) {
-            return this.mappings.find((d, i) => !ignoreIndex.includes(i) &&
-                (key === d.key || key.toLowerCase() === d.key) &&
-                modifiers.length === d.modifiers.length &&
-                modifiers.every(m => d.modifiers.includes(m)) &&
-                d.modifiers.every(m => modifiers.includes(m))
-            )
+            return this.mappings.find((d, i) => !ignoreIndex.includes(i) && d.matches(key, modifiers))
         },
 
         keyEvent(event) {
@@ -98,13 +160,60 @@ export const useControls = defineStore('controls', {
             ].filter(d => d !== null)
 
             const m = this.mappingFromHotkey(event.key, mods)
+
             if (m) {
-                event.preventDefault();
-                m.callback(m)
+                event.preventDefault()
+                // reset targets if we click a different key while another is still active
+                if (this.activeMapping !== null) {
+                    this.activeTargets = []
+                }
                 this.trigger = m.id
                 setTimeout(() => this.trigger = null, 500)
-            } else {
-                this.trigger = null
+                // set this to the active mapping
+                this.activeMapping = m
+                this.activeMappingId = m.id
+                // if no targets are allowed, execute immediately
+                if (m.maxTargets === 0) {
+                    this.executeActive()
+                }
+            }
+        },
+
+        targetEvent(target, targetType) {
+            if (this.hasActive) {
+                // only do sth if this is a valid target
+                if (this.activeMapping.isValidTarget(targetType)) {
+                    if (this.activeTargets.length < this.activeMapping.maxTargets) {
+                        if (Array.isArray(target)) {
+                            this.activeTargets = this.activeTargets.concat(target)
+                        } else {
+                            this.activeTargets.push(target)
+                        }
+                        // trigger immediately if we reached the maximum number of targets
+                        if (this.activeTargets.length === this.activeMapping.maxTargets) {
+                            this.executeActive()
+                        }
+                    } else {
+                        this.executeActive()
+                    }
+                }
+            }
+        },
+
+        executeActive() {
+            if (this.hasActive) {
+                // execute callback with selected targets
+                this.activeMapping.execute(this.activeTargets)
+                this.activeTargets = []
+                this.activeMapping = null
+                this.activeMappingId = null
+            }
+        },
+
+        cancelActive() {
+            if (this.hasActive) {
+                this.activeTargets = []
+                this.activeMapping = null
             }
         },
 
@@ -125,9 +234,14 @@ export const useControls = defineStore('controls', {
 
                 let m;
                 if (this.mappings[this.recordTarget]) {
-                    m = Object.assign({}, this.mappings[this.recordTarget])
+                    m = this.mappings[this.recordTarget].copy()
                 } else {
-                    m = {}
+                    m = new KeyMapping(
+                        this.recordTarget,
+                        key,
+                        this.recordLabel,
+                        this.recordCallback
+                    )
                 }
 
                 m.key = key

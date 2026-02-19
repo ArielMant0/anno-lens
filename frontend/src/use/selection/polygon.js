@@ -2,7 +2,7 @@ import { polygonCentroid, polygonHull } from "d3"
 import { euclidean } from "../util"
 
 export function polygonSplit(points, polygon) {
-    if (points.length < 3) {
+    if (points.length <= 3) {
         return [polygon]
     }
     const c = polygonCentroid(polygon)
@@ -33,11 +33,11 @@ export function polygonSplit(points, polygon) {
 
         let tmp = []
         if (a.length > 0 && b.length > 0) {
-            tmp = split(a, polygonHull(a)).concat(split(b, polygonHull(b)))
+            tmp = polygonSplit(a, polygonHull(a)).concat(polygonSplit(b, polygonHull(b)))
         } else if (b.length > 0) {
-            tmp = split(b, polygonHull(b))
+            tmp = polygonSplit(b, polygonHull(b))
         } else if (a.length > 0) {
-            tmp = split(a, polygonHull(a))
+            tmp = polygonSplit(a, polygonHull(a))
         }
 
         return tmp.filter(d => d.length > 0)
@@ -58,7 +58,7 @@ export function polygonEnlarge(polygon, centroid) {
 
 export function makePolygon(points) {
     let polygon;
-    if (points.length > 2) {
+    if (points.length > 3) {
         polygon = polygonSplit(points, polygonHull(points))
     } else {
         polygon = [points]

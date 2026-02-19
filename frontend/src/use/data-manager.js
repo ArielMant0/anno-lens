@@ -162,6 +162,10 @@ class DataManager {
         return this.lenses[index].getResult(mode)
     }
 
+    getSelectionById(id) {
+        return this.selections.find(d => d.id === id)
+    }
+
     setData(data=[], columns=[], types=[], xAttr="x", yAttr="y", width=500, height=500) {
         this.data = data
         this.columns = columns
@@ -381,8 +385,6 @@ class DataManager {
     annotateText(text, src, entities=[]) {
         // no data is selected, so make no annotation
         if (this.selections.length === 0) return
-
-        console.log(this.tmpAnno)
 
         if (this.tmpAnno !== null) {
             // if we have an unsaved annotation, add the entry to it
@@ -789,6 +791,10 @@ class DataManager {
 
     getAnnotations() {
         return this.annotations
+    }
+
+    getAnnotationById(id) {
+        return this.annotations.find(d => d.id === id)
     }
 
     clearAnnotations() {

@@ -1,10 +1,11 @@
+import DM from "../data-manager"
 import { ENTITY_TYPE } from "./entity"
 
 let _ANNO_ID = 1
 
 export default class Annotation {
 
-    constructor(data, selection, label="Annotation") {
+    constructor(data, selections, label="Annotation") {
         this.id = `anno_${_ANNO_ID++}`
         this.label = label
         this.data = new Set(data)
@@ -12,24 +13,32 @@ export default class Annotation {
         this.timeCreated = Date.now()
         this.timeUpdated = this.timeCreated
 
-        this.selection = selection
+        this.selections = selections
         this.color = "red"
     }
 
     get polygon() {
-        return this.selection[0].polygon
+        return this.selections[0].polygon
     }
 
     get centroid() {
-        return this.selection[0].centroid
+        return this.selections[0].centroid
     }
 
     get x() {
-        return this.selection[0].x
+        return this.selections[0].x
     }
 
     get y() {
-        return this.selection[0].y
+        return this.selections[0].y
+    }
+
+    getData() {
+        return DM.getDataBy(d => this.data.has(d.id))
+    }
+
+    getSelectionIds() {
+        return this.selections.map(s => s.id)
     }
 
     update(time=null) {

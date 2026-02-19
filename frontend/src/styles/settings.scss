@@ -8,3 +8,11 @@
 // @use 'vuetify/settings' with (
 //   $color-pack: false
 // );
+
+.clickable {
+    cursor: pointer;
+}
+
+.valid-target {
+    cursor: pointer;
+}

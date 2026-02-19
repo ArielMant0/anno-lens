@@ -1,5 +1,12 @@
 <template>
-    <v-sheet :style="{ maxWidth: maxw }" rounded border class="ma-1 pa-2 text-caption">
+    <v-sheet
+        :style="{ maxWidth: maxw }"
+        rounded
+        border
+        class="ma-1 pa-2 text-caption"
+        :data-target-type="ACTION_TARGET.ANNOTATION"
+        :data-target-id="data.id"
+        >
 
         <v-btn
             icon="mdi-close"
@@ -26,6 +33,7 @@
 </template>
 
 <script setup>
+    import { ACTION_TARGET } from '@/use/annotation/action-target';
     import { ENTRY_TYPE, TextEntry } from '@/use/annotation/annotation-entry';
     import { computed } from 'vue';
 

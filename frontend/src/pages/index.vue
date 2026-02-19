@@ -3,11 +3,13 @@
         <v-overlay v-if="!ready" absolute>
             <v-progress-circular size="64" indeterminate></v-progress-circular>
         </v-overlay>
+        <TargetingOverlay/>
         <MultiLensVis/>
     </div>
 </template>
 
 <script setup>
+    import TargetingOverlay from '@/components/annotation/TargetingOverlay.vue';
     import MultiLensVis from '@/components/MultiLensVis.vue';
     import { useApp } from '@/stores/app';
     import { useControls } from '@/stores/controls';
@@ -20,7 +22,7 @@
     const { ready } = storeToRefs(app)
 
     onMounted(function() {
-        window.addEventListener("keydown", (event) => controls.keyEvent(event))
+        window.addEventListener("keyup", (event) => controls.keyEvent(event))
     })
 
 </script>

@@ -95,8 +95,7 @@ export class Lens {
     }
 
     getResultData() {
-        const data = DM.getData()
-        return data.filter(d => this.ids.has(d.id))
+        return DM.getDataBy(d => this.ids.has(d.id))
     }
 
     getResultSize() {

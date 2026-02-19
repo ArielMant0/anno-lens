@@ -10,7 +10,7 @@ export const ENTRY_TYPE = Object.freeze({
     VIS: 2,
 });
 
-class AnnotationEntry {
+export class AnnotationEntry {
 
     constructor(annotation, type, src) {
         this._anno = annotation

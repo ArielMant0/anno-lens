@@ -158,6 +158,8 @@
     import AnnoInspector from './annotation/AnnoInspector.vue';
     import { ColumnEntity } from '@/use/annotation/entity';
     import { ENTRY_SOURCE } from '@/use/annotation/annotation-entry';
+import { ACTION_TARGET } from '@/use/annotation/action-target';
+import { Selection } from '@/use/selection/selection';
 
     const app = useApp()
     const tt = useTooltip()
@@ -709,31 +711,49 @@
         })
 
 
-        // annotation hotkeys
-        const annoFunc = keymap => annotate(keymap.color)
-        controls.setKeyMapping(5, "1", "summarize", function() {
+        // llm hotkeys
+        controls.setKeyMapping(5, "1", "describe", function(targets) {
             app.setLLMLoading(true)
-            llmSummary(DM.getLensData(0))
+
+            const selection = Selection.dataUnion(targets)
+            const datapoints = selection.filter(DM.getData())
+            if (datapoints.length === 0) {
+                toast.error("no entity to describe")
+                return
+            }
+
+            llmSummary(datapoints)
                 .then(response => {
                     DM.annotateText(response.answer, ENTRY_SOURCE.AI)
                     app.setLLMLoading(false)
                 })
-        })
-        controls.setKeyMapping(6, "2", "label", function() {
+        }, [], 1, [ACTION_TARGET.DATA, ACTION_TARGET.VIS])
+
+        controls.setKeyMapping(6, "2", "label", function(targets) {
             app.setLLMLoading(true)
-            llmFreeWithData("Provide a fitting label for these data points.", DM.getLensData(0), 6)
+
+            const datapoints = Selection.dataUnion(targets).filter(DM.getData())
+            if (datapoints.length === 0) {
+                toast.error("no data to label")
+                return
+            }
+
+            llmFreeWithData("Provide a fitting label for these data points.", datapoints, 5)
                 .then(response => {
+                    // TODO: get the correct annotation to label
                     const anno = DM.getTmpAnnotation()
                     if (anno) {
                         anno.label = response.answer
                         anno.update()
                         DM.trigger("anno")
+                    } else {
+                        DM.annotateText(response.answer, ENTRY_SOURCE.AI)
                     }
-                    // DM.annotateText(response.answer, ENTRY_SOURCE.AI)
                     app.setLLMLoading(false)
                 })
-        })
-        controls.setKeyMapping(7, "3", "unique", function() {
+        }, [], 1, [ACTION_TARGET.DATA, ACTION_TARGET.ANNOTATION])
+
+        controls.setKeyMapping(7, "3", "extract", function() {
             app.setLLMLoading(true)
             const global = Object.entries(DM.stats).map(([name, obj]) => {
                 obj.name = name
@@ -747,7 +767,8 @@
                     DM.annotateText(response.answer, ENTRY_SOURCE.AI, entities)
                     app.setLLMLoading(false)
                 })
-        })
+        }, [], Infinity, [ACTION_TARGET.DATA, ACTION_TARGET.ANNOTATION])
+
         controls.setKeyMapping(8, "4", "combine", function() {
             app.setLLMLoading(true)
             llmCombine("fast-paced", DM.columns)
@@ -759,7 +780,8 @@
                     app.setLLMLoading(false)
                 })
         })
-        controls.setKeyMapping(9, "5", "misc", annoFunc)
+
+        controls.setKeyMapping(9, "5", "misc", function() { console.log("misc") })
 
         window.addEventListener("wheel", function(event) {
             if (!event.ctrlKey) return
