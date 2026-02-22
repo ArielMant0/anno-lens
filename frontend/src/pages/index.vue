@@ -3,8 +3,13 @@
         <v-overlay v-if="!ready" absolute>
             <v-progress-circular size="64" indeterminate></v-progress-circular>
         </v-overlay>
-        <TargetingOverlay/>
         <MultiLensVis/>
+        <template v-if="ready && initialized">
+            <DatasetSelector/>
+            <HotBar/>
+        </template>
+        <TargetingOverlay/>
+        <CommandEditingPanel/>
     </div>
 </template>
 
@@ -15,14 +20,17 @@
     import { useControls } from '@/stores/controls';
     import { storeToRefs } from 'pinia';
     import { onMounted } from 'vue';
+    import HotBar from '@/components/HotBar.vue';
+    import DatasetSelector from '@/components/DatasetSelector.vue';
+    import CommandEditingPanel from '@/components/CommandEditingPanel.vue';
 
     const app = useApp()
     const controls = useControls()
 
-    const { ready } = storeToRefs(app)
+    const { ready, initialized } = storeToRefs(app)
 
     onMounted(function() {
-        window.addEventListener("keyup", (event) => controls.keyEvent(event))
+        window.addEventListener("keydown", (event) => controls.keyEvent(event))
     })
 
 </script>

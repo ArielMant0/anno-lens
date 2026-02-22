@@ -13,6 +13,7 @@
     import { ACTION_TARGET, ALL_ACTION_TARGETS } from '@/use/annotation/action-target';
     import { storeToRefs } from 'pinia';
     import { onMounted, watch } from 'vue';
+import { LLMCommand } from '@/use/commands';
 
     const controls = useControls()
     const { canTarget, activeMappingId } = storeToRefs(controls)
@@ -50,18 +51,23 @@
 
         switch (targetType) {
             case ACTION_TARGET.DATA:
-                const annoId = element.getAttribute('data-target-anno')
-                // this is actually a selection in an annotation
-                if (annoId) {
-                    const anno = DM.getAnnotationById(annoId)
-                    controls.targetEvent(anno.selections, targetType)
-                } else {
-                    controls.targetEvent(targetId.map(tid => DM.getSelectionById(tid)), targetType)
+                {
+                    const annoId = element.getAttribute('data-target-anno')
+                    // this is actually a selection in an annotation
+                    if (annoId) {
+                        const anno = DM.getAnnotationById(annoId)
+                        controls.targetEvent(anno.selections, targetType)
+                    } else {
+                        controls.targetEvent(targetId.map(tid => DM.getSelectionById(tid)), targetType)
+                    }
                 }
                 break
             case ACTION_TARGET.ANNOTATION:
-                const anno = DM.getAnnotationById(targetId)
-                controls.targetEvent(anno, targetType)
+                {
+                    const anno = DM.getAnnotationById(targetId)
+                    console.log("clicked on annotation", anno.label)
+                    controls.targetEvent(anno, targetType)
+                } 
                 break
             case ACTION_TARGET.VIS:
                 // TODO: what should happen here?
@@ -73,8 +79,11 @@
     function updateMask() {
         if (!visible.value) return;
 
+        const cmd = controls.activeMapping.command
+        if (!(cmd instanceof LLMCommand)) return
+
         // get selectors of available targets for the currently active mapping
-        const selectors = controls.activeMapping.targetTypes.map(d => `*[data-target-type="${d}"]`)
+        const selectors = cmd.targetTypes.map(d => `*[data-target-type="${d}"]`)
         const elements = Array.from(document.querySelectorAll(selectors))
 
         const svg = d3.select("#to-svg")

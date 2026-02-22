@@ -2,7 +2,11 @@
     <v-sheet rounded elevation="2" min-height="100" style="width: 100%;">
 
         <div v-for="anno in annos" :key="anno.id+'_'+anno.timeUpdated" class="pa-1 pt-2">
-            <div class="ml-2" :data-target-type="ACTION_TARGET.DATA" :data-target-id="anno.getSelectionIds().join(',')" :data-target-anno="anno.id">
+            <div class="ml-2"
+                :data-target-type="ACTION_TARGET.DATA"
+                :data-target-selections="anno.getSelectionIds().join(',')"
+                :data-target-id="anno.id"
+                :data-target-anno="anno.id">
                 <span style="font-weight: bold;">{{ anno.label }}</span> <span class="text-caption">({{ anno.data.size }}<v-icon size="small">mdi-scatter-plot</v-icon>)</span>
             </div>
 

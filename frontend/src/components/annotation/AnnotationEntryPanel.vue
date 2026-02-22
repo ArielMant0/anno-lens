@@ -6,6 +6,8 @@
         class="ma-1 pa-2 text-caption"
         :data-target-type="ACTION_TARGET.ANNOTATION"
         :data-target-id="data.id"
+        :data-target-anno="data._anno.id"
+        :data-target-selections="data._anno.getSelectionIds().join(',')"
         >
 
         <v-btn

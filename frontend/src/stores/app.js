@@ -30,7 +30,17 @@ export const DATASETS = [
         color: "rating",
         type: DATA_TYPES.SEQUENTIAL,
         ignore: ["name"],
-        meta: ["name"]
+        meta: ["name"],
+        types: {
+            // "calories": DATA_TYPES.INTEGER,
+            // "protein": DATA_TYPES.INTEGER,
+            // "fat": DATA_TYPES.INTEGER,
+            // "sodium": DATA_TYPES.INTEGER,
+            // "sugars": DATA_TYPES.INTEGER,
+            // "potassium": DATA_TYPES.INTEGER,
+            // "vitamins & minerals": DATA_TYPES.INTEGER,
+            "display shelf": DATA_TYPES.ORDINAL,
+        }
     }
 ]
 
@@ -62,7 +72,8 @@ export const useApp = defineStore('app', {
         showInventory: false,
         inventoryTime: 0,
 
-        llmLoading: false
+        llmLoading: false,
+        initialized: false
     }),
 
     getters: {
@@ -74,6 +85,10 @@ export const useApp = defineStore('app', {
     },
 
     actions: {
+
+        setInitialized() {
+            this.initialized = true
+        },
 
         setDataset(name) {
             const it = DATASETS.find(d => d.file === name)

@@ -17,7 +17,7 @@
             <div v-for="i in 5">
                 <v-btn
                     class="add-anno"
-                    :color="controls.getColor(i+4)"
+                    :color="CM.getColor(i+4)"
                     variant="text"
                     rounded="sm"
                     size="sm"
@@ -53,7 +53,9 @@
                 <div
                     class="text-dots cursor-pointer"
                     :data-target-type="ACTION_TARGET.DATA"
-                    :data-target-id="data.getSelectionIds().join(',')"
+                    :data-target-id="data.id"
+                    :data-target-anno="data.id"
+                    :data-target-selections="data.getSelectionIds().join(',')"
                     :style="{ maxWidth: (w-15)+'px', fontWeight: 'bold' }">
                     {{ data.label }}
                 </div>
@@ -83,7 +85,7 @@
             <div v-for="i in 5">
                 <v-btn
                     class="add-anno"
-                    :color="controls.getColor(i+4)"
+                    :color="CM.getColor(i+4)"
                     variant="text"
                     rounded="sm"
                     size="sm"
@@ -101,6 +103,7 @@
     import AnnotationEntryPanel from './AnnotationEntryPanel.vue';
     import { computed } from 'vue';
     import { ACTION_TARGET } from '@/use/annotation/action-target';
+    import CM from '@/use/command-manager';
 
     const props = defineProps({
         data: {

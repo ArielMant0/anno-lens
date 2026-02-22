@@ -368,7 +368,6 @@ import AnnotationPanel from './AnnotationPanel.vue';
             annoMeta.sizeL = sizeL
             annoMeta.sizeR = sizeR
             annoPos.value = annoPosData
-            console.log(onLeft, onRight)
             annoLeft.value = onLeft
             annoRight.value = onRight
         } else {
@@ -378,17 +377,6 @@ import AnnotationPanel from './AnnotationPanel.vue';
         }
 
         anno.value = data
-    }
-
-    function annotate(id, index) {
-        DM.addToAnnotation(
-            id,
-            app.activeLens,
-            app.columnIndex,
-            app.refMode,
-            app.lensType,
-            controls.getColor(index)
-        )
     }
 
     function update() {

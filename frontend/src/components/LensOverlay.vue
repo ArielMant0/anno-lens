@@ -138,6 +138,7 @@
         lg.append("circle")
             .attr("data-target-type", ACTION_TARGET.DATA)
             .attr("data-target-id", DM.selections[0].id) // TODO: hardcoded because lens and lens selection are split
+            .attr("data-target-selections", DM.selections[0].id)
             .attr("cx", 0)
             .attr("cy", 0)
             .attr("r", d => d.radius)

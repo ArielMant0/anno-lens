@@ -146,6 +146,7 @@
     import { useControls } from '@/stores/controls';
     import { storeToRefs } from 'pinia';
     import { useTooltip } from '@/stores/tooltip';
+    import CM from '@/use/command-manager';
 
     const tt = useTooltip()
     const app = useApp()
@@ -245,7 +246,7 @@
             columnIndex,
             props.mode,
             lens.type,
-            controls.getColor(5),
+            CM.getColor(5),
             columnValue
         )
     }

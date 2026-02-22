@@ -2,14 +2,11 @@ import { polygonCentroid, polygonHull } from "d3"
 import { euclidean } from "../util"
 
 export function polygonSplit(points, polygon) {
-    if (points.length <= 3) {
-        return [polygon]
-    }
+    if (points.length <= 3) return [points]
+
     const c = polygonCentroid(polygon)
     let minDist = Number.MAX_VALUE
     let point = null
-
-    if (points.length <= 2) return [points]
 
     points.forEach(p => {
         const d = euclidean(p[0], p[1], c[0], c[1])

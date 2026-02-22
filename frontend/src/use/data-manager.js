@@ -360,6 +360,10 @@ class DataManager {
         }
     }
 
+    get hasTmpAnnotation() {
+        return this.tmpAnno !== null
+    }
+
     getTmpAnnotation() {
         return this.tmpAnno
     }
@@ -382,255 +386,54 @@ class DataManager {
         }
     }
 
-    annotateText(text, src, entities=[]) {
-        // no data is selected, so make no annotation
-        if (this.selections.length === 0) return
+    createEmptyAnnotation() {
+        let ids = new Set()
+        this.selections.forEach(s => {
+            ids = ids.union(s.data)
+            s.calculatePolygon(this.data, this.xAttr, this.yAttr, this.x, this.y)
+        })
+        return new Annotation(ids, this.selections.map(s => s.copy()), "Tmp Anno")
+    }
 
-        if (this.tmpAnno !== null) {
-            // if we have an unsaved annotation, add the entry to it
-            this.tmpAnno.addEntry(new TextEntry(this.tmpAnno, text, src, entities))
-        } else {
-            // otherwise, create a new unsaved annotation
-            let ids = new Set()
-            this.selections.forEach(s => {
-                ids = ids.union(s.data)
-                s.calculatePolygon(this.data, this.xAttr, this.yAttr, this.x, this.y)
-            })
-            this.tmpAnno = new Annotation(ids, this.selections.map(s => s.copy()), "Tmp Anno")
-            this.tmpAnno.addEntry(new TextEntry(this.tmpAnno, text, src, entities))
+    annotateEmpty() {
+        if (this.hasTmpAnnotation) {
+            // TODO: put unsaved annotation into history/storage
         }
-
+        this.tmpAnno = this.createEmptyAnnotation()
         this.callbacks.anno.forEach(f => f(this.tmpAnno))
     }
 
-    annotate(entry) {
+    annotateText(text, src, entities=[], id=null) {
 
-        // no data is selected, so make no annotation
-        if (this.selections.length === 0) return
+        // TODO: what about global notes where there is no associated selection?
+        // TODO: what about unsaved annotations?
 
-        if (this.tmpAnno !== null) {
-            // if we have an unsaved annotation, add the entry to it
-            this.tmpAnno.addEntry(entry)
-        } else {
-            // otherwise, create a new unsaved annotation
-            let ids = new Set()
-            this.selections.forEach(s => {
-                ids = ids.union(s.data)
-                s.calculatePolygon(this.data, this.xAttr, this.yAttr, this.x, this.y)
-            })
-            this.tmpAnno = new Annotation(ids, this.selections.map(s => s.copy()), "Tmp Anno")
-            this.tmpAnno.addEntry(entry)
-        }
-
-        this.callbacks.anno.forEach(f => f(this.tmpAnno))
-
-        // ------------------------------------------------------------- //
-        // ------------------------ OLD CODE --------------------------- //
-        // ------------------------------------------------------------- //
-
-        // const lens = this.getLens(lensIndex)
-        // const col = lens.getResult(mode)[columnIndex]
-
-        // const exact = this.annotations.find(d => {
-        //     if (d.lensType !== lensType || d.mode !== mode) return false
-        //     const set = lens.ids.union(new Set(d.ids))
-        //     return set.size === d.ids.length && set.size === lens.ids.size
-        // })
-
-        // const id = _ANNO_ID++
-        // let addObj, startCols;
-
-        // if (exact !== undefined) {
-        //     startCols = exact.columns
-        //     if (!startCols.find(d => d.name === col.name && d.color === color && d.value === columnValue)) {
-        //         startCols.push({ name: col.name, color: color, value: columnValue })
-        //     }
-        //     this.annotations.splice(this.annotations.findIndex(a => a.id === exact.id), 1)
-        // } else {
-        //     startCols = [{ name: col.name, color: color, value: columnValue }]
-        // }
-
-        // const overlap = this.annotations.filter(d => {
-        //     if (exact && d.id === exact.id || d.lensType !== lensType || d.mode !== mode) return false
-        //     const set = lens.ids.intersection(new Set(d.ids))
-        //     return set.size > 0 && d.columns.length === startCols.length === 1 && d.columns[0].name === col.name
-        // })
-
-        // const app = useApp()
-        // const cols = this.columns.concat(app.datasetObj.meta)
-
-        // // merge annotations
-        // if (exact || overlap.length > 0) {
-
-        //     const colSet = new Map(startCols.map(d => ([d.name, d.value])))
-        //     let idSet = new Set(lens.ids)
-        //     let mergeCols = startCols;
-
-        //     const colCounts = new Map()
-        //     mergeCols.forEach(c => colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1))
-
-        //     overlap.forEach(d => {
-        //         this.annotations.splice(this.annotations.findIndex(a => a.id === d.id), 1)
-        //         idSet = idSet.union(new Set(d.ids))
-        //         d.columns.forEach(c => {
-        //             delete this.annoMap[c.name][d.id]
-        //             if (colSet.has(c.name) && colSet.get(c.name) === columnValue) {
-        //                 colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1)
-        //             } else {
-        //                 mergeCols.push({ name: c.name, color: c.color, value: c.value })
-        //                 colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1)
-        //                 colSet.set(c.name, c.value)
-        //             }
-        //         })
-        //     })
-
-        //     let annoColor, maxCount = 0;
-        //     colCounts.forEach((theCount, theColor) => {
-        //         if (theCount > maxCount) {
-        //             annoColor = theColor
-        //             maxCount = theCount
-        //         }
-        //     })
-
-        //     const points = this.data.filter(d => idSet.has(d.id)).map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))]))
-        //     const { polygon, centroid } = this._makePolygon(points)
-
-        //     addObj = {
-        //         id: id,
-        //         x: mean(centroid, c => c[0]),
-        //         y: mean(centroid, c => c[1]),
-        //         polygon: polygon,
-        //         centroid: centroid,
-        //         mode: mode,
-        //         lensType: lensType,
-        //         columns: mergeCols,
-        //         ids: Array.from(idSet.values()),
-        //         color: annoColor
-        //     }
-
-        //     const dataA = this.data.filter(d => idSet.has(d.id))
-        //         .map(d => {
-        //             const obj = {}
-        //             cols.forEach(c => {
-        //                 if (typeof d[c] !== "boolean" || d[c] === true) {
-        //                     obj[c] = d[c]
-        //                 }
-        //             })
-        //             return obj
-        //         })
-        //     // ask the LLM what it says about this data
-        //     llmExtract("interesting", dataA, this.stats)
-        //         .then(reply => console.log(reply))
-
-        // } else {
-        //     const idSet = new Set(lens.ids)
-        //     const points = this.data.filter(d => idSet.has(d.id)).map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))]))
-        //     const { polygon, centroid } = this._makePolygon(points)
-
-        //     addObj = {
-        //         id: id,
-        //         x: mean(centroid, c => c[0]),
-        //         y: mean(centroid, c => c[1]),
-        //         centroid: centroid,
-        //         polygon: polygon,
-        //         mode: mode,
-        //         lensType: lensType,
-        //         columns: [{ name: col.name, color: color, value: columnValue }],
-        //         ids: lens.ids,
-        //         color: color
-        //     }
-
-        //     const dataA = this.data.filter(d => idSet.has(d.id))
-        //         .map(d => {
-        //             const obj = {}
-        //             cols.forEach(c => {
-        //                 if (typeof d[c] !== "boolean" || d[c] === true) {
-        //                     obj[c] = d[c]
-        //                 }
-        //             })
-        //             return obj
-        //         })
-        //     // ask the LLM what it says about this data
-        //     llmExtract("interesting", dataA, this.stats)
-        //         .then(reply => console.log(reply))
-        // }
-
-        // addObj.columns.forEach(c => {
-        //     const n = c.name
-        //     if (!this.annoMap[n]) {
-        //         this.annoMap[n] = {}
-        //     }
-        //     this.annoMap[n][id] = true
-        // })
-
-        // if (addObj) {
-        //     this.annotations.push(addObj)
-        //     this.callbacks.anno.forEach(f => f(addObj))
-        //     this.checkAnnoMerges()
-        // }
-    }
-
-    addToAnnotation(id, entry) {
-
-        if (this.tmpAnno !== null && this.tmpAnno.id === id) {
-            // add an entry to the currently unsaved annotation
-            this.tmpAnno.addEntry(entry)
-            this.callbacks.anno.forEach(f => f(tmpAnno))
-        } else {
-            // look for the matching annotation
-            const anno = this.annotations.find(d => d.id === id)
-            if (anno !== null) {
-                anno.addEntry(entry)
-                this.callbacks.anno.forEach(f => f(anno))
+        let target = null
+        if (id !== null) {
+            target = this.getAnnotationById(id)
+            if (target) {
+                // if the referenced annotation exists, add an entry
+                target.addEntry(new TextEntry(target, text, src, entities))
             }
+        } else if (this.selections.length === 0) {
+            // no data is selected, so make no tmp annotation
+            return
         }
 
-        // ------------------------------------------------------------- //
-        // ------------------------ OLD CODE --------------------------- //
-        // ------------------------------------------------------------- //
+        if (this.hasTmpAnnotation) {
+            // if we have an unsaved annotation, add the entry to it
+            this.tmpAnno.addEntry(new TextEntry(this.tmpAnno, text, src, entities))
+            target = this.tmpAnno
+        } else {
+            // otherwise, create a new unsaved annotation
+            this.tmpAnno = this.createEmptyAnnotation()
+            this.tmpAnno.addEntry(new TextEntry(this.tmpAnno, text, src, entities))
+            target = this.tmpAnno
+        }
 
-        // const lens = this.getLens(lensIndex)
-        // const col = lens.getResult(mode)[columnIndex]
-
-        // const anno = this.annotations.find(d => d.id === id)
-        // if (!anno || anno.lensType !== lensType) return
-
-        // const mergeCols = anno.columns
-        // if (!mergeCols.find(d => d.name === col.name && d.color === color && d.value === columnValue)) {
-        //     mergeCols.push({ name: col.name, color: color, value: columnValue })
-        // }
-
-        // const idSet = new Set(anno.ids).union(lens.ids)
-        // const colCounts = new Map()
-        // mergeCols.forEach(c => colCounts.set(c.color, (colCounts.get(c.color) || 0) + 1))
-
-
-        // let annoColor, maxCount = 0;
-        // colCounts.forEach((theCount, theColor) => {
-        //     if (theCount > maxCount) {
-        //         annoColor = theColor
-        //         maxCount = theCount
-        //     }
-        // })
-
-        // const points = this.data.filter(d => idSet.has(d.id)).map(d => ([this.x(getAttr(d, this.xAttr)), this.y(getAttr(d, this.yAttr))]))
-        // const { polygon, centroid } = this._makePolygon(points)
-
-        // const n = col.name
-        // if (!this.annoMap[n]) {
-        //     this.annoMap[n] = {}
-        // }
-        // this.annoMap[n][id] = true
-
-        // anno.x = centroid[0]
-        // anno.y = centroid[1]
-        // anno.polygon = polygon
-        // anno.columns = mergeCols
-        // anno.ids = Array.from(idSet.values())
-        // anno.color = annoColor
-
-        // this.callbacks.anno.forEach(f => f(anno))
-        // this.checkAnnoMerges()
+        if (target) {
+            this.callbacks.anno.forEach(f => f(target))
+        }
     }
 
     saveTmpAnnotation() {

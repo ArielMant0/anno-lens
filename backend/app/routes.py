@@ -18,6 +18,11 @@ from pydantic import BaseModel, Field
 model = ChatOpenAI(model="gpt-4.1-mini", api_key=config.OPENAI_API_KEY)
 
 
+class DataComparisonResult(BaseModel):
+    """A list of relevant columns for tabular data and an explanation of the comparison between datasets."""
+    explanation: str = Field(description="The explanation")
+    columns: List[str] = Field(description="The list of column names")
+
 class ColumnExtraction(BaseModel):
     """A list of columns for tabular data and an explanation for their choice."""
     explanation: str = Field(description="The explanation")
@@ -64,35 +69,32 @@ class ColDescRetriever(BaseRetriever):
 
 @bp.post('/free')
 def free():
-    template = request.prompt+". Use no more than {limit} words. Only reply with the answer contents, nothing else."
+    template = request.json["prompt"]+" Only reply with the answer contents, nothing else."
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a data analyst."),
         ("human", template)
     ])
     chain = prompt | model
-    answer = chain.invoke({ "limit": request.json["limit"] })
+    answer = chain.invoke()
     return jsonify({ "answer": answer.content })
 
 
 @bp.post('/free_data')
 def free_with_data():
-    template = request.json["prompt"]+". Use no more than {limit} words. Data: {data}. Only reply with the answer, nothing else."
+    template = request.json["prompt"]+" Only reply with the answer contents, nothing else. Data: {data}"
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a data analyst."),
         ("human", template)
     ])
 
     chain = prompt | model
-    answer = chain.invoke({
-        "data": request.json["data"],
-        "limit": request.json["limit"]
-    })
+    answer = chain.invoke({ "data": request.json["data"] })
     return jsonify({ "answer": answer.content })
 
 
 @bp.post('/extract')
 def extract():
-    template = "Extract {number} columns from the data subset that could be described as {keyword} relative to the global dataset characteristics. Explain your choice using no more than {limit} words. Data subset: {data}. Global characteristics: {global}. Only reply with the column names and explanation, nothing else."
+    template = request.json["prompt"]+" Only reply with the column names and explanation, nothing else. Data subset: {data}. Global characteristics: {global}."
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a data analyst."),
@@ -107,10 +109,7 @@ def extract():
     chain = prompt | agent
     answer = chain.invoke({
         "data": request.json["data"],
-        "global": request.json["global"],
-        "number": request.json["number"],
-        "limit": request.json["limit"],
-        "keyword": request.json["keyword"]
+        "global": request.json["global"]
     })
 
     return jsonify({
@@ -179,15 +178,24 @@ def summaryfunction():
 
 @bp.post('/comparison')
 def comparison():
-    template = "Summarize the differences between the following two sets of data (passed as JSON) using no more than {limit} words. Primary: {dataA}. Secondary: {dataB}. Only reply with the differences, nothing else."
+    template = request.json["prompt"] + " Data subsets: {data}"
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a data analyst."),
         ("human", template)
     ])
-    chain = prompt | model
+
+    agent = create_agent(
+        model=model,
+        response_format=DataComparisonResult  # Auto-selects ProviderStrategy
+    )
+
+    chain = prompt | agent
     answer = chain.invoke({
-        "dataA": request.json["dataA"],
-        "dataB": request.json["dataB"],
-        "limit": request.json["limit"]
+        "data": request.json["data"],
+        "global": request.json["global"]
     })
-    return jsonify({ "answer": answer.content })
+
+    return jsonify({
+        "answer": answer["structured_response"].explanation,
+        "columns": answer["structured_response"].columns
+    })

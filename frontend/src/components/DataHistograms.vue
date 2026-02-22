@@ -41,6 +41,7 @@
                             pattern-attr="pattern"
                             label-attr="group"
                             selectable
+                            outline="black"
                             @click="v => annotate(0, i, v.x)"
                             :width="chartWidth"
                             :height="chartHeight"/>
@@ -73,6 +74,7 @@
                             color-attr="color"
                             pattern-attr="pattern"
                             label-attr="group"
+                            outline="black"
                             :width="chartWidth"
                             :height="chartHeight"/>
                     </div>
@@ -90,6 +92,7 @@
     import { calcHistogram } from '@/use/util';
     import { useControls } from '@/stores/controls';
     import { storeToRefs } from 'pinia';
+    import CM from '@/use/command-manager';
 
     const app = useApp()
     const { activeLens, showHotbar } = storeToRefs(app)
@@ -165,7 +168,7 @@
             columnIndex,
             props.mode,
             lens.type,
-            controls.getColor(5),
+            CM.getColor(5),
             columnValue
         )
     }

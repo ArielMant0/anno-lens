@@ -1,6 +1,5 @@
 <template>
     <div class="hotbar" :style="{ transform: 'translate(-50%,'+offset+'px)', textAlign: 'center' }">
-
         <v-btn
             class="hide-btn mb-1"
             density="compact"
@@ -38,7 +37,7 @@
                         fontSize: size > 50 ? '14px' : '12px',
                         display: 'inline'
                     }"
-                    @click="annotate(m)"
+                    @click="controls.triggerMapping(m)"
                     @contextmenu.prevent="record(i)">
                     <div v-if="m && m.key">
                         <div v-for="str in controls.formatArray(m.key, m.modifiers)">
@@ -55,32 +54,37 @@
 <script setup>
     import { useApp } from '@/stores/app';
     import { useControls } from '@/stores/controls';
+    import CM from '@/use/command-manager';
     import { useWindowSize } from '@vueuse/core';
     import { storeToRefs } from 'pinia';
-    import { computed, watch } from 'vue';
+    import { computed, onMounted, watch } from 'vue';
     import { toast } from 'vue3-toastify';
 
     const app = useApp()
     const controls = useControls()
 
     const { showHotbar } = storeToRefs(app)
-    const { mappings, recording, recordMessage, trigger } = storeToRefs(controls)
+    const { initialized, recording, recordMessage, trigger } = storeToRefs(controls)
 
     const { width } = useWindowSize()
 
     const size = computed(() => width.value <= 1600 ? 40 : 50)
     const offset = computed(() => -15 + (showHotbar.value ? 0 : 50))
 
-    let toastId = null;
+    let toastId = null
+    const mappings = ref([])
 
-    function annotate(mapping) {
-        if (mapping) {
-            mapping.callback(mapping)
-        }
-    }
     function record(i) {
-        controls.startRecordHotkey(i, 'group '+(i+1), annotate)
+        controls.startRecordHotkey(i, 'group '+(i+1))
     }
+
+    function readMappings() {
+        mappings.value = CM.mappings
+    }
+
+    onMounted(readMappings)
+    
+    watch(initialized, readMappings)
 
     watch(recording, function() {
         if (!recording.value && toastId !== null) {

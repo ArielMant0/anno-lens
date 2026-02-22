@@ -140,11 +140,13 @@
             .attr("y", d => getY(d) > 0 ? Math.min(y(0)-2, y(getY(d))) : 0)
             .attr("width", x.bandwidth())
             .attr("height", d => getY(d) > 0 ? Math.max(2, y(0) - y(getY(d))) : 0)
+            .attr("stroke", d => d3.hsl(props.colorAttr ? getC(d) : props.fillColor).darker(2))
+            .attr("stroke-width", 1)
             .attr("fill", d => {
                 const col = props.colorAttr ? getC(d) : props.fillColor
                 if (props.patternAttr && getP(d)) {
                     const hsl = d3.hsl(col)
-                    return hsl < 0.33 ? hsl.brighter(1.5) : hsl.darker(1.5)
+                    return hsl.l < 0.45 ? hsl.brighter(1) : hsl.darker(1.5)
                 }
                 return col
             })
@@ -165,9 +167,9 @@
                     tt.show(`${extra}${getX(d)}: ${textY(d)}`, mx, my)
                 }
             })
-            .on("pointerleave", function() {
+            .on("pointerleave", function(_, d) {
                 if (props.selectable) {
-                    d3.select(this).attr("stroke", null)
+                    d3.select(this).attr("stroke", d3.hsl(props.colorAttr ? getC(d) : props.fillColor).darker(2))
                 }
                 tt.hide()
             })

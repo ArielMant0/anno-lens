@@ -1,8 +1,6 @@
 <template>
 <div style="min-height: 90vh; max-height: 95vh; max-width: 100vw;">
 
-    <DatasetSelector/>
-
     <div v-if="!loading && data.length > 0" class="d-flex flex-column align-center justify-start mt-8">
         <div class="d-flex mt-2">
             <div>
@@ -29,7 +27,7 @@
                         :y-attr="datasetY"
                         :color-attr="chosenColorAttr"
                         :color-scale="int.scales[chosenColorAttr]"
-                        :radius="3"
+                        :radius="5"
                         :width="w"
                         :height="h"
                         show-lens
@@ -124,8 +122,6 @@
         <AnnoInventory/>
 
         <ColorPicker v-model="editColor" @select="setColorOverride"/>
-
-        <HotBar @annotate="annotate"/>
     </div>
 </div>
 </template>
@@ -134,7 +130,8 @@
     import * as d3 from 'd3'
     import ScatterPlot from './vis/ScatterPlot.vue'
     import { storeToRefs } from 'pinia'
-    import { DATA_TYPES, useApp, DATASETS } from '@/stores/app';
+    import { DATA_TYPES, useApp } from '@/stores/app';
+    import { useControls } from '@/stores/controls';
     import { LENS_TYPE } from '@/use/Lens';
     import { computed, reactive, toRaw, watch } from 'vue';
     import DM from '@/use/data-manager';
@@ -146,24 +143,23 @@
     import AnnotationOverlay from './annotation/AnnotationOverlay.vue';
     import LensOverlay from './LensOverlay.vue';
     import { useWindowSize } from '@vueuse/core';
-    import HotBar from './HotBar.vue';
-    import { useControls } from '@/stores/controls';
     import AnnoInventory from './AnnoInventory.vue';
     import { useTooltip } from '@/stores/tooltip';
     import ColorPicker from './ColorPicker.vue';
-    import DatasetSelector from './DatasetSelector.vue';
-    import { llmCombine, llmComparison, llmExtract, llmFreeWithData, llmSummary } from '@/use/llm-interface';
+    import { COMPARE_PROMPT, EXTRACT_PROMPT, LABEL_PROMPT, llmComparison, llmExtract, llmFreeWithData, llmSummary, SUMMARY_PROMPT } from '@/use/llm-interface';
     import { toast } from 'vue3-toastify';
     import DataHistograms from './DataHistograms.vue';
     import AnnoInspector from './annotation/AnnoInspector.vue';
     import { ColumnEntity } from '@/use/annotation/entity';
     import { ENTRY_SOURCE } from '@/use/annotation/annotation-entry';
-import { ACTION_TARGET } from '@/use/annotation/action-target';
-import { Selection } from '@/use/selection/selection';
+    import { ACTION_TARGET } from '@/use/annotation/action-target';
+    import { Selection } from '@/use/selection/selection';
+    import { Command, LLMCommand } from '@/use/commands';
+    import CM from '@/use/command-manager';
 
     const app = useApp()
-    const tt = useTooltip()
     const controls = useControls()
+    const tt = useTooltip()
     const theme = useTheme()
 
     const {
@@ -554,7 +550,7 @@ import { Selection } from '@/use/selection/selection';
             columnIndex,
             refMode.value,
             lensType.value,
-            controls.getColor(5)
+            CM.getColor(5)
         )
     }
 
@@ -628,6 +624,8 @@ import { Selection } from '@/use/selection/selection';
 
         data.value = points
 
+        app.setInitialized()
+
         dataTime.value = Date.now()
         annoTime.value = Date.now()
 
@@ -687,102 +685,143 @@ import { Selection } from '@/use/selection/selection';
 
     onMounted(function() {
         // static hotkeys
-        controls.setKeyMappingLocked(0, "a", "up/left", function() {
+        CM.addKeyMappingLocked(0, "a", "up/left", new Command(function() {
             if (columnIndex.value > 0) {
                 setColorIndex(columnIndex.value - 1)
                 applyLens()
             }
-        })
-        controls.setKeyMappingLocked(1, "d", "down/right", function() {
+        }))
+        CM.addKeyMappingLocked(1, "d", "down/right", new Command(function() {
             setColorIndex(columnIndex.value + 1)
             applyLens()
-        })
+        }))
 
-        controls.setKeyMappingLocked(2, "s", "swap", swapLenses)
-        controls.setKeyMappingLocked(3, "s", "save", function() {
+        CM.addKeyMappingLocked(2, "s", "swap", new Command(swapLenses))
+        CM.addKeyMappingLocked(3, "s", "save", new Command(function() {
             DM.saveTmpAnnotation()
-        }, ["ctrl"])
+        }), ["ctrl"])
 
-        controls.setKeyMappingLocked(4, "m", "mode", function() {
+        CM.addKeyMappingLocked(4, "m", "mode", new Command(function() {
             setRefMode(refMode.value !== "local" ? "local" : "global")
             const lens = DM.getLens(activeLens.value)
             updateLens(lens.x, lens.y)
             applyLens()
-        })
-
+        }))
 
         // llm hotkeys
-        controls.setKeyMapping(5, "1", "describe", function(targets) {
+        const descCommand = new LLMCommand(function(prompt, targets) {
             app.setLLMLoading(true)
 
-            const selection = Selection.dataUnion(targets)
+            switch (targets[0].type) {
+                case ACTION_TARGET.DATA:
+                    // get data points that match the target
+                    const selection = Selection.dataUnion(targets.map(t => t.target).flat())
+                    const datapoints = selection.filter(DM.getData())
+                    if (datapoints.length === 0) {
+                        toast.error("no entity to describe")
+                        return
+                    }
+                    // ask for description / summary
+                    llmFreeWithData(prompt, datapoints)
+                        .then(response => {
+                            DM.annotateText(response.answer, ENTRY_SOURCE.AI, [], targets[0].annotation)
+                            app.setLLMLoading(false)
+                        })
+                    break
+                case ACTION_TARGET.VIS:
+                    // TODO: add the response text to the global notes
+                    console.debug("describe vis:", response.answer)
+                    break
+            }}, SUMMARY_PROMPT, 1, 1, [ACTION_TARGET.DATA, ACTION_TARGET.VIS])
+        // add hotkey for "describe" command
+        CM.addKeyMapping(5, "1", "describe", descCommand)
+
+
+        const labelCommand = new LLMCommand(function(prompt, targets) {
+            app.setLLMLoading(true)
+
+            const selection = Selection.dataUnion(targets.map(t => t.target).flat())
             const datapoints = selection.filter(DM.getData())
-            if (datapoints.length === 0) {
-                toast.error("no entity to describe")
-                return
-            }
-
-            llmSummary(datapoints)
-                .then(response => {
-                    DM.annotateText(response.answer, ENTRY_SOURCE.AI)
-                    app.setLLMLoading(false)
-                })
-        }, [], 1, [ACTION_TARGET.DATA, ACTION_TARGET.VIS])
-
-        controls.setKeyMapping(6, "2", "label", function(targets) {
-            app.setLLMLoading(true)
-
-            const datapoints = Selection.dataUnion(targets).filter(DM.getData())
             if (datapoints.length === 0) {
                 toast.error("no data to label")
                 return
             }
 
-            llmFreeWithData("Provide a fitting label for these data points.", datapoints, 5)
+            llmFreeWithData(prompt, datapoints, 5)
                 .then(response => {
-                    // TODO: get the correct annotation to label
-                    const anno = DM.getTmpAnnotation()
+                    let anno = null
+                    // get the correct annotation to label
+                    if (targets[0].annotation) {
+                        anno = DM.getAnnotationById(targets[0].annotation)
+                    } else if (DM.hasTmpAnnotation) {
+                        anno = DM.getTmpAnnotation()
+                    } else {
+                        DM.annotateEmpty()
+                        anno = DM.getTmpAnnotation()
+                    }
+                    
                     if (anno) {
                         anno.label = response.answer
                         anno.update()
                         DM.trigger("anno")
-                    } else {
-                        DM.annotateText(response.answer, ENTRY_SOURCE.AI)
                     }
                     app.setLLMLoading(false)
                 })
-        }, [], 1, [ACTION_TARGET.DATA, ACTION_TARGET.ANNOTATION])
+            }, LABEL_PROMPT, 1, 1, [ACTION_TARGET.DATA])
+        // add hotkey for "label" command
+        CM.addKeyMapping(6, "2", "label", labelCommand)
 
-        controls.setKeyMapping(7, "3", "extract", function() {
+        const extractCommand = new LLMCommand(function(prompt, targets) {
             app.setLLMLoading(true)
             const global = Object.entries(DM.stats).map(([name, obj]) => {
                 obj.name = name
                 return obj
             })
-            llmExtract("unique", DM.getLensData(0), global)
+            const selection = Selection.dataUnion(targets.map(t => t.target).flat())
+            const datapoints = selection.filter(DM.getData())
+            if (datapoints.length === 0) {
+                toast.error("no data to extract columns for")
+                return
+            }
+            llmExtract(prompt, datapoints, global)
                 .then(response => {
-                    const entities = response.columns.map(c => {
-                        return new ColumnEntity(c)
-                    })
-                    DM.annotateText(response.answer, ENTRY_SOURCE.AI, entities)
+                    const entities = response.columns.map(c => new ColumnEntity(c))
+                    DM.annotateText(response.answer, ENTRY_SOURCE.AI, entities, targets[0].annotation)
                     app.setLLMLoading(false)
                 })
-        }, [], Infinity, [ACTION_TARGET.DATA, ACTION_TARGET.ANNOTATION])
+            }, EXTRACT_PROMPT, 1, 1, [ACTION_TARGET.DATA])
+        // add hotkey for "extract" command
+        CM.addKeyMapping(7, "3", "extract", extractCommand)
 
-        controls.setKeyMapping(8, "4", "combine", function() {
+        const compareCommand = new LLMCommand(function(prompt, targets) {
             app.setLLMLoading(true)
-            llmCombine("fast-paced", DM.columns)
+            const allData = DM.getData()
+            // get data for all involved selections
+            const subsets = {}
+            targets.forEach((t, i) => {
+                const s = Selection.dataUnion(t.target)
+                const name = t.name ? t.name : `Subset ${i}`
+                subsets[name] = s.filter(allData)
+            })
+
+            if (Object.keys(subsets).length < 2) {
+                toast.error("not enough data for a comparison")
+                return
+            }
+
+            llmComparison(prompt, subsets)
                 .then(response => {
-                    const entities = response.columns.map(c => {
-                        return new ColumnEntity(c, response.weights[c])
-                    })
+                    const entities = response.columns.map(c => new ColumnEntity(c))
+                    // TODO: add to global notepad
                     DM.annotateText(response.answer, ENTRY_SOURCE.AI, entities)
                     app.setLLMLoading(false)
                 })
-        })
+            }, COMPARE_PROMPT, 2, Infinity, [ACTION_TARGET.DATA])
+        CM.addKeyMapping(8, "4", "compare", compareCommand)
 
-        controls.setKeyMapping(9, "5", "misc", function() { console.log("misc") })
+        CM.addKeyMapping(9, "5", "misc", new Command(function() { console.log("misc") }))
 
+        // resize lens
         window.addEventListener("wheel", function(event) {
             if (!event.ctrlKey) return
             const [mx, my] = d3.pointer(event, document.body)
@@ -800,14 +839,18 @@ import { Selection } from '@/use/selection/selection';
             return false
         })
 
+        // update lens data when something changes
         DM.onLens(() => {
             app.updateLensData()
             lensMoveTime.value = Date.now()
         })
+        // propagate annotation changes
         DM.onAnnotation(() => annoTime.value = Date.now())
 
         looptime = Date.now()
         loop = requestAnimationFrame(loopFunc)
+
+        controls.setInitialized()
 
         init()
     })
