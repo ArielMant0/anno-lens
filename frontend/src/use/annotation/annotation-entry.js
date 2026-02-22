@@ -66,7 +66,7 @@ export class TextEntry extends AnnotationEntry {
         })
 
         if (update && this.entities.length !== before) {
-            this.annotation.update()
+            this._anno.update()
         }
     }
 
@@ -74,7 +74,7 @@ export class TextEntry extends AnnotationEntry {
         const index = this.entities.find(d => d.type === type && d.id === id)
         if (index >= 0) {
             this.entities.splice(index, 1)
-            this.annotation.update()
+            this._anno.update()
         }
     }
 }

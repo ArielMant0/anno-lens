@@ -5,6 +5,9 @@ import { defineStore } from 'pinia'
 function isValidKey(key) {
     return new RegExp(/\w/, "i").test(key)
 }
+function isInputElement(tagName) {
+    return tagName === "INPUT" || tagName === "TEXTAREA"
+}
 
 export const useControls = defineStore('controls', {
     state: () => ({
@@ -58,11 +61,14 @@ export const useControls = defineStore('controls', {
                 CM.clearTargets()
                 this.numActiveTargets = 0
             }
-            this.trigger = mapping.id
-            setTimeout(() => this.trigger = null, 500)
             // set this to the active mapping
             this.activeMapping = mapping
             this.activeMappingId = mapping.id
+
+            // indicate which button triggered the action
+            this.trigger = mapping.id
+            setTimeout(() => this.trigger = null, 500)
+
             // if no targets are allowed, execute immediately
             if (!mapping.canTarget()) {
                 this.executeActive()
@@ -70,7 +76,7 @@ export const useControls = defineStore('controls', {
         },
 
         keyEvent(event) {
-            if (document.activeElement && document.activeElement.tagName === "INPUT") return
+            if (document.activeElement && isInputElement(document.activeElement.tagName)) return
             if (!isValidKey(event.key)) return
 
             if (this.recording) {

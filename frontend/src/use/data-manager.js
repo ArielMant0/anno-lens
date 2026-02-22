@@ -597,6 +597,7 @@ class DataManager {
     }
 
     getAnnotationById(id) {
+        if (this.hasTmpAnnotation && this.tmpAnno.id === id) return this.tmpAnno
         return this.annotations.find(d => d.id === id)
     }
 

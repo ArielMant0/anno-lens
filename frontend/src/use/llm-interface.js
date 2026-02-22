@@ -1,28 +1,53 @@
 import { useLoader } from "./loader";
 import { PromptTemplate, PromptVariable } from "./prompt-template";
 
-export async function llmSummary(data) {
+
+/**
+ * Asks the model something without any relation to data
+ * @param {String} prompt prompt send to model
+ * @returns 
+ */
+export async function llmFree(prompt) {
     const loader = useLoader()
-    return loader.post("summary", { limit: limit, data: data })
+    console.debug("free/", prompt)
+    return loader.post("free", { prompt: prompt })
 }
 
 /**
+ * Asks the model something for a given set of data points
+ * @param {String} prompt prompt send to model
+ * @param {Array} data list of data points for the chosen subset
+ * @returns 
+ */
+export async function llmFreeWithData(prompt, data) {
+    const loader = useLoader()
+    console.debug("free_data/", prompt)
+    return loader.post("free_data", { prompt: prompt, data: data })
+}
+
+
+/**
  * Compare a number of data subsets to each other
- * @param {Object} data 
+ * @param {String} prompt prompt send to model
+ * @param {Object} data object containing data points for named subsets
  * @returns 
  */
 export async function llmComparison(prompt, data) {
     const loader = useLoader()
+    console.debug("comparison/", prompt)
     return loader.post("comparison", { prompt: prompt, data: data })
 }
 
-export async function llmSummaryFunction(data) {
-    const loader = useLoader()
-    return loader.post("summaryfunction", { limit: limit, data: data })
-}
-
+/**
+ * 
+ * @param {String} prompt prompt send to model
+ * @param {Array} data list of data points for the chosen subset
+ * @param {Array} global list of column statistics for all data
+ * @returns 
+ */
 export async function llmExtract(prompt, data, global) {
     const loader = useLoader()
+    console.debug("extract/", prompt)
     return loader.post("extract", {
         prompt: prompt,
         data: data,
@@ -30,27 +55,27 @@ export async function llmExtract(prompt, data, global) {
     })
 }
 
-export async function llmCombine(keyword, columns, limit=30) {
+export async function llmCombine(prompt, columns) {
     const loader = useLoader()
+    console.debug("combine/", prompt)
     return loader.post("combine", {
-        keyword: keyword,
+        prompt: prompt,
         columns: columns,
         limit: limit,
     })
 }
 
-export async function llmFree(prompt) {
-    const loader = useLoader()
-    return loader.post("free", { prompt: prompt})
-}
-
-export async function llmFreeWithData(prompt, data) {
-    const loader = useLoader()
-    return loader.post("free_data", { prompt: prompt, data: data })
-}
+///////////////////////////////////////////////////////////////////////////////////////
+/// Default prompt templates
+///////////////////////////////////////////////////////////////////////////////////////
 
 export const SUMMARY_PROMPT = new PromptTemplate(
-    "Summarize important characteristics of the data using no more than :limit: words.",
+    "Summarize the most important characteristics of the data using no more than :limit: words.",
+    [new PromptVariable("limit", 50, "integer")]
+)
+
+export const DESCRIPTION_PROMPT = new PromptTemplate(
+    "Describe the data using no more than :limit: words.",
     [new PromptVariable("limit", 50, "integer")]
 )
 

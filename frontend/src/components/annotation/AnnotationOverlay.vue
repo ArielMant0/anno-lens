@@ -300,7 +300,7 @@ import AnnotationPanel from './AnnotationPanel.vue';
     }
 
     function calcLabelPositions() {
-        const data = DM.getAnnotations().slice(0)//.map(d => Object.assign({}, d))
+        const data = DM.getAnnotations()
 
         if (data.length > 0) {
             // default size

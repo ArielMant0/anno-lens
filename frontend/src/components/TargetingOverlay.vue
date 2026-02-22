@@ -56,7 +56,7 @@ import { LLMCommand } from '@/use/commands';
                     // this is actually a selection in an annotation
                     if (annoId) {
                         const anno = DM.getAnnotationById(annoId)
-                        controls.targetEvent(anno.selections, targetType)
+                        controls.targetEvent(anno.selections, targetType, annoId)
                     } else {
                         controls.targetEvent(targetId.map(tid => DM.getSelectionById(tid)), targetType)
                     }
@@ -65,8 +65,7 @@ import { LLMCommand } from '@/use/commands';
             case ACTION_TARGET.ANNOTATION:
                 {
                     const anno = DM.getAnnotationById(targetId)
-                    console.log("clicked on annotation", anno.label)
-                    controls.targetEvent(anno, targetType)
+                    controls.targetEvent(anno, targetType, anno.id)
                 } 
                 break
             case ACTION_TARGET.VIS:

@@ -87,7 +87,7 @@
                     </div>
                 </div>
 
-                <AnnoInspector/>
+                <GlobalNotepad/>
 
                 <DataHistograms
                     :active="!moveLens || mouseStill"
@@ -146,10 +146,10 @@
     import AnnoInventory from './AnnoInventory.vue';
     import { useTooltip } from '@/stores/tooltip';
     import ColorPicker from './ColorPicker.vue';
-    import { COMPARE_PROMPT, EXTRACT_PROMPT, LABEL_PROMPT, llmComparison, llmExtract, llmFreeWithData, llmSummary, SUMMARY_PROMPT } from '@/use/llm-interface';
+    import { COMPARE_PROMPT, DESCRIPTION_PROMPT, EXTRACT_PROMPT, LABEL_PROMPT, llmComparison, llmExtract, llmFreeWithData } from '@/use/llm-interface';
     import { toast } from 'vue3-toastify';
     import DataHistograms from './DataHistograms.vue';
-    import AnnoInspector from './annotation/AnnoInspector.vue';
+    import GlobalNotepad from './annotation/GlobalNotepad.vue';
     import { ColumnEntity } from '@/use/annotation/entity';
     import { ENTRY_SOURCE } from '@/use/annotation/annotation-entry';
     import { ACTION_TARGET } from '@/use/annotation/action-target';
@@ -732,7 +732,7 @@
                     // TODO: add the response text to the global notes
                     console.debug("describe vis:", response.answer)
                     break
-            }}, SUMMARY_PROMPT, 1, 1, [ACTION_TARGET.DATA, ACTION_TARGET.VIS])
+            }}, DESCRIPTION_PROMPT, 1, 1, [ACTION_TARGET.DATA, ACTION_TARGET.VIS])
         // add hotkey for "describe" command
         CM.addKeyMapping(5, "1", "describe", descCommand)
 
@@ -812,7 +812,7 @@
             llmComparison(prompt, subsets)
                 .then(response => {
                     const entities = response.columns.map(c => new ColumnEntity(c))
-                    // TODO: add to global notepad
+                    // TODO: add to notepad
                     DM.annotateText(response.answer, ENTRY_SOURCE.AI, entities)
                     app.setLLMLoading(false)
                 })

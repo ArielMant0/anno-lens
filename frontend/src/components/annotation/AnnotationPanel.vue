@@ -41,32 +41,21 @@
                 maxWidth: w,
             }">
 
-            <div class="d-flex">
-                <v-btn
-                    color="error"
-                    variant="text"
-                    rounded="sm"
-                    size="sm"
-                    icon="mdi-close"
-                    density="compact"/>
-
-                <div
-                    class="text-dots cursor-pointer"
-                    :data-target-type="ACTION_TARGET.DATA"
-                    :data-target-id="data.id"
-                    :data-target-anno="data.id"
-                    :data-target-selections="data.getSelectionIds().join(',')"
-                    :style="{ maxWidth: (w-15)+'px', fontWeight: 'bold' }">
-                    {{ data.label }}
-                </div>
-
-            </div>
-
-            <AnnotationEntryPanel v-for="entry in data.entries"
-                :key="entry.id"
-                :data="entry"
-                @remove="data.removeEntry(entry.id)"
+            <AnnotationTitle
+                v-model="data.label"
+                :size="data.data.size"
+                class="text-dots cursor-pointer"
+                :data-target-type="ACTION_TARGET.DATA"
+                :data-target-id="data.id"
+                :data-target-anno="data.id"
+                :data-target-selections="data.getSelectionIds().join(',')"
+                :style="{ maxWidth: (w-15)+'px' }"
                 />
+
+            <template v-for="(entry, idx) in data.entries" :key="entry.id">
+                <v-divider v-if="idx > 0" class="mt-2 mb-1"></v-divider>
+                <AnnotationEntryPanel :data="entry"/>
+            </template>
         </div>
 
         <div v-if="side === 'right'">
@@ -104,6 +93,7 @@
     import { computed } from 'vue';
     import { ACTION_TARGET } from '@/use/annotation/action-target';
     import CM from '@/use/command-manager';
+    import AnnotationTitle from './AnnotationTitle.vue';
 
     const props = defineProps({
         data: {

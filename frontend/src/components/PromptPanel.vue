@@ -20,7 +20,7 @@
                 :step="part.type === 'integer' ? 1 : undefined"
                 class="pa-1 keyword"
                 style="max-width: 50px;"
-                @change="setValue(part.name, part.value)"
+                @change="setValue(part)"
                 />
         </template>
     </p>
@@ -87,7 +87,7 @@
     }
 
     function setValue(part) {
-        part.value = prompt.setVariable(part.name, part.value)
+        props.prompt.setVariable(part.name, part.value)
         emit("update")
     }
 

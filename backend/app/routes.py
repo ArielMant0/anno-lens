@@ -15,13 +15,19 @@ from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
 # model = OllamaLLM(model="gemma3:4b")
-model = ChatOpenAI(model="gpt-4.1-mini", api_key=config.OPENAI_API_KEY)
+model = ChatOpenAI(model="gpt-4o-mini", api_key=config.OPENAI_API_KEY)
+
+class BasicAnswer(BaseModel):
+    """A basic answer consisting of the answer text and a list of column names relevant to the answer."""
+    answer: str = Field(description="The explanation")
+    columns: List[str] = Field(description="The list of column names (may be empty)")
 
 
 class DataComparisonResult(BaseModel):
     """A list of relevant columns for tabular data and an explanation of the comparison between datasets."""
     explanation: str = Field(description="The explanation")
     columns: List[str] = Field(description="The list of column names")
+
 
 class ColumnExtraction(BaseModel):
     """A list of columns for tabular data and an explanation for their choice."""
@@ -36,65 +42,59 @@ class ColumnLinearCombination(BaseModel):
     weights: dict = Field(description="The dictionary containing weights for selected columns")
 
 
-class ColDescRetriever(BaseRetriever):
-    """A column retriever that contains the top k documents that match the user query.
-
-    This retriever only implements the sync method _get_relevant_documents.
-
-    If the retriever were to involve file access or network access, it could benefit
-    from a native async implementation of `_aget_relevant_documents`.
-
-    As usual, with Runnables, there's a default async implementation that's provided
-    that delegates to the sync implementation running on another thread.
-    """
-
-    documents: List[Document]
-    """List of documents to retrieve from."""
-    k: int
-    """Number of top results to return"""
-
-    def _get_relevant_documents(
-        self, query: str, *, run_manager: CallbackManagerForRetrieverRun
-    ) -> List[Document]:
-        """Sync implementations for retriever."""
-        matching_docs = []
-        for document in self.documents:
-            if len(matching_docs) > self.k:
-                return matching_docs
-
-            if query.lower() in document.page_content.lower():
-                matching_docs.append(document.page_content)
-        return matching_docs
-
-
 @bp.post('/free')
 def free():
+    if config.USE_DUMMY_DATA:
+        return jsonify({ "answer": "free prompt answer" })
+
     template = request.json["prompt"]+" Only reply with the answer contents, nothing else."
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a data analyst."),
         ("human", template)
     ])
-    chain = prompt | model
+    agent = create_agent(
+        model=model,
+        response_format=BasicAnswer  # Auto-selects ProviderStrategy
+    )
+    chain = prompt | agent
     answer = chain.invoke()
-    return jsonify({ "answer": answer.content })
+    return jsonify({ "answer": answer["structured_response"].answer })
 
 
 @bp.post('/free_data')
 def free_with_data():
+    if config.USE_DUMMY_DATA:
+        return jsonify({ "answer": "free with data answer" })
+    
     template = request.json["prompt"]+" Only reply with the answer contents, nothing else. Data: {data}"
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a data analyst."),
         ("human", template)
     ])
 
-    chain = prompt | model
+    agent = create_agent(
+        model=model,
+        response_format=BasicAnswer  # Auto-selects ProviderStrategy
+    )
+
+    chain = prompt | agent
     answer = chain.invoke({ "data": request.json["data"] })
-    return jsonify({ "answer": answer.content })
+
+    return jsonify({
+        "answer": answer["structured_response"].answer,
+        "columns": answer["structured_response"].columns
+    })
 
 
 @bp.post('/extract')
 def extract():
-    template = request.json["prompt"]+" Only reply with the column names and explanation, nothing else. Data subset: {data}. Global characteristics: {global}."
+    if config.USE_DUMMY_DATA:
+        return jsonify({
+            "answer": "extract columns answer",
+            "columns": ["potassium", "protein"],
+        })
+
+    template = request.json["prompt"] + " Only reply with the answer contents, nothing else. Data subset: {data}. Global characteristics: {global}."
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a data analyst."),
@@ -103,7 +103,7 @@ def extract():
 
     agent = create_agent(
         model=model,
-        response_format=ColumnExtraction  # Auto-selects ProviderStrategy
+        response_format=BasicAnswer  # Auto-selects ProviderStrategy
     )
 
     chain = prompt | agent
@@ -120,7 +120,14 @@ def extract():
 
 @bp.post('/combine')
 def combine():
-    template = "Provide a linear combination of columns from the data subset that represents {keyword} data points. Explain your choice using no more than {limit} words."
+    if config.USE_DUMMY_DATA:
+        return jsonify({
+            "answer": "combination explanation",
+            "columns": ["potassium", "protein"],
+            "weights": { "potassium": 0.33, "protein": 0.66 }
+        })
+    
+    template = request.json["prompt"] + " Only reply with the explanation and columns, nothing else."
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a data analyst."),
@@ -133,10 +140,7 @@ def combine():
     )
 
     chain = prompt | agent
-    answer = chain.invoke({
-        "limit": request.json["limit"],
-        "keyword": request.json["keyword"]
-    })
+    answer = chain.invoke()
 
     return jsonify({
         "answer": answer["structured_response"].explanation,
@@ -145,39 +149,14 @@ def combine():
     })
 
 
-@bp.post('/summary')
-def summary():
-    template = "Summarize important characteristics of the data using no more than {limit} words. Data: {data}. Only reply with the summary, nothing else."
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are a data analyst."),
-        ("human", template)
-    ])
-    chain = prompt | model
-    answer = chain.invoke({
-        "data": request.json["data"],
-        "limit": request.json["limit"]
-    })
-    return jsonify({ "answer": answer.content })
-
-
-@bp.post('/summaryfunction')
-def summaryfunction():
-    # TODO: adapt this prompt to return a structured linear combination of columns
-    template = "Summarize the following data (passed as JSON) using no more than {limit} words: {data}."
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are a data analyst."),
-        ("human", template)
-    ])
-    chain = prompt | model
-    answer = chain.invoke({
-        "data": request.json["data"],
-        "limit": request.json["limit"]
-    })
-    return jsonify({ "answer": answer.content })
-
-
 @bp.post('/comparison')
 def comparison():
+    if config.USE_DUMMY_DATA:
+        return jsonify({
+            "answer": "comparison explanation",
+            "columns": ["vitamins & minerals"]
+        })
+    
     template = request.json["prompt"] + " Data subsets: {data}"
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a data analyst."),
@@ -190,10 +169,7 @@ def comparison():
     )
 
     chain = prompt | agent
-    answer = chain.invoke({
-        "data": request.json["data"],
-        "global": request.json["global"]
-    })
+    answer = chain.invoke({ "data": request.json["data"] })
 
     return jsonify({
         "answer": answer["structured_response"].explanation,
