@@ -5,7 +5,7 @@ import { PromptTemplate, PromptVariable } from "./prompt-template";
 /**
  * Asks the model something without any relation to data
  * @param {String} prompt prompt send to model
- * @returns 
+ * @returns
  */
 export async function llmFree(prompt) {
     const loader = useLoader()
@@ -17,7 +17,7 @@ export async function llmFree(prompt) {
  * Asks the model something for a given set of data points
  * @param {String} prompt prompt send to model
  * @param {Array} data list of data points for the chosen subset
- * @returns 
+ * @returns
  */
 export async function llmFreeWithData(prompt, data) {
     const loader = useLoader()
@@ -30,7 +30,7 @@ export async function llmFreeWithData(prompt, data) {
  * Compare a number of data subsets to each other
  * @param {String} prompt prompt send to model
  * @param {Object} data object containing data points for named subsets
- * @returns 
+ * @returns
  */
 export async function llmComparison(prompt, data) {
     const loader = useLoader()
@@ -39,11 +39,11 @@ export async function llmComparison(prompt, data) {
 }
 
 /**
- * 
+ *
  * @param {String} prompt prompt send to model
  * @param {Array} data list of data points for the chosen subset
  * @param {Array} global list of column statistics for all data
- * @returns 
+ * @returns
  */
 export async function llmExtract(prompt, data, global) {
     const loader = useLoader()
@@ -55,13 +55,13 @@ export async function llmExtract(prompt, data, global) {
     })
 }
 
-export async function llmCombine(prompt, columns) {
+export async function llmCombine(prompt, columns, global) {
     const loader = useLoader()
     console.debug("combine/", prompt)
     return loader.post("combine", {
         prompt: prompt,
+        global: global,
         columns: columns,
-        limit: limit,
     })
 }
 
@@ -75,7 +75,7 @@ export const SUMMARY_PROMPT = new PromptTemplate(
 )
 
 export const DESCRIPTION_PROMPT = new PromptTemplate(
-    "Describe the data using no more than :limit: words.",
+    "Describe the most important characteristics of the data using no more than :limit: words.",
     [new PromptVariable("limit", 50, "integer")]
 )
 
@@ -85,11 +85,16 @@ export const LABEL_PROMPT = new PromptTemplate(
 )
 
 export const EXTRACT_PROMPT = new PromptTemplate(
-    "Extract :number: columns from the data subset that could be described as :keyword: relative to the global dataset characteristics. Explain your choice using no more than :limit: words.",
-    [new PromptVariable("number", 5, "integer"), new PromptVariable("keyword", "unique"), new PromptVariable("limit", 50, "integer")]
+    "Extract up to :number: columns for which the data subset could be described as :keyword: compared to the global dataset. Explain what makes them :keyword: using no more than :limit: words.",
+    [new PromptVariable("number", 3, "integer"), new PromptVariable("keyword", "different"), new PromptVariable("limit", 100, "integer")]
 )
 
 export const COMPARE_PROMPT = new PromptTemplate(
     "Compare the the following data subsets, focus on :keyword:. Explain your choice using no more than :limit: words.",
-    [new PromptVariable("keyword", "differences"), new PromptVariable("limit", 50, "integer")]
+    [new PromptVariable("keyword", "differences"), new PromptVariable("limit", 100, "integer")]
+)
+
+export const COMBINE_PROMPT = new PromptTemplate(
+    "Provide a weighted linear combination of the following columns to indicate :keyword:. Explain your choice using no more than :limit: words.",
+    [new PromptVariable("keyword", "healthy cereal options"), new PromptVariable("limit", 100, "integer")]
 )

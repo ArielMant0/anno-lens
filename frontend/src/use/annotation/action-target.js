@@ -1,15 +1,19 @@
 import { AnnotationEntry, TextEntry } from "./annotation-entry"
 
 export const ACTION_TARGET = Object.freeze({
-    DATA: "at-data",
+    SELECTION: "at-sel",
     VIS: "at-vis",
-    ANNOTATION: "at-anno"
+    ANNOTATION: "at-anno",
+    COLUMN: "at-col",
+    DATAPOINT: "at-dp"
 })
 
 export const ALL_ACTION_TARGETS = [
-    ACTION_TARGET.DATA,
+    ACTION_TARGET.SELECTION,
     ACTION_TARGET.VIS,
-    ACTION_TARGET.ANNOTATION
+    ACTION_TARGET.ANNOTATION,
+    ACTION_TARGET.COLUMN,
+    ACTION_TARGET.DATAPOINT,
 ]
 
 export class TargetData {
@@ -24,8 +28,8 @@ export class TargetData {
         let label = null, data = null, desc = this.description, img = null
 
         switch(this.type) {
-            case ACTION_TARGET.DATA:
-                label = "data points"
+            case ACTION_TARGET.SELECTION:
+                label = "selection"
                 if (this.target instanceof Lens) {
                     // TODO: pass only a few instances and stats instead?
                     data = this.target.getResultData()
@@ -46,6 +50,14 @@ export class TargetData {
                 label = "visualization"
                 // assume that target is some kind of image representation
                 img = target
+                break
+            case ACTION_TARGET.COLUMN:
+                label = "column"
+                data = this.target.name
+                break
+            case ACTION_TARGET.DATAPOINT:
+                label = "datapoint"
+                data = id
                 break
         }
 

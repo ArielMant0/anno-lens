@@ -32,11 +32,12 @@ export class TextEntry extends AnnotationEntry {
         this.text = text
         this.entities = []
         this.addEntities(entities, false)
+        this.timeUpdated = Date.now()
     }
 
-    update(text, entities=[]) {
-        this.text = text
-        this.addEntities(entities)
+    update() {
+        this.timeUpdated = Date.now()
+        this._anno.update()
     }
 
     hasEntity(type, id) {
@@ -44,7 +45,12 @@ export class TextEntry extends AnnotationEntry {
     }
 
     addText(text) {
-        this.text += text
+        this.setText(this.text + text)
+    }
+
+    setText(text) {
+        this.text = text
+        this.update()
     }
 
     addEntities(entities, update=true) {
@@ -66,15 +72,15 @@ export class TextEntry extends AnnotationEntry {
         })
 
         if (update && this.entities.length !== before) {
-            this._anno.update()
+            this.update()
         }
     }
 
-    removeEntity(id, type) {
-        const index = this.entities.find(d => d.type === type && d.id === id)
+    removeEntity(id) {
+        const index = this.entities.findIndex(d => d.id === id)
         if (index >= 0) {
             this.entities.splice(index, 1)
-            this._anno.update()
+            this.update()
         }
     }
 }

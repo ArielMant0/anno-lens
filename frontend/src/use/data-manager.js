@@ -3,8 +3,6 @@ import { bin, deviation, min, mean, median, quadtree, scaleLinear, extent, group
 import { circleIntersect, dataToNumbers, euclidean, findInCircle, getAttr } from "./util"
 import { Lens, LENS_TYPE } from "./Lens"
 
-let _ANNO_ID = 1;
-
 import MyWorker from '@/worker/feature-worker?worker'
 import { LensSelection } from "./selection/selection";
 import Annotation from "./annotation/annotation";
@@ -85,7 +83,6 @@ class DataManager {
         this.annotations = []
         this.tmpAnno = null
         this.annoMap = {}
-        _ANNO_ID = 1
     }
 
     setDataset(dsobj) {
@@ -566,29 +563,12 @@ class DataManager {
     removeAnnotation(id) {
         const idx = this.annotations.findIndex(d => d.id === id)
         if (idx >= 0) {
-            this.annotations[idx].columns.forEach(c => {
-                delete this.annoMap[c.name][id]
-            })
+            // this.annotations[idx].columns.forEach(c => {
+            //     delete this.annoMap[c.name][id]
+            // })
             this.annotations.splice(idx, 1)
             this.callbacks.anno.forEach(f => f())
-            this.checkAnnoMerges()
-        }
-    }
-
-    removeAnnotationColumn(id, name) {
-        const anno = this.annotations.find(d => d.id === id)
-        if (anno) {
-            if (anno.columns.length === 1) {
-                this.removeAnnotation(id)
-            } else {
-                const idx = anno.columns.findIndex(c => c.name === name)
-                if (idx >= 0) {
-                    delete this.annoMap[name][id]
-                    anno.columns.splice(idx, 1)
-                    this.callbacks.anno.forEach(f => f())
-                }
-            }
-            this.checkAnnoMerges()
+            // this.checkAnnoMerges()
         }
     }
 

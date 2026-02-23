@@ -1,7 +1,7 @@
 <template>
-<div style="min-height: 90vh; max-height: 95vh; max-width: 100vw;">
+<div style="min-height: 90vh; max-height: 97vh; max-width: 100vw;">
 
-    <div v-if="!loading && data.length > 0" class="d-flex flex-column align-center justify-start mt-8">
+    <div v-if="!loading && data.length > 0" class="d-flex flex-column align-center justify-start mt-2">
         <div class="d-flex mt-2">
             <div>
                 <div style="position: relative;">
@@ -87,7 +87,7 @@
                     </div>
                 </div>
 
-                <GlobalNotepad/>
+                <GlobalNotepad style="min-height: 30vh; max-height: 30vh; overflow-y: auto;"/>
 
                 <DataHistograms
                     :active="!moveLens || mouseStill"
@@ -137,7 +137,7 @@
     import DM from '@/use/data-manager';
     import ColorLegend from './vis/ColorLegend.vue';
     import FilterDesc from './FilterDesc.vue';
-    import { findInCircle, getAttr, getDataType, makeColorScale } from '@/use/util';
+    import { findInCircle, getAttr, getDataType, makeColorScale, parseEntities } from '@/use/util';
     import FeatureMap from './vis/FeatureMap.vue';
     import { useTheme } from 'vuetify';
     import AnnotationOverlay from './annotation/AnnotationOverlay.vue';
@@ -146,7 +146,7 @@
     import AnnoInventory from './AnnoInventory.vue';
     import { useTooltip } from '@/stores/tooltip';
     import ColorPicker from './ColorPicker.vue';
-    import { COMPARE_PROMPT, DESCRIPTION_PROMPT, EXTRACT_PROMPT, LABEL_PROMPT, llmComparison, llmExtract, llmFreeWithData } from '@/use/llm-interface';
+    import { COMBINE_PROMPT, COMPARE_PROMPT, DESCRIPTION_PROMPT, EXTRACT_PROMPT, LABEL_PROMPT, llmCombine, llmComparison, llmExtract, llmFreeWithData } from '@/use/llm-interface';
     import { toast } from 'vue3-toastify';
     import DataHistograms from './DataHistograms.vue';
     import GlobalNotepad from './annotation/GlobalNotepad.vue';
@@ -274,7 +274,7 @@
 
     const mouseStill = ref(false)
 
-    let windowResize = null, plotResize = null, mouseMove = null;
+    let windowResize = null, plotResize = null, mouseMove = null, sizeTime = null
     let loop, looptime;
     let llmToastSum = null, llmToastComp = null
 
@@ -466,58 +466,6 @@
         updateLens(lx, ly)
         applyLens()
 
-        // TODO: debug, disable AI
-        return
-
-        if (!moveLens.value) {
-
-            if (llmToastSum !== null) toast.remove(llmToastSum)
-            if (llmToastComp !== null) toast.remove(llmToastComp)
-
-            const loadToast = toast.loading("analyzing lens data..")
-            const cols = DM.columns.concat(app.datasetObj.meta)
-            const dataA = act.getResultData()
-                .map(d => {
-                    const obj = {}
-                    cols.forEach(c => {
-                        if (typeof d[c] !== "boolean" || d[c] === true) {
-                            obj[c] = d[c]
-                        }
-                    })
-                    return obj
-                })
-
-            llmSummary(dataA)
-                .then(result => {
-                    toast.remove(loadToast)
-                    llmToastSum = toast.success(result.answer, { autoClose: false })
-                })
-
-            const other = DM.getLens(activeLens.value === primaryLens.value ?
-                secondaryLens.value :
-                primaryLens.value)
-
-            if (other) {
-                const dataB = other.getResultData()
-                    .map(d => {
-                        const obj = {}
-                        cols.forEach(c => {
-                            if (typeof d[c] !== "boolean" || d[c] === true) {
-                                obj[c] = d[c]
-                            }
-                        })
-                        return obj
-                    })
-
-                llmComparison(dataA, dataB)
-                    .then(result => {
-                        toast.remove(loadToast)
-                        llmToastComp = toast.success(result.answer, { autoClose: false })
-                    })
-            }
-
-
-        }
         lensMoveTime.value = Date.now()
     }
     function onClickLensOverlay(id) {
@@ -659,7 +607,7 @@
         // react to last plot resize
         const plotDiff = plotResize !== null ? timestamp - plotResize : 0
         if (plotDiff >= 200 && plotDiff <= 250) {
-            plotResize = null;
+            plotResize = null
             DM.resize(w.value, h.value)
             refreshFeatureMaps()
         }
@@ -667,7 +615,7 @@
         // react to last window resize
         const resizeDiff = windowResize !== null ? timestamp - windowResize : 0
         if (resizeDiff >= 200 && resizeDiff <= 250) {
-            windowResize = null;
+            windowResize = null
             // applyLens()
             app.updateLensData()
         }
@@ -675,8 +623,15 @@
         // react to mouse down for longer time
         const mouseDiff = mouseMove !== null ? timestamp - mouseMove : 0
         if (mouseDiff >= 100 && mouseDiff <= 150) {
-            mouseMove = null;
+            mouseMove = null
             mouseStill.value = true
+        }
+
+        // react to lens resize after some time (more expensive stuff)
+        const sizeDiff = sizeTime !== null ? timestamp - sizeTime : 0
+        if (sizeDiff >= 50 && sizeDiff <= 150) {
+            sizeTime = null
+            refreshFeatureMaps()
         }
 
         // keep going
@@ -696,7 +651,11 @@
             applyLens()
         }))
 
-        CM.addKeyMappingLocked(2, "s", "swap", new Command(swapLenses))
+        CM.addKeyMappingLocked(2, "w", "select", new Command(function() {
+            // TODO: add lens to saved selection
+            // DM.addLensToSelection()
+            console.log("hotkey select")
+        }))
         CM.addKeyMappingLocked(3, "s", "save", new Command(function() {
             DM.saveTmpAnnotation()
         }), ["ctrl"])
@@ -713,7 +672,7 @@
             app.setLLMLoading(true)
 
             switch (targets[0].type) {
-                case ACTION_TARGET.DATA:
+                case ACTION_TARGET.SELECTION:
                     // get data points that match the target
                     const selection = Selection.dataUnion(targets.map(t => t.target).flat())
                     const datapoints = selection.filter(DM.getData())
@@ -732,7 +691,7 @@
                     // TODO: add the response text to the global notes
                     console.debug("describe vis:", response.answer)
                     break
-            }}, DESCRIPTION_PROMPT, 1, 1, [ACTION_TARGET.DATA, ACTION_TARGET.VIS])
+            }}, DESCRIPTION_PROMPT, 1, 1, [ACTION_TARGET.SELECTION, ACTION_TARGET.VIS])
         // add hotkey for "describe" command
         CM.addKeyMapping(5, "1", "describe", descCommand)
 
@@ -759,7 +718,7 @@
                         DM.annotateEmpty()
                         anno = DM.getTmpAnnotation()
                     }
-                    
+
                     if (anno) {
                         anno.label = response.answer
                         anno.update()
@@ -767,14 +726,22 @@
                     }
                     app.setLLMLoading(false)
                 })
-            }, LABEL_PROMPT, 1, 1, [ACTION_TARGET.DATA])
+            }, LABEL_PROMPT, 1, 1, [ACTION_TARGET.SELECTION])
         // add hotkey for "label" command
         CM.addKeyMapping(6, "2", "label", labelCommand)
 
         const extractCommand = new LLMCommand(function(prompt, targets) {
             app.setLLMLoading(true)
-            const global = Object.entries(DM.stats).map(([name, obj]) => {
-                obj.name = name
+            const global = {}
+            Object.entries(DM.stats).forEach(([name, obj]) => {
+                global[name] = {
+                    min: obj.min,
+                    max: obj.max,
+                    mean: obj.mean,
+                    median: obj.median,
+                    distribution: {}
+                }
+                obj.bins.forEach((b,i) => global[name].distribution[b] = obj.countRel[i])
                 return obj
             })
             const selection = Selection.dataUnion(targets.map(t => t.target).flat())
@@ -785,11 +752,16 @@
             }
             llmExtract(prompt, datapoints, global)
                 .then(response => {
-                    const entities = response.columns.map(c => new ColumnEntity(c))
-                    DM.annotateText(response.answer, ENTRY_SOURCE.AI, entities, targets[0].annotation)
+                    const entities = parseEntities(response)
+                    DM.annotateText(
+                        response.answer,
+                        ENTRY_SOURCE.AI,
+                        entities,
+                        targets[0].annotation
+                    )
                     app.setLLMLoading(false)
                 })
-            }, EXTRACT_PROMPT, 1, 1, [ACTION_TARGET.DATA])
+            }, EXTRACT_PROMPT, 1, 1, [ACTION_TARGET.SELECTION])
         // add hotkey for "extract" command
         CM.addKeyMapping(7, "3", "extract", extractCommand)
 
@@ -811,22 +783,54 @@
 
             llmComparison(prompt, subsets)
                 .then(response => {
-                    const entities = response.columns.map(c => new ColumnEntity(c))
+                    const entities = parseEntities(response)
                     // TODO: add to notepad
-                    DM.annotateText(response.answer, ENTRY_SOURCE.AI, entities)
+                    DM.annotateText(
+                        response.answer,
+                        ENTRY_SOURCE.AI,
+                        entities,
+                        targets.map(t => t.annotation)
+                    )
                     app.setLLMLoading(false)
                 })
-            }, COMPARE_PROMPT, 2, Infinity, [ACTION_TARGET.DATA])
+            }, COMPARE_PROMPT, 2, Infinity, [ACTION_TARGET.SELECTION])
         CM.addKeyMapping(8, "4", "compare", compareCommand)
 
-        CM.addKeyMapping(9, "5", "misc", new Command(function() { console.log("misc") }))
+        const combineCommand = new LLMCommand(function(prompt, targets) {
+            app.setLLMLoading(true)
+            const global = {}
+            Object.entries(DM.stats).forEach(([name, obj]) => {
+                global[name] = {
+                    min: obj.min,
+                    max: obj.max,
+                    mean: obj.mean,
+                    median: obj.median,
+                    distribution: {}
+                }
+                obj.bins.forEach((b,i) => global[name].distribution[b] = obj.countRel[i])
+                return obj
+            })
+
+            llmCombine(prompt, targets.map(c => c.name), global)
+                .then(response => {
+                    const entities = parseEntities(response)
+                    // TODO: add to notepad
+                    DM.annotateText(
+                        response.answer,
+                        ENTRY_SOURCE.AI,
+                        entities
+                    )
+                    app.setLLMLoading(false)
+                })
+            }, COMBINE_PROMPT, 2, Infinity, [ACTION_TARGET.COLUMN])
+        CM.addKeyMapping(9, "5", "combine", combineCommand)
 
         // resize lens
         window.addEventListener("wheel", function(event) {
-            if (!event.ctrlKey) return
+            if (!event.shiftKey) return
             const [mx, my] = d3.pointer(event, document.body)
             const elem = document.elementFromPoint(mx, my)
-            if (!elem || !elem.classList.contains("scatter")) return
+            if (!elem || !elem.classList.contains("lens") && !elem.classList.contains("lens-circle")) return
             lensRadius.value = Math.max(
                 5,
                 Math.min(
@@ -834,8 +838,8 @@
                     Math.round(lensRadius.value + event.deltaY * -0.05)
                 )
             )
-            int.lenses.forEach((l, i) => l.radius = lensRadius.value * (i+1))
-            refreshFeatureMaps()
+            DM.getLens(0).radius = lensRadius.value
+            sizeTime = performance.now()
             return false
         })
 

@@ -1,28 +1,23 @@
 <template>
     <div class="d-flex align-center anno-container">
 
-        <div v-if="side === 'left'">
+        <div v-if="side === 'left'" class="extras">
             <div>
                 <v-btn
-                    class="del-anno"
                     color="error"
                     variant="text"
                     rounded="sm"
                     size="sm"
                     icon="mdi-delete"
                     density="compact"
-                    @click="DM.removeAnnotation(data.id)"/>
+                    @click="DM.removeAnnotation(anno.id)"/>
             </div>
 
-            <div v-for="i in 5">
-                <v-btn
-                    class="add-anno"
-                    :color="CM.getColor(i+4)"
-                    variant="text"
-                    rounded="sm"
-                    size="sm"
-                    icon="mdi-plus"
-                    density="compact"/>
+            <div>
+                <MiniColorPicker v-model="anno.color"
+                    :size="20"
+                    @update:model-value="anno.update()"
+                    />
             </div>
         </div>
 
@@ -42,63 +37,62 @@
             }">
 
             <AnnotationTitle
-                v-model="data.label"
-                :size="data.data.size"
+                v-model="anno.label"
+                :size="anno.data.size"
                 class="text-dots cursor-pointer"
-                :data-target-type="ACTION_TARGET.DATA"
-                :data-target-id="data.id"
-                :data-target-anno="data.id"
-                :data-target-selections="data.getSelectionIds().join(',')"
+                :data-target-type="ACTION_TARGET.SELECTION"
+                :data-target-id="anno.id"
+                :data-target-anno="anno.id"
+                :data-target-selections="anno.getSelectionIds().join(',')"
                 :style="{ maxWidth: (w-15)+'px' }"
                 />
 
-            <template v-for="(entry, idx) in data.entries" :key="entry.id">
+            <template v-for="(entry, idx) in entries" :key="entry.id+'_'+entry.timeUpdated">
                 <v-divider v-if="idx > 0" class="mt-2 mb-1"></v-divider>
-                <AnnotationEntryPanel :data="entry"/>
+                <AnnotationEntryPanel :data="entry" :max-length="100"/>
             </template>
+            <div v-if="numHidden > 0">{{ numHidden }} more...</div>
         </div>
 
-        <div v-if="side === 'right'">
+        <div v-if="side === 'right'" class="extras">
             <div>
                 <v-btn
-                    class="del-anno"
                     color="error"
                     variant="text"
                     rounded="sm"
                     size="sm"
                     icon="mdi-delete"
                     density="compact"
-                    @click="DM.removeAnnotation(data.id)"/>
+                    @click="DM.removeAnnotation(anno.id)"/>
             </div>
 
-            <div v-for="i in 5">
-                <v-btn
-                    class="add-anno"
-                    :color="CM.getColor(i+4)"
-                    variant="text"
-                    rounded="sm"
-                    size="sm"
-                    icon="mdi-plus"
-                    density="compact"/>
+            <div>
+                <MiniColorPicker v-model="anno.color"
+                    :size="20"
+                    @update:model-value="anno.update()"
+                    />
             </div>
         </div>
     </div>
 </template>
 
 <script setup>
-    import { useControls } from '@/stores/controls';
     import Annotation from '@/use/annotation/annotation';
     import DM from '@/use/data-manager';
     import AnnotationEntryPanel from './AnnotationEntryPanel.vue';
     import { computed } from 'vue';
     import { ACTION_TARGET } from '@/use/annotation/action-target';
-    import CM from '@/use/command-manager';
     import AnnotationTitle from './AnnotationTitle.vue';
+    import MiniColorPicker from '../MiniColorPicker.vue';
 
     const props = defineProps({
         data: {
             type: Annotation,
-            required: true
+            required: false
+        },
+        id: {
+            type: String,
+            required: false
         },
         side: {
             type: String,
@@ -122,17 +116,29 @@
         },
     })
 
-    const controls = useControls()
-
     const minh = computed(() => props.minHeight + (typeof props.minHeight === "string" ? "" : "px"))
     const maxh = computed(() => props.maxHeight + (typeof props.maxHeight === "string" ? "" : "px"))
     const w = computed(() => props.width + "px")
 
+    const anno = computed(() => props.data ? props.data : DM.getAnnotationById(props.id))
+    const numEntries = computed(() => {
+        if (typeof props.maxHeight === "string") {
+            return anno.value.entries.length
+        }
+        return Math.round(props.maxHeight / 50)
+    })
+    const numHidden = computed(() => anno.value.entries.length - numEntries.value)
+    const entries = computed(() => {
+        if (numHidden.value > 0) {
+            return anno.value.entries.slice(0, numEntries.value)
+        }
+        return anno.value.entries
+    })
+
 </script>
 
 <style scoped>
-.anno-container:not(:hover) .del-anno,
-.anno-container:not(:hover) .add-anno {
+.anno-container:not(:hover) .extras {
     visibility: hidden;
 }
 </style>

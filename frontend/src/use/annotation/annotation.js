@@ -45,6 +45,7 @@ export default class Annotation {
         time = time ? time : Date.now()
         if (time > this.timeUpdated) {
             this.timeUpdated = time
+            DM.trigger("anno")
         }
     }
 

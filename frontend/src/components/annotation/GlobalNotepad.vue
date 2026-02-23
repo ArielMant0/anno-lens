@@ -7,14 +7,14 @@
                     v-model="anno.label"
                     :size="anno.data.size"
                     class="ml-2"
-                    :data-target-type="ACTION_TARGET.DATA"
+                    :data-target-type="ACTION_TARGET.SELECTION"
                     :data-target-selections="anno.getSelectionIds().join(',')"
                     :data-target-id="anno.id"
                     :data-target-anno="anno.id"
                     />
             </div>
 
-            <AnnotationEntryPanel v-for="e in anno.entries" :key="e.id" :data="e"/>
+            <AnnotationEntryPanel v-for="e in anno.entries" :key="e.id.id+'_'+e.timeUpdated" :data="e"/>
         </div>
 
         <div v-if="llmLoading" class="d-flex align-center justify-center">

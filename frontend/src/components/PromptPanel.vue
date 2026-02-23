@@ -11,7 +11,7 @@
                 type="text"
                 class="pa-1 keyword"
                 style="max-width: 200px; width: fit-content;"
-                @change="setValue(part.name, part.value)"
+                @change="setValue(part)"
                 />
 
             <input v-else
@@ -42,18 +42,14 @@
     const parts = ref([])
 
     /**
-     * Parse prompt into parts:
-     * [
-     *   { type: 'text', value: 'Hello ' },
-     *   { type: 'keyword', value: 'name' },
-     *   ...
-     * ]
+     * Parse prompt into parts that can be edited if they are keywords.
      */
     function parse() {
         const regex = /:([a-zA-Z0-9_]+):/g
         const result = []
         let lastIndex = 0
         let match
+        let matchedKeywords = new Map()
 
         const template = props.prompt.text
 
@@ -66,12 +62,17 @@
             }
 
             const v = props.prompt.getVariable(match[1])
-            result.push({
-                keyword: true,
-                name: match[1],
-                type: v.type,
-                value: v.value
-            })
+            if (matchedKeywords.has(match[1])) {
+                const index = matchedKeywords.get(match[1])
+                result.push(result[index])
+            } else {
+                result.push({
+                    keyword: true,
+                    name: match[1],
+                    type: v.type,
+                    value: v.value
+                })
+            }
 
             lastIndex = regex.lastIndex
         }

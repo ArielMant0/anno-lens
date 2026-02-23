@@ -23,7 +23,7 @@
                     top: (offsetY)+'px',
                     pointerEvents: 'none'
                 }">
-                <g v-for="a in anno" :opacity="active && !selectedAnnos[a.id] ? 0.75 : 1">
+                <g v-for="a in annoPolygons" :opacity="active && !selectedAnnos[a.id] ? 0.75 : 1">
                     <g v-for="(p, idx) in a.polygon" :key="a.id+'_'+idx">
                         <circle v-if="p.length === 1"
                             :cx="p[0]"
@@ -60,15 +60,15 @@
 
         <Teleport to="body">
             <div style="z-index: 4999;">
-                <AnnotationPanel v-for="a in annoLeft"
-                    :key="a.id+'_l_'+annoPos[a.id].index"
-                    :data="a"
-                    :selected="selectedAnnos[a.id]"
+                <AnnotationPanel v-for="aid in annoLeft"
+                    :key="aid+'_l_'+annoPos[aid].index"
+                    :id="aid"
+                    :selected="selectedAnnos[aid]"
                     :width="padding"
                     :min-height="annoMeta.sizeL-2"
                     :max-height="annoMeta.sizeL-2"
                     side="left"
-                    @pointerenter="hoverAnno = a.id"
+                    @pointerenter="hoverAnno = aid"
                     @pointerleave="hoverAnno = null"
                     draggable="true"
                     @dragstart="onDragAnno(a)"
@@ -76,21 +76,21 @@
                     @drop.prevent="onDropAnno(a)"
                     :style="{
                         position: 'absolute',
-                        left: (offsetX+getAnnotationPos(a.id, true)[0]-25)+'px',
-                        top: (offsetY+getAnnotationPos(a.id, true)[1])+'px',
+                        left: (offsetX+getAnnotationPos(aid, true)[0]-25)+'px',
+                        top: (offsetY+getAnnotationPos(aid, true)[1])+'px',
                         fontSize: '12px',
                     }"/>
 
 
-                <AnnotationPanel v-for="a in annoRight"
-                    :key="a.id+'_r_'+annoPos[a.id].index"
-                    :data="a"
-                    :selected="selectedAnnos[a.id]"
+                <AnnotationPanel v-for="aid in annoRight"
+                    :key="aid+'_r_'+annoPos[aid].index"
+                    :id="aid"
+                    :selected="selectedAnnos[aid]"
                     :width="padding"
                     :min-height="annoMeta.sizeR-2"
                     :max-height="annoMeta.sizeR-2"
                     side="right"
-                    @pointerenter="hoverAnno = a.id"
+                    @pointerenter="hoverAnno = aid"
                     @pointerleave="hoverAnno = null"
                     draggable="true"
                     @dragstart="onDragAnno(a)"
@@ -98,8 +98,8 @@
                     @drop.prevent="onDropAnno(a)"
                     :style="{
                         position: 'absolute',
-                        left: (offsetX+getAnnotationPos(a.id, true)[0])+'px',
-                        top: (offsetY+getAnnotationPos(a.id, true)[1])+'px',
+                        left: (offsetX+getAnnotationPos(aid, true)[0])+'px',
+                        top: (offsetY+getAnnotationPos(aid, true)[1])+'px',
                         fontSize: '12px',
                     }"/>
             </div>
@@ -113,14 +113,9 @@
     import { useMouse, useWindowScroll, useWindowSize } from '@vueuse/core';
     import { computed, onMounted, reactive, watch } from 'vue';
     import { euclidean } from '@/use/util';
-    import { useApp } from '@/stores/app';
-    import { useControls } from '@/stores/controls';
-    import { ENTRY_TYPE } from '@/use/annotation/annotation-entry';
-import AnnotationPanel from './AnnotationPanel.vue';
+    import AnnotationPanel from './AnnotationPanel.vue';
 
-    const app = useApp()
     const mouse = useMouse()
-    const controls = useControls()
 
     const props = defineProps({
         targetId: {
@@ -160,7 +155,7 @@ import AnnotationPanel from './AnnotationPanel.vue';
     const width = ref(0)
     const height = ref(0)
 
-    const anno = ref([])
+    const annoPolygons = ref([])
     const annoLeft = ref([])
     const annoRight = ref([])
 
@@ -192,7 +187,7 @@ import AnnotationPanel from './AnnotationPanel.vue';
 
         const mx = mouse.x.value - offsetX.value - props.padding
         const my = mouse.y.value - offsetY.value
-        anno.value.forEach(a => obj[a.id] = isSelected(a))// || inside && a.polygon.some(p => d3.polygonContains(p, [mx, my])))
+        DM.getAnnotations().forEach(a => obj[a.id] = isSelected(a))// || inside && a.polygon.some(p => d3.polygonContains(p, [mx, my])))
         return obj
     })
     const selectedColums = computed(() => {
@@ -270,7 +265,8 @@ import AnnotationPanel from './AnnotationPanel.vue';
         actx.globalAlpha = 1
         actx.lineWidth = 2
 
-        anno.value.forEach(a => {
+        const annos = DM.getAnnotations()
+        annos.forEach(a => {
             if (selectedAnnos.value[a.id]) {
                 // draw links that connect annotations labels and polygons
                 actx.strokeStyle = a.color ? a.color : "black"
@@ -365,18 +361,18 @@ import AnnotationPanel from './AnnotationPanel.vue';
                 annoPosData[a.id] = { index: pos, side: "right" }
             })
 
+            annoPolygons.value = data.map(d => ({ id: d.id, polygon: d.polygon, color: d.color }))
             annoMeta.sizeL = sizeL
             annoMeta.sizeR = sizeR
             annoPos.value = annoPosData
-            annoLeft.value = onLeft
-            annoRight.value = onRight
+            annoLeft.value = onLeft.map(d => d.id)
+            annoRight.value = onRight.map(d => d.id)
         } else {
+            annoPolygons.value = []
             annoPos.value = []
             annoLeft.value = []
             annoRight.value = []
         }
-
-        anno.value = data
     }
 
     function update() {

@@ -1,6 +1,7 @@
 import { DATA_TYPES, useApp } from "@/stores/app";
 import { bin, deviation, extent, group, interpolatePlasma, mean, scaleOrdinal, scaleQuantile, scaleSequential, schemeBlues, schemeCategory10, schemeOrRd } from "d3";
 import DM from "./data-manager";
+import { AnnotationEntity, ColumnEntity, DatapointEntity } from "./annotation/entity";
 
 let _UID = 1;
 
@@ -206,4 +207,20 @@ export function capitalize(str) {
 
 export function uid(namespace="u_") {
     return namespace+(_UID++)
+}
+
+export function parseEntities(response) {
+    let entities = []
+
+    if (response.columns) {
+        entities = response.columns.map(c => new ColumnEntity(c))
+    }
+    if (response.datapoints) {
+        entities = entities.concat(response.datapoints.map(d => new DatapointEntity(d)))
+    }
+    if (response.annotations) {
+        entities = entities.concat(response.annotations.map(a => new AnnotationEntity(a)))
+    }
+
+    return entities
 }

@@ -24,30 +24,45 @@
                 />
         </div>
 
-        <textarea v-if="data.type === ENTRY_TYPE.TEXT"
-            v-model="data.text"
-            style="width: 100%;"
-            class="text-wrap">
-            {{ data.text }}
-        </textarea>
+        <template v-if="data.type === ENTRY_TYPE.TEXT">
+            <textarea v-if="showMarkdown"
+                v-model="data.text"
+                ref="editArea"
+                style="width: 100%; border: thin solid lightgray; border-radius: 4px;"
+                :rows="Math.floor(data.text.length / 65)"
+                class="text-wrap pl-1 pr-1 anno-md"
+                @blur="setShowMarkdown(false)"
+                @change="data.update()"
+                >
+                {{ data.text }}
+            </textarea>
+            <div v-else v-html="markdown"
+                class="anno-md"
+                style="width: 95%"
+                @click="setShowMarkdown(true)"
+                >
+            </div>
+        </template>
 
-        <div class="d-flex flex-wrap">
+        <div class="d-flex flex-wrap mt-1">
             <v-chip v-for="ent in data.entities"
+                :key="ent.id"
                 closable
-                @click:close="data.removeEntity(ent.id)"
+                @click:close.prevent="data.removeEntity(ent.id)"
                 class="mr-1 mb-1"
                 size="small"
                 density="compact">
-                {{ ent.id }}
+                {{ ent.data }}
             </v-chip>
         </div>
     </v-sheet>
 </template>
 
 <script setup>
+    import { marked } from 'marked';
     import { ACTION_TARGET } from '@/use/annotation/action-target';
     import { ENTRY_SOURCE, ENTRY_TYPE, TextEntry } from '@/use/annotation/annotation-entry';
-    import { computed } from 'vue';
+    import { computed, onMounted, useTemplateRef, watch } from 'vue';
 
     const props = defineProps({
         data: {
@@ -57,8 +72,14 @@
         maxWidth: {
             type: [Number, String],
             default: "auto"
+        },
+        maxLength: {
+            type: Number,
+            default: 0
         }
     })
+
+    const editArea = useTemplateRef("editArea")
 
     const maxw = computed(() => typeof props.maxWidth === "number" ? props.maxWidth+'px' : props.maxWidth)
     const sourceIcon = computed(() => props.data.source === ENTRY_SOURCE.AI ? "mdi-robot-happy" : "mdi-account")
@@ -69,4 +90,40 @@
             case ENTRY_TYPE.VIS: return "mdi-chart-bar"
         }
     })
+
+    const showMarkdown = ref(false)
+    const markdown = ref("")
+
+    function convertMarkdown() {
+        const truncate = props.maxLength > 0 && props.data.text.length > props.maxLength
+        markdown.value = marked.parse(truncate ?
+            props.data.text.slice(0, props.maxLength)+"..." :
+            props.data.text
+        )
+    }
+
+    function setShowMarkdown(value) {
+        showMarkdown.value = value
+    }
+
+    onMounted(convertMarkdown)
+
+    watch(editArea, function() {
+        if (editArea.value) {
+            editArea.value.focus()
+        }
+    })
+
+    watch(() => props.data.timeUpdated, convertMarkdown)
 </script>
+
+<style>
+.anno-md ul {
+    padding-left: 12px;
+    list-style-type: disc;
+}
+.anno-md ol {
+    padding-left: 12px;
+    list-style-type: upper-greek;
+}
+</style>

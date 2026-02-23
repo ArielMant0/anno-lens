@@ -1,5 +1,5 @@
 <template>
-    <div style="width: fit-content;">
+    <div style="width: 100%;">
         <div class="mt-2 mb-2">
             <v-text-field v-model="search"
                 placeholder="search attributes .."
@@ -10,13 +10,13 @@
                 variant="outlined"/>
         </div>
 
-        <div :style="{ maxHeight: (showHotbar ? 70 : 75)+'vh', overflowY: 'auto'}">
+        <div class="d-flex flex-column align-center" :style="{ maxHeight: (showHotbar ? 45 : 50)+'vh', overflowY: 'auto' }">
 
             <div style="text-align: center; width: 100%;" class="mb-1 text-dots">
                 <v-icon :color="colorP" class="mr-1" size="small">mdi-circle-outline</v-icon>
                 <span :style="{ fontWeight: activeLens === 0 ? 'bold' : null }">primary</span>
             </div>
-            
+
             <div :style="{ width: (2*(chartWidth+10))+'px' }" class="d-flex flex-wrap">
 
                 <div v-for="i in fP"

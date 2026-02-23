@@ -50,7 +50,7 @@ import { LLMCommand } from '@/use/commands';
         if (!targetType || !targetId) return
 
         switch (targetType) {
-            case ACTION_TARGET.DATA:
+            case ACTION_TARGET.SELECTION:
                 {
                     const annoId = element.getAttribute('data-target-anno')
                     // this is actually a selection in an annotation
@@ -66,7 +66,7 @@ import { LLMCommand } from '@/use/commands';
                 {
                     const anno = DM.getAnnotationById(targetId)
                     controls.targetEvent(anno, targetType, anno.id)
-                } 
+                }
                 break
             case ACTION_TARGET.VIS:
                 // TODO: what should happen here?

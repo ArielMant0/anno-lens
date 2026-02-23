@@ -1,28 +1,31 @@
 export const ENTITY_TYPE = Object.freeze({
-    DATAPOINT: 1,
-    COLUMN: 2,
-    ANNOTATION: 3,
+    DATAPOINT: "dp",
+    COLUMN: "col",
+    ANNOTATION: "anno",
 })
+
+let _EID = 1
 
 class Entity {
 
-    constructor(type, id) {
+    constructor(type, data) {
+        this.id = `${type}_${_EID++}`
         this.type = type
-        this.id = id
+        this.data = data
     }
 }
 
 export class DatapointEntity extends Entity {
 
-    constructor(id) {
-        super(ENTITY_TYPE.DATAPOINT, id)
+    constructor(data) {
+        super(ENTITY_TYPE.DATAPOINT, data)
     }
 }
 
 export class ColumnEntity extends Entity {
 
-    constructor(id, name=id, value=null) {
-        super(ENTITY_TYPE.COLUMN, id)
+    constructor(data, name=data, value=null) {
+        super(ENTITY_TYPE.COLUMN, data)
         this.name = name
         this.value = value
     }
@@ -30,7 +33,7 @@ export class ColumnEntity extends Entity {
 
 export class AnnotationEntity extends Entity {
 
-    constructor(id) {
-        super(ENTITY_TYPE.ANNOTATION, id)
+    constructor(data) {
+        super(ENTITY_TYPE.ANNOTATION, data)
     }
 }
