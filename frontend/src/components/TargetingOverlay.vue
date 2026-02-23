@@ -13,7 +13,7 @@
     import { ACTION_TARGET, ALL_ACTION_TARGETS } from '@/use/annotation/action-target';
     import { storeToRefs } from 'pinia';
     import { onMounted, watch } from 'vue';
-import { LLMCommand } from '@/use/commands';
+    import { LLMCommand } from '@/use/commands';
 
     const controls = useControls()
     const { canTarget, activeMappingId } = storeToRefs(controls)
@@ -71,6 +71,9 @@ import { LLMCommand } from '@/use/commands';
             case ACTION_TARGET.VIS:
                 // TODO: what should happen here?
                 controls.targetEvent(element, targetType)
+                break
+            case ACTION_TARGET.COLUMN:
+                controls.targetEvent(targetId, targetType)
                 break
         }
     }

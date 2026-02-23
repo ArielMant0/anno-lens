@@ -79,11 +79,11 @@
     }
 
     function readMappings() {
-        mappings.value = CM.mappings
+        mappings.value = CM.mappings.filter(d => d !== undefined)
     }
 
     onMounted(readMappings)
-    
+
     watch(initialized, readMappings)
 
     watch(recording, function() {

@@ -150,7 +150,7 @@ export const useControls = defineStore('controls', {
                 if (key.length > 1 || !isValidKey(key) || !CM.getKeyMapping(this.recordTarget)) return
 
                 const m = CM.getKeyMapping(this.recordTarget).copy()
-                
+
                 m.key = key
                 m.modifiers = []
                 if (event.ctrlKey) {
@@ -183,7 +183,7 @@ export const useControls = defineStore('controls', {
 
         startRecordHotkey(index, label) {
             // ignore locked hotkeys
-            if (index < CM.size) return;
+            if (index < CM.sizeLocked) return;
             this.recordTarget = index
             this.recordLabel = label
             this.recordMessage = "press your desired hotkey now"

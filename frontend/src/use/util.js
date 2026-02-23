@@ -215,6 +215,13 @@ export function parseEntities(response) {
     if (response.columns) {
         entities = response.columns.map(c => new ColumnEntity(c))
     }
+    if (response.weights) {
+        const result = []
+        for (const name in response.weights) {
+            result.push(new ColumnEntity(name, name, response.weights[name]))
+        }
+        entities = entities.concat(result)
+    }
     if (response.datapoints) {
         entities = entities.concat(response.datapoints.map(d => new DatapointEntity(d)))
     }

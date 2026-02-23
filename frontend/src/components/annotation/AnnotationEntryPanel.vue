@@ -45,15 +45,12 @@
         </template>
 
         <div class="d-flex flex-wrap mt-1">
-            <v-chip v-for="ent in data.entities"
+            <AnnotationEntity v-for="ent in data.entities"
                 :key="ent.id"
-                closable
-                @click:close.prevent="data.removeEntity(ent.id)"
+                :entity="ent"
+                @remove="data.removeEntity(ent.id)"
                 class="mr-1 mb-1"
-                size="small"
-                density="compact">
-                {{ ent.data }}
-            </v-chip>
+                />
         </div>
     </v-sheet>
 </template>
@@ -63,6 +60,7 @@
     import { ACTION_TARGET } from '@/use/annotation/action-target';
     import { ENTRY_SOURCE, ENTRY_TYPE, TextEntry } from '@/use/annotation/annotation-entry';
     import { computed, onMounted, useTemplateRef, watch } from 'vue';
+    import AnnotationEntity from './AnnotationEntity.vue';
 
     const props = defineProps({
         data: {

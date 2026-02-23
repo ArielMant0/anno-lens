@@ -640,13 +640,13 @@
 
     onMounted(function() {
         // static hotkeys
-        CM.addKeyMappingLocked(0, "a", "up/left", new Command(function() {
+        CM.addKeyMappingLocked(0, "a", "prev col", new Command(function() {
             if (columnIndex.value > 0) {
                 setColorIndex(columnIndex.value - 1)
                 applyLens()
             }
         }))
-        CM.addKeyMappingLocked(1, "d", "down/right", new Command(function() {
+        CM.addKeyMappingLocked(1, "d", "next col", new Command(function() {
             setColorIndex(columnIndex.value + 1)
             applyLens()
         }))
@@ -659,13 +659,6 @@
         CM.addKeyMappingLocked(3, "s", "save", new Command(function() {
             DM.saveTmpAnnotation()
         }), ["ctrl"])
-
-        CM.addKeyMappingLocked(4, "m", "mode", new Command(function() {
-            setRefMode(refMode.value !== "local" ? "local" : "global")
-            const lens = DM.getLens(activeLens.value)
-            updateLens(lens.x, lens.y)
-            applyLens()
-        }))
 
         // llm hotkeys
         const descCommand = new LLMCommand(function(prompt, targets) {
@@ -693,7 +686,7 @@
                     break
             }}, DESCRIPTION_PROMPT, 1, 1, [ACTION_TARGET.SELECTION, ACTION_TARGET.VIS])
         // add hotkey for "describe" command
-        CM.addKeyMapping(5, "1", "describe", descCommand)
+        CM.addKeyMapping(4, "1", "describe", descCommand)
 
 
         const labelCommand = new LLMCommand(function(prompt, targets) {
@@ -728,7 +721,7 @@
                 })
             }, LABEL_PROMPT, 1, 1, [ACTION_TARGET.SELECTION])
         // add hotkey for "label" command
-        CM.addKeyMapping(6, "2", "label", labelCommand)
+        CM.addKeyMapping(5, "2", "label", labelCommand)
 
         const extractCommand = new LLMCommand(function(prompt, targets) {
             app.setLLMLoading(true)
@@ -763,7 +756,7 @@
                 })
             }, EXTRACT_PROMPT, 1, 1, [ACTION_TARGET.SELECTION])
         // add hotkey for "extract" command
-        CM.addKeyMapping(7, "3", "extract", extractCommand)
+        CM.addKeyMapping(6, "3", "extract", extractCommand)
 
         const compareCommand = new LLMCommand(function(prompt, targets) {
             app.setLLMLoading(true)
@@ -794,24 +787,11 @@
                     app.setLLMLoading(false)
                 })
             }, COMPARE_PROMPT, 2, Infinity, [ACTION_TARGET.SELECTION])
-        CM.addKeyMapping(8, "4", "compare", compareCommand)
+        CM.addKeyMapping(7, "4", "compare", compareCommand)
 
         const combineCommand = new LLMCommand(function(prompt, targets) {
             app.setLLMLoading(true)
-            const global = {}
-            Object.entries(DM.stats).forEach(([name, obj]) => {
-                global[name] = {
-                    min: obj.min,
-                    max: obj.max,
-                    mean: obj.mean,
-                    median: obj.median,
-                    distribution: {}
-                }
-                obj.bins.forEach((b,i) => global[name].distribution[b] = obj.countRel[i])
-                return obj
-            })
-
-            llmCombine(prompt, targets.map(c => c.name), global)
+            llmCombine(prompt, targets)
                 .then(response => {
                     const entities = parseEntities(response)
                     // TODO: add to notepad
@@ -823,7 +803,7 @@
                     app.setLLMLoading(false)
                 })
             }, COMBINE_PROMPT, 2, Infinity, [ACTION_TARGET.COLUMN])
-        CM.addKeyMapping(9, "5", "combine", combineCommand)
+        CM.addKeyMapping(8, "5", "combine", combineCommand)
 
         // resize lens
         window.addEventListener("wheel", function(event) {

@@ -6,18 +6,23 @@ const COLORS5_2 = ["#619b8a", "#a1c181", "#f0b51d", "#fe8435", "#233d4d"]
 
 
 class CommandManager {
-    
-    constructor(size=5, colors=COLORS5_2) {
-        this.size = size
+
+    constructor(sizeLocked=4, sizeUnlocked=6, colors=COLORS5_2) {
+        this.sizeLocked = sizeLocked
+        this.sizeUnlocked = sizeUnlocked
         this.colors = colors
-        this.mappings = new Array(this.size*2)
+        this.mappings = new Array(this.size)
 
         this.targets = []
     }
 
+    get size() {
+        return this.sizeLocked + this.sizeUnlocked
+    }
+
     getColor(index) {
         if (index >= this.mappings.length) return "black"
-        return this.colors[(index-this.size) % this.mappings.length]
+        return this.colors[(index-this.sizeLocked) % this.mappings.length]
     }
 
     getKeyMapping(index) {
@@ -25,7 +30,7 @@ class CommandManager {
     }
 
     getKeyMappingFromHotkey(key, modifiers=[], ignoreIndex=[]) {
-        return this.mappings.find((d, i) => !ignoreIndex.includes(i) && d.matches(key, modifiers))
+        return this.mappings.find((d, i) => d !== undefined && !ignoreIndex.includes(i) && d.matches(key, modifiers))
     }
 
     setKeyMapping(index, mapping) {
@@ -33,7 +38,7 @@ class CommandManager {
     }
 
     addKeyMapping(index, key, label, command, modifiers=[]) {
-        if (index < this.size || index >= this.mappings.length) return
+        if (index < this.sizeLocked || index >= this.size) return
         this.mappings[index] = new KeyMapping(
             index,
             key,
@@ -46,7 +51,7 @@ class CommandManager {
     }
 
     addKeyMappingLocked(index, key, label, command, modifiers=[]) {
-        if (index < 0 || index >= this.size) return
+        if (index < 0 || index >= this.sizeLocked) return
         this.mappings[index] = new KeyMapping(
             index,
             key,

@@ -55,12 +55,11 @@ export async function llmExtract(prompt, data, global) {
     })
 }
 
-export async function llmCombine(prompt, columns, global) {
+export async function llmCombine(prompt, columns) {
     const loader = useLoader()
     console.debug("combine/", prompt)
     return loader.post("combine", {
         prompt: prompt,
-        global: global,
         columns: columns,
     })
 }

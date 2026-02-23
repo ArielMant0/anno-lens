@@ -1,12 +1,25 @@
+let _EID = 1
+
 export const ENTITY_TYPE = Object.freeze({
     DATAPOINT: "dp",
     COLUMN: "col",
     ANNOTATION: "anno",
 })
 
-let _EID = 1
+export function entityTypeToValue(type) {
+    switch(type) {
+        case ENTITY_TYPE.ANNOTATION: return 1
+        case ENTITY_TYPE.COLUMN: return 2
+        default:
+        case ENTITY_TYPE.DATAPOINT: return 3
+    }
+}
 
-class Entity {
+export function compareEntityType(a, b) {
+    return entityTypeToValue(a) - entityTypeToValue(b)
+}
+
+export class Entity {
 
     constructor(type, data) {
         this.id = `${type}_${_EID++}`

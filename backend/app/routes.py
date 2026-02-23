@@ -125,7 +125,7 @@ def combine():
             "weights": { "potassium": 0.33, "protein": 0.66 }
         })
 
-    template = request.json["prompt"] + " Only reply with the explanation and weights, nothing else."
+    template = request.json["prompt"] + " The weights should sum up to 1. Only reply with the explanation and weights, nothing else. Columns: {columns}"
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a data analyst."),
@@ -138,10 +138,7 @@ def combine():
     )
 
     chain = prompt | agent
-    answer = chain.invoke({
-        "global": request.json["global"],
-        "columns": request.json["columns"]
-    })
+    answer = chain.invoke({ "columns": request.json["columns"] })
 
     return jsonify({
         "answer": answer["structured_response"].explanation,

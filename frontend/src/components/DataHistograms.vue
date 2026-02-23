@@ -31,7 +31,7 @@
                     }">
                     <div>
                         <div @click="setColor(0, i)" :style="{ maxWidth: (chartWidth-5)+'px' }" class="cursor-pointer text-dots hover-bold">
-                            {{ i+1 }}. {{ colsP[i] }}
+                            {{ i+1 }}. <span :data-target-type="ACTION_TARGET.COLUMN" :data-target-id="colsP[i]">{{ colsP[i] }}</span>
                         </div>
                         <BarChart
                             :title="colsP[i]"
@@ -65,7 +65,7 @@
                     }">
                     <div>
                         <div :style="{ maxWidth: (chartWidth-5)+'px' }" class="cursor-pointer text-dots hover-bold">
-                            {{ colsOtherP[i] }}
+                            <span :data-target-type="ACTION_TARGET.COLUMN" :data-target-id="colsOtherP[i]">{{ colsOtherP[i] }}</span>
                         </div>
                         <BarChart
                             :title="colsOtherP[i]"
@@ -86,13 +86,14 @@
 
 <script setup>
     import DM from '@/use/data-manager';
-    import { computed, onMounted, reactive, ref, watch } from 'vue';
+    import { computed, onMounted, ref, watch } from 'vue';
     import BarChart from './vis/BarChart.vue';
     import { useApp } from '@/stores/app';
     import { calcHistogram } from '@/use/util';
     import { useControls } from '@/stores/controls';
     import { storeToRefs } from 'pinia';
     import CM from '@/use/command-manager';
+    import { ACTION_TARGET } from '@/use/annotation/action-target';
 
     const app = useApp()
     const { activeLens, showHotbar } = storeToRefs(app)

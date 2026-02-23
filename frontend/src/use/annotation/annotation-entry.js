@@ -1,3 +1,5 @@
+import { compareEntityType } from "./entity";
+
 let _ENTRY_ID = 1;
 
 export const ENTRY_SOURCE = Object.freeze({
@@ -70,6 +72,7 @@ export class TextEntry extends AnnotationEntry {
             entitySet[d.type].add(d.id)
             return true
         })
+        this.entities.sort((a, b) => compareEntityType(a.type, b.type))
 
         if (update && this.entities.length !== before) {
             this.update()
