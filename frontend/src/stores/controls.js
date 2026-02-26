@@ -77,6 +77,11 @@ export const useControls = defineStore('controls', {
 
         keyEvent(event) {
             if (document.activeElement && isInputElement(document.activeElement.tagName)) return
+            // if we have an active hotkey/mapping and clicked ESC, cancel the action
+            if (event.key === "Escape" && this.hasActive) {
+                return this.cancelActive()
+            }
+
             if (!isValidKey(event.key)) return
 
             if (this.recording) {

@@ -1,7 +1,7 @@
 <template>
     <Teleport to="body">
         <div v-show="visible" id="targeting-overlay">
-            <svg id="to-svg" style="position: absolute;" width="100%" height="100%"></svg>
+            <svg id="to-svg" width="100%" height="100%"></svg>
         </div>
     </Teleport>
 </template>
@@ -10,9 +10,9 @@
     import * as d3 from 'd3'
     import DM from '@/use/data-manager';
     import { useControls } from '@/stores/controls';
-    import { ACTION_TARGET, ALL_ACTION_TARGETS } from '@/use/annotation/action-target';
+    import { ACTION_TARGET } from '@/use/annotation/action-target';
     import { storeToRefs } from 'pinia';
-    import { onMounted, watch } from 'vue';
+    import { onBeforeUnmount, onMounted, watch } from 'vue';
     import { LLMCommand } from '@/use/commands';
 
     const controls = useControls()
@@ -20,26 +20,59 @@
 
     const visible = ref(false)
 
+    const scrollContainers = new Set();
+
+    let svgNodes = [], highlights = []
+    let scrollPending = false
+
+    function getScrollableAncestors(el) {
+        const ancestors = []
+
+        let current = el.parentElement
+
+        while (current && current !== document.body) {
+            const style = window.getComputedStyle(current)
+            const overflowY = style.overflowY
+            const overflowX = style.overflowX
+
+            if (
+                overflowY === "auto" || overflowY === "scroll" ||
+                overflowX === "auto" || overflowX === "scroll"
+            ) {
+                ancestors.push(current);
+            }
+
+            current = current.parentElement
+        }
+
+        return ancestors
+    }
+
     function show() {
         console.debug("showing targeting overlay")
         if (!canTarget.value) return
-        resetSelectable()
+        reset()
         visible.value = true
 
-        updateMask()
+        makeHighlights()
     }
 
     function hide() {
         if (!visible.value) return
         controls.cancelActive()
         visible.value = false
-        resetSelectable()
+        reset()
     }
 
-    function resetSelectable() {
-        document
-            .querySelectorAll(ALL_ACTION_TARGETS.map(d => `*[data-target-type="${d}"]`))
-            .forEach(el => el.classList.remove("valid-target"))
+    function reset() {
+        // remove target class
+        highlights.forEach(d => d.el.classList.remove("valid-target"))
+        highlights = []
+        // remove scroll listeners
+        scrollContainers.forEach(d => {
+            d.removeEventListener("scroll", updateHighlights, { passive: true })
+        })
+        scrollContainers.clear()
     }
 
     function onClick(element) {
@@ -78,7 +111,7 @@
         }
     }
 
-    function updateMask() {
+    function makeHighlights() {
         if (!visible.value) return;
 
         const cmd = controls.activeMapping.command
@@ -87,15 +120,17 @@
         // get selectors of available targets for the currently active mapping
         const selectors = cmd.targetTypes.map(d => `*[data-target-type="${d}"]`)
         const elements = Array.from(document.querySelectorAll(selectors))
+        highlights = elements.map(d => ({ el: d, rect: d.getBoundingClientRect() }))
 
         const svg = d3.select("#to-svg")
 
         svg.selectAll(".indicator").remove()
 
-        svg.selectAll(".indicator")
-            .data(elements.map(d => ({ el: d, rect: d.getBoundingClientRect() })))
+        svgNodes = svg.selectAll(".indicator")
+            .data(highlights)
             .join("rect")
             .classed("indicator valid-target rot-border", true)
+            .style("pointer-events", "all")
             .attr("fill", "black")
             .attr("fill-opacity", 0.1)
             .attr("stroke", "black")
@@ -113,14 +148,52 @@
                 d3.select(this).attr("stroke", "black")
             })
             .on("click", function(_e, d) { onClick(d.el) })
+
+        // attach scroll listeners for ancestors
+        highlights.forEach(({ el }) => {
+            getScrollableAncestors(el).forEach(container => {
+                scrollContainers.add(container)
+            })
+        })
+
+        scrollContainers.forEach(container => {
+            container.addEventListener("scroll", updateHighlights, { passive: true });
+        })
+
+    }
+
+    function updateHighlights() {
+        if (scrollPending) return
+
+        scrollPending = true;
+        requestAnimationFrame(() => {
+            scrollPending = false
+            highlights.forEach(d => d.rect = d.el.getBoundingClientRect())
+            svgNodes
+                .attr("x", d => d.rect.left-2)
+                .attr("y", d => d.rect.top-2)
+                .attr("width", d => d.rect.width+4)
+                .attr("height", d => d.rect.height+4)
+                .style("display", d => {
+                    const parents = getScrollableAncestors(d.el)
+                    if (parents.length === 0) {
+                        return "block"
+                    }
+                    const rect = parents[0].getBoundingClientRect()
+                    return d.rect.top > rect.bottom || d.rect.bottom < rect.top ||
+                        d.rect.left > rect.right || d.rect.right < rect.left ?
+                        "none" : "block"
+                })
+        })
     }
 
     function init() {
-        window.addEventListener("resize", updateMask)
-        // window.addEventListener("scroll", updateMask)
+        window.addEventListener("resize", makeHighlights)
+        window.addEventListener("scroll", updateHighlights, { passive: true });
     }
 
     onMounted(init)
+    onBeforeUnmount(reset)
 
     watch(activeMappingId, function(value) {
         if (value !== null && !visible.value) {
@@ -142,6 +215,6 @@
     position: fixed;
     inset: 0;
     z-index: 4999;
-    pointer-events: auto;
+    pointer-events: none;
 }
 </style>
