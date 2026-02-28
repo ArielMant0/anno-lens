@@ -1,9 +1,19 @@
 <template>
     <v-card v-if="data.prompt" id="command-panel" density="compact" :style="{ maxWidth: maxW }">
         <v-card-text>
-            <div class="text-caption">
-                <b>{{ numActiveTargets }}</b> / <b>{{ data.cmd.minTargets }}</b> targets (max <b>{{ data.cmd.maxTargets }}</b>)
+            <div class="text-caption" :class="{ 'text-red': numActiveTargets < data.cmd.minTargets}">
+                <b>{{ numActiveTargets }}</b> / <b>{{ data.cmd.maxTargets }}</b> targets (min <b>{{ data.cmd.minTargets }}</b>)
             </div>
+            <div class="d-flex">
+                <template v-for="target in data.targets" :key="target.id">
+                    <AnnotationEntity v-for="entity in target.entities"
+                        :key="entity.id"
+                        :entity="entity"
+                        @remove="removeEntity(target, entity.id)"
+                        />
+                </template>
+            </div>
+            <v-divider class="mt-1 mb-1"></v-divider>
             <PromptPanel :prompt="data.prompt"/>
         </v-card-text>
         <v-card-actions>
@@ -19,6 +29,8 @@
     import PromptPanel from './PromptPanel.vue';
     import { computed, reactive, watch } from 'vue';
     import { LLMCommand } from '@/use/commands';
+    import AnnotationEntity from './annotation/AnnotationEntity.vue';
+    import CM from '@/use/command-manager';
 
     const controls = useControls()
 
@@ -32,7 +44,7 @@
     })
     const maxW = computed(() => props.maxWidth + (typeof props.maxWidth === "string" ? "" : "px"))
 
-    const data = reactive({ prompt: null, cmd: null })
+    const data = reactive({ prompt: null, cmd: null, targets: null })
     const minReached = computed(() => data.prompt ? numActiveTargets.value >= data.cmd.minTargets : true)
     const maxReached = computed(() => data.prompt ? numActiveTargets.value > data.cmd.maxTargets : true)
 
@@ -44,19 +56,36 @@
         controls.executeActive()
     }
 
+    function readTargets() {
+        data.targets = CM.getTargets()
+    }
+
+    function removeEntity(target, entityId) {
+        if (target.multiple) {
+            target.removeEntity(entityId)
+        } else {
+            controls.removeTarget(target.id)
+            readTargets()
+        }
+    }
+
+    watch(numActiveTargets, readTargets)
     watch(hasActive, function(value) {
         if (value) {
             const cmd = activeMapping.value.command
-            if (cmd instanceof LLMCommand ) {
+            if (cmd instanceof LLMCommand) {
                 data.cmd = cmd
                 data.prompt = cmd.promptTemplate
+                readTargets()
             } else {
                 data.prompt = null
                 data.cmd = null
+                data.targets = null
             }
         } else {
             data.prompt = null
             data.cmd = null
+            data.targets = null
         }
     })
 

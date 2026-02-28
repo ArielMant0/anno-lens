@@ -150,7 +150,7 @@
     import { toast } from 'vue3-toastify';
     import DataHistograms from './DataHistograms.vue';
     import GlobalNotepad from './annotation/GlobalNotepad.vue';
-    import { ColumnEntity } from '@/use/annotation/entity';
+    import { AnnotationEntity, ColumnEntity, SelectionEntity } from '@/use/annotation/entity';
     import { ENTRY_SOURCE } from '@/use/annotation/annotation-entry';
     import { ACTION_TARGET } from '@/use/annotation/action-target';
     import { Selection } from '@/use/selection/selection';
@@ -658,17 +658,17 @@
         }))
         CM.addKeyMappingLocked(3, "s", "save", new Command(function() {
             DM.saveTmpAnnotation()
-        }), ["ctrl"])
+        }))
 
         // llm hotkeys
-        const descCommand = new LLMCommand(function(prompt, targets) {
+        const descCommand = new LLMCommand(function(prompt, target) {
             app.setLLMLoading(true)
 
-            switch (targets[0].type) {
+            switch (target.type) {
                 case ACTION_TARGET.SELECTION:
+                    console.log(target)
                     // get data points that match the target
-                    const selection = Selection.dataUnion(targets.map(t => t.target).flat())
-                    const datapoints = selection.filter(DM.getData())
+                    const datapoints = target.getSelection().filter(DM.getData())
                     if (datapoints.length === 0) {
                         toast.error("no entity to describe")
                         return
@@ -676,24 +676,23 @@
                     // ask for description / summary
                     llmFreeWithData(prompt, datapoints)
                         .then(response => {
-                            DM.annotateText(response.answer, ENTRY_SOURCE.AI, [], targets[0].annotation)
+                            DM.annotateText(response.answer, ENTRY_SOURCE.AI, [], target.annotation)
                             app.setLLMLoading(false)
                         })
                     break
                 case ACTION_TARGET.VIS:
                     // TODO: add the response text to the global notes
-                    console.debug("describe vis:", response.answer)
+                    console.debug("describe vis")
                     break
             }}, DESCRIPTION_PROMPT, 1, 1, [ACTION_TARGET.SELECTION, ACTION_TARGET.VIS])
         // add hotkey for "describe" command
         CM.addKeyMapping(4, "1", "describe", descCommand)
 
 
-        const labelCommand = new LLMCommand(function(prompt, targets) {
+        const labelCommand = new LLMCommand(function(prompt, target) {
             app.setLLMLoading(true)
 
-            const selection = Selection.dataUnion(targets.map(t => t.target).flat())
-            const datapoints = selection.filter(DM.getData())
+            const datapoints = target.getSelection().filter(DM.getData())
             if (datapoints.length === 0) {
                 toast.error("no data to label")
                 return
@@ -703,8 +702,8 @@
                 .then(response => {
                     let anno = null
                     // get the correct annotation to label
-                    if (targets[0].annotation) {
-                        anno = DM.getAnnotationById(targets[0].annotation)
+                    if (target.annotation) {
+                        anno = DM.getAnnotationById(target.annotation)
                     } else if (DM.hasTmpAnnotation) {
                         anno = DM.getTmpAnnotation()
                     } else {
@@ -723,7 +722,7 @@
         // add hotkey for "label" command
         CM.addKeyMapping(5, "2", "label", labelCommand)
 
-        const extractCommand = new LLMCommand(function(prompt, targets) {
+        const extractCommand = new LLMCommand(function(prompt, target) {
             app.setLLMLoading(true)
             const global = {}
             Object.entries(DM.stats).forEach(([name, obj]) => {
@@ -737,8 +736,7 @@
                 obj.bins.forEach((b,i) => global[name].distribution[b] = obj.countRel[i])
                 return obj
             })
-            const selection = Selection.dataUnion(targets.map(t => t.target).flat())
-            const datapoints = selection.filter(DM.getData())
+            const datapoints = target.getSelection().filter(DM.getData())
             if (datapoints.length === 0) {
                 toast.error("no data to extract columns for")
                 return
@@ -750,7 +748,7 @@
                         response.answer,
                         ENTRY_SOURCE.AI,
                         entities,
-                        targets[0].annotation
+                        target.annotation
                     )
                     app.setLLMLoading(false)
                 })
@@ -764,9 +762,10 @@
             // get data for all involved selections
             const subsets = {}
             targets.forEach((t, i) => {
-                const s = Selection.dataUnion(t.target)
-                const name = t.name ? t.name : `Subset ${i}`
-                subsets[name] = s.filter(allData)
+                const s = t.getSelection()
+                const e = t.getEntities()
+                const name = e.name ? e.name : `Subset ${i+1}`
+                subsets[name] = s.filtverhaer(allData)
             })
 
             if (Object.keys(subsets).length < 2) {
@@ -777,12 +776,22 @@
             llmComparison(prompt, subsets)
                 .then(response => {
                     const entities = parseEntities(response)
-                    // TODO: add to notepad
+                    targets.forEach(t => {
+                        if (t.annotation) {
+                            const anno = DM.getAnnotationById(t.annotation)
+                            entities.push(new AnnotationEntity(
+                                anno.id,
+                                anno.label,
+                                anno
+                            ))
+                        }
+                        // should we also add selection entities?
+                    })
+                    // TODO: this needs to have a different selection than the current one
                     DM.annotateText(
                         response.answer,
                         ENTRY_SOURCE.AI,
-                        entities,
-                        targets.map(t => t.annotation)
+                        entities
                     )
                     app.setLLMLoading(false)
                 })
@@ -791,10 +800,10 @@
 
         const combineCommand = new LLMCommand(function(prompt, targets) {
             app.setLLMLoading(true)
-            llmCombine(prompt, targets)
+            llmCombine(prompt, targets.map(t => t.getData()).flat())
                 .then(response => {
                     const entities = parseEntities(response)
-                    // TODO: add to notepad
+                    // TODO: add to a global notepad
                     DM.annotateText(
                         response.answer,
                         ENTRY_SOURCE.AI,

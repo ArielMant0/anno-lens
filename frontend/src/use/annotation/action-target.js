@@ -1,4 +1,4 @@
-import { AnnotationEntry, TextEntry } from "./annotation-entry"
+import { Selection } from "../selection/selection"
 
 export const ACTION_TARGET = Object.freeze({
     SELECTION: "at-sel",
@@ -16,56 +16,42 @@ export const ALL_ACTION_TARGETS = [
     ACTION_TARGET.DATAPOINT,
 ]
 
+let _TDID = 1
+
 export class TargetData {
 
-    constructor(type, target, description=null) {
+    constructor(entities, type, annotation=null) {
+        this.id = `td_${_TDID++}`
+        this.entities = entities
         this.type = type
-        this.target = target
-        this.description = description
+        this.annotation = annotation
     }
 
-    describe() {
-        let label = null, data = null, desc = this.description, img = null
+    get multiple() {
+        return this.entities.length > 1
+    }
 
-        switch(this.type) {
-            case ACTION_TARGET.SELECTION:
-                label = "selection"
-                if (this.target instanceof Lens) {
-                    // TODO: pass only a few instances and stats instead?
-                    data = this.target.getResultData()
-                } else {
-                    // otherwise: assume this is already the data of interest
-                    data = this.target
-                }
-                break
-            case ACTION_TARGET.ANNOTATION:
-                label = "annotation"
-                console.assert(this.target instanceof AnnotationEntry, "target should be an annotation entry")
-                data = this.target.annotation.getData()
-                if (this.target instanceof TextEntry) {
-                    desc = this.target.text
-                }
-                break
-            case ACTION_TARGET.VIS:
-                label = "visualization"
-                // assume that target is some kind of image representation
-                img = target
-                break
-            case ACTION_TARGET.COLUMN:
-                label = "column"
-                data = this.target.name
-                break
-            case ACTION_TARGET.DATAPOINT:
-                label = "datapoint"
-                data = id
-                break
+    getEntities() {
+        return this.multiple ? this.entities : this.entities.at(0)
+    }
+
+    getData() {
+        return this.entities.map(d => d.data)
+    }
+
+    getSelection() {
+        if (this.type === ACTION_TARGET.SELECTION) {
+            return this.multiple ?
+                Selection.dataUnion(this.entities.map(d => d.selection)) :
+                this.entities.at(0).selection
         }
+        return null
+    }
 
-        return {
-            label: label,
-            description: desc,
-            data: data,
-            image: img
+    removeEntity(id) {
+        const idx = this.entities.findIndex(d => d.id === id)
+        if (idx >= 0) {
+            this.entities.splice(idx, 1)
         }
     }
 }

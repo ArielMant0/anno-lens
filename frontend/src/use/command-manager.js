@@ -77,9 +77,20 @@ class CommandManager {
 
     addTarget(target) {
         if (Array.isArray(target)) {
-            this.targets = this.targets.concat(target)
+            if (target.length > 1) {
+                this.targets = this.targets.concat(target)
+            } else {
+                this.targets.push(target[0])
+            }
         } else {
             this.targets.push(target)
+        }
+    }
+
+    removeTarget(id) {
+        const idx = this.targets.findIndex(d => d.id === id)
+        if (idx >= 0) {
+            this.targets.splice(idx, 1)
         }
     }
 

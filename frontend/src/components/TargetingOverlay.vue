@@ -14,6 +14,7 @@
     import { storeToRefs } from 'pinia';
     import { onBeforeUnmount, onMounted, watch } from 'vue';
     import { LLMCommand } from '@/use/commands';
+import { AnnotationEntity, ColumnEntity, SelectionEntity } from '@/use/annotation/entity';
 
     const controls = useControls()
     const { canTarget, activeMappingId } = storeToRefs(controls)
@@ -78,7 +79,8 @@
     function onClick(element) {
         // get target type
         const targetType = element.getAttribute('data-target-type')
-        const targetId = element.getAttribute('data-target-id').split(",")
+        const ids = element.getAttribute('data-target-id').split(",")
+        const targetId = ids.length > 1 ? ids : ids[0]
 
         if (!targetType || !targetId) return
 
@@ -89,16 +91,30 @@
                     // this is actually a selection in an annotation
                     if (annoId) {
                         const anno = DM.getAnnotationById(annoId)
-                        controls.targetEvent(anno.selections, targetType, annoId)
+                        controls.targetEvent(
+                            anno.selections.map(s => new SelectionEntity(s.id, s.id, s)),
+                            targetType,
+                            annoId
+                        )
                     } else {
-                        controls.targetEvent(targetId.map(tid => DM.getSelectionById(tid)), targetType)
+                        controls.targetEvent(
+                            ids.map(tid => {
+                                const s = DM.getSelectionById(tid)
+                                return new SelectionEntity(tid, tid, s)
+                            }),
+                            targetType
+                        )
                     }
                 }
                 break
             case ACTION_TARGET.ANNOTATION:
                 {
                     const anno = DM.getAnnotationById(targetId)
-                    controls.targetEvent(anno, targetType, anno.id)
+                    controls.targetEvent(
+                        new AnnotationEntity(anno.id, anno.label, anno),
+                        targetType,
+                        anno.id
+                    )
                 }
                 break
             case ACTION_TARGET.VIS:
@@ -106,7 +122,10 @@
                 controls.targetEvent(element, targetType)
                 break
             case ACTION_TARGET.COLUMN:
-                controls.targetEvent(targetId, targetType)
+                controls.targetEvent(
+                    new ColumnEntity(targetId, targetId),
+                    targetType
+                )
                 break
         }
     }

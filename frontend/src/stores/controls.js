@@ -1,3 +1,4 @@
+import { TargetData } from '@/use/annotation/action-target'
 import CM from '@/use/command-manager'
 import { capitalize } from '@/use/util'
 import { defineStore } from 'pinia'
@@ -102,12 +103,16 @@ export const useControls = defineStore('controls', {
             }
         },
 
-        targetEvent(target, targetType, annotation=null) {
+        targetEvent(targets, targetType, annotation=null) {
             if (this.hasActive) {
                 // only do sth if this is a valid target
                 if (this.activeMapping.isValidTarget(targetType)) {
                     if (this.activeMapping.canTarget(this.numActiveTargets)) {
-                        CM.addTarget({ target: target, type: targetType, annotation: annotation })
+                        CM.addTarget(new TargetData(
+                            Array.isArray(targets) ? targets : [targets],
+                            targetType,
+                            annotation
+                        ))
                         this.numActiveTargets = CM.numTargets
                         // trigger immediately if we reached the maximum number of targets
                         if (!this.activeMapping.canTarget(this.numActiveTargets)) {
@@ -120,10 +125,18 @@ export const useControls = defineStore('controls', {
             }
         },
 
+        removeTarget(id) {
+            if (this.hasActive) {
+                CM.removeTarget(id)
+                this.numActiveTargets = CM.numTargets
+            }
+        },
+
         executeActive() {
             if (this.hasActive) {
+                const targets = CM.getTargets()
                 // execute callback with selected targets
-                this.activeMapping.execute(CM.getTargets())
+                this.activeMapping.execute(targets.length > 1 ? targets : targets.at(0))
                 CM.clearTargets()
                 this.numActiveTargets = 0
                 this.activeMapping = null
