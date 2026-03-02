@@ -14,7 +14,7 @@
     import { storeToRefs } from 'pinia';
     import { onBeforeUnmount, onMounted, watch } from 'vue';
     import { LLMCommand } from '@/use/commands';
-import { AnnotationEntity, ColumnEntity, SelectionEntity } from '@/use/annotation/entity';
+    import { AnnotationEntity, ColumnEntity, SelectionEntity } from '@/use/annotation/entity';
 
     const controls = useControls()
     const { canTarget, activeMappingId } = storeToRefs(controls)
@@ -92,9 +92,9 @@ import { AnnotationEntity, ColumnEntity, SelectionEntity } from '@/use/annotatio
                     if (annoId) {
                         const anno = DM.getAnnotationById(annoId)
                         controls.targetEvent(
-                            anno.selections.map(s => new SelectionEntity(s.id, s.id, s)),
+                            anno.selections.map(s => new SelectionEntity(s.id, anno.label, s)),
                             targetType,
-                            annoId
+                            anno
                         )
                     } else {
                         controls.targetEvent(
@@ -109,11 +109,12 @@ import { AnnotationEntity, ColumnEntity, SelectionEntity } from '@/use/annotatio
                 break
             case ACTION_TARGET.ANNOTATION:
                 {
-                    const anno = DM.getAnnotationById(targetId)
+                    const annoId = element.getAttribute('data-target-anno')
+                    const anno = DM.getAnnotationById(annoId)
                     controls.targetEvent(
-                        new AnnotationEntity(anno.id, anno.label, anno),
+                        new AnnotationEntity(targetId, anno.label, anno),
                         targetType,
-                        anno.id
+                        anno
                     )
                 }
                 break

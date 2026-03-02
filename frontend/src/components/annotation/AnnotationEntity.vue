@@ -1,12 +1,12 @@
 <template>
     <div class="d-flex align-center">
-        <v-icon :icon="typeIcon" :size="size" class="mr-1"></v-icon>
         <v-chip
             closable
             :size="size"
             @click:close.prevent="emit('remove', entity)"
             @click="emit('click', entity)"
             density="compact">
+            <v-icon :icon="typeIcon" :size="size" class="mr-1 pt-1"></v-icon>
             {{ entity.name ? entity.name : entity.data }}
         </v-chip>
     </div>
@@ -32,7 +32,7 @@
         switch(props.entity.type) {
             case ENTITY_TYPE.ANNOTATION: return "mdi-note-edit-outline"
             case ENTITY_TYPE.DATAPOINT: return "mdi-circle"
-            case ENTITY_TYPE.SELECTION: return "mdi-scatter"
+            case ENTITY_TYPE.SELECTION: return "mdi-scatter-plot"
             case ENTITY_TYPE.COLUMN: return "mdi-pillar"
         }
     })

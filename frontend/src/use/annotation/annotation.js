@@ -5,8 +5,9 @@ let _ANNO_ID = 1
 
 export default class Annotation {
 
-    constructor(data, selections, label="Annotation") {
+    constructor(data, selections, title="Annotation", label="A1") {
         this.id = `anno_${_ANNO_ID++}`
+        this.title = title
         this.label = label
         this.data = new Set(data)
         this.entries = []
@@ -14,7 +15,7 @@ export default class Annotation {
         this.timeUpdated = this.timeCreated
 
         this.selections = selections
-        this.color = "red"
+        this.color = "#3996d4"
     }
 
     get polygon() {
@@ -41,12 +42,20 @@ export default class Annotation {
         return this.selections.map(s => s.id)
     }
 
+    getSelections() {
+        return this.selections
+    }
+
     update(time=null) {
         time = time ? time : Date.now()
         if (time > this.timeUpdated) {
             this.timeUpdated = time
             DM.trigger("anno")
         }
+    }
+
+    getEntry(id) {
+        return this.entries.find(d => d.id === id)
     }
 
     addEntry(entry) {

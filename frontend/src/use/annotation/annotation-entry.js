@@ -5,6 +5,7 @@ let _ENTRY_ID = 1;
 export const ENTRY_SOURCE = Object.freeze({
     USER: 1,
     AI: 2,
+    COMBINED: 3
 });
 
 export const ENTRY_TYPE = Object.freeze({
@@ -46,8 +47,12 @@ export class TextEntry extends AnnotationEntry {
         return this.entities.some(d => d.type === type && d.id === id)
     }
 
+    getText() {
+        return this.text
+    }
+
     addText(text) {
-        this.setText(this.text + text)
+        this.setText(this.text + "\n\n" + text)
     }
 
     setText(text) {

@@ -64,6 +64,9 @@
                     :key="aid+'_l_'+annoPos[aid].index"
                     :id="aid"
                     :selected="selectedAnnos[aid]"
+                    style-selected
+                    hide-input
+                    :max-entry-length="100"
                     :width="padding"
                     :min-height="annoMeta.sizeL-2"
                     :max-height="annoMeta.sizeL-2"
@@ -86,6 +89,9 @@
                     :key="aid+'_r_'+annoPos[aid].index"
                     :id="aid"
                     :selected="selectedAnnos[aid]"
+                    style-selected
+                    hide-input
+                    :max-entry-length="100"
                     :width="padding"
                     :min-height="annoMeta.sizeR-2"
                     :max-height="annoMeta.sizeR-2"

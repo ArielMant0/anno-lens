@@ -1,12 +1,13 @@
 import { DATA_TYPES, useApp } from "@/stores/app"
-import { bin, deviation, min, mean, median, quadtree, scaleLinear, extent, group, polygonHull, polygonCentroid } from "d3"
-import { circleIntersect, dataToNumbers, euclidean, findInCircle, getAttr } from "./util"
+import { bin, deviation, min, mean, median, quadtree, scaleLinear, extent, group } from "d3"
+import { circleIntersect, dataToNumbers, findInCircle, getAttr } from "./util"
 import { Lens, LENS_TYPE } from "./Lens"
 
 import MyWorker from '@/worker/feature-worker?worker'
 import { LensSelection } from "./selection/selection";
 import Annotation from "./annotation/annotation";
 import { TextEntry } from "./annotation/annotation-entry";
+import { pick } from "./random"
 
 function calcStats(data, c, filterType) {
     const ord = filterType === DATA_TYPES.ORDINAL || filterType === DATA_TYPES.NOMINAL || filterType === DATA_TYPES.BOOLEAN
@@ -50,6 +51,13 @@ function calcStats(data, c, filterType) {
     }
 }
 
+const DEFAULT_DESC_OPTIONS = Object.freeze({
+    columns: false,
+    examples: true,
+    numExamples: 5,
+    statistics: true
+})
+
 class DataManager {
 
     constructor() {
@@ -83,6 +91,57 @@ class DataManager {
         this.annotations = []
         this.tmpAnno = null
         this.annoMap = {}
+    }
+
+    describeData(datapoints=null, options=DEFAULT_DESC_OPTIONS) {
+        const data = datapoints ? datapoints : this.data
+        const opts = Object.assign(Object.assign({}, DEFAULT_DESC_OPTIONS), options)
+        const result = { size: data.length }
+        // add columns
+        if (opts.columns) {
+            result.columns = this.columns
+        }
+        if (data && data.length > 0) {
+            // add examples
+            if (opts.examples) {
+                result.examples = opts.numExamples < data.length ?
+                pick(data, opts.numExamples) :
+                data
+            }
+            // add statistics
+            if (opts.statistics) {
+                result.statistics = this.describeDataStats(data)
+            }
+        }
+        return result
+    }
+
+    describeDataStats(datapoints=null) {
+        let stats = null
+
+        if (datapoints) {
+            stats = {}
+            this.columns.forEach((c, i) => {
+                stats[c] = calcStats(datapoints, c, this.types[i])
+            })
+        } else {
+            stats = this.stats
+        }
+
+        const desc = {}
+        Object.entries(stats).forEach(([name, obj]) => {
+            desc[name] = {
+                min: obj.min,
+                max: obj.max,
+                mean: obj.mean,
+                median: obj.median,
+                distribution: {}
+            }
+            obj.bins.forEach((b,i) => desc[name].distribution[b] = obj.countRel[i])
+            return obj
+        })
+
+        return desc
     }
 
     setDataset(dsobj) {
@@ -383,20 +442,21 @@ class DataManager {
         }
     }
 
-    createEmptyAnnotation() {
+    createEmptyAnnotation(label="A1", selections=null) {
         let ids = new Set()
-        this.selections.forEach(s => {
+        const sel = selections === null ? this.selections : selections
+        sel.forEach(s => {
             ids = ids.union(s.data)
             s.calculatePolygon(this.data, this.xAttr, this.yAttr, this.x, this.y)
         })
-        return new Annotation(ids, this.selections.map(s => s.copy()), "Tmp Anno")
+        return new Annotation(ids, this.selections.map(s => s.copy()), "Tmp Anno", label)
     }
 
     annotateEmpty() {
         if (this.hasTmpAnnotation) {
             // TODO: put unsaved annotation into history/storage
         }
-        this.tmpAnno = this.createEmptyAnnotation()
+        this.tmpAnno = this.createEmptyAnnotation(`A${this.annotations.length+1}`)
         this.callbacks.anno.forEach(f => f(this.tmpAnno))
     }
 
@@ -411,7 +471,9 @@ class DataManager {
             if (target) {
                 // if the referenced annotation exists, add an entry
                 target.addEntry(new TextEntry(target, text, src, entities))
+                this.callbacks.anno.forEach(f => f(target))
             }
+            return
         } else if (this.selections.length === 0) {
             // no data is selected, so make no tmp annotation
             return
@@ -423,7 +485,7 @@ class DataManager {
             target = this.tmpAnno
         } else {
             // otherwise, create a new unsaved annotation
-            this.tmpAnno = this.createEmptyAnnotation()
+            this.tmpAnno = this.createEmptyAnnotation(`A${this.annotations.length+1}`)
             this.tmpAnno.addEntry(new TextEntry(this.tmpAnno, text, src, entities))
             target = this.tmpAnno
         }
@@ -435,6 +497,7 @@ class DataManager {
 
     saveTmpAnnotation() {
         if (this.tmpAnno !== null) {
+            this.tmpAnno.label = `A${this.annotations.length+1}`
             this.annotations.push(this.tmpAnno)
             this.tmpAnno = null
             const anno = this.annotations.at(-1)
@@ -567,6 +630,9 @@ class DataManager {
             //     delete this.annoMap[c.name][id]
             // })
             this.annotations.splice(idx, 1)
+            for (let i = idx; idx < this.annotations.length; ++i) {
+                this.annotations[i].label = `A${i+1}`
+            }
             this.callbacks.anno.forEach(f => f())
             // this.checkAnnoMerges()
         }
@@ -580,6 +646,12 @@ class DataManager {
         if (this.hasTmpAnnotation && this.tmpAnno.id === id) return this.tmpAnno
         return this.annotations.find(d => d.id === id)
     }
+
+    getAnnotationByLabel(label) {
+        if (this.hasTmpAnnotation && this.tmpAnno.label === label) return this.tmpAnno
+        return this.annotations.find(d => d.label === label)
+    }
+
 
     clearAnnotations() {
         this.annoMap = {}

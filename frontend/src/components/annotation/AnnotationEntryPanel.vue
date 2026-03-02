@@ -38,7 +38,7 @@
             </textarea>
             <div v-else v-html="markdown"
                 class="anno-md"
-                style="width: 95%"
+                style="width: 95%; height: fit-content;"
                 @click="setShowMarkdown(true)"
                 >
             </div>

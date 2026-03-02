@@ -40,12 +40,16 @@ export class TargetData {
     }
 
     getSelection() {
-        if (this.type === ACTION_TARGET.SELECTION) {
-            return this.multiple ?
-                Selection.dataUnion(this.entities.map(d => d.selection)) :
-                this.entities.at(0).selection
+        switch (this.type) {
+            case ACTION_TARGET.SELECTION:
+                return this.multiple ?
+                    Selection.dataUnion(this.entities.map(d => d.selection)) :
+                    this.entities.at(0).selection
+            case ACTION_TARGET.ANNOTATION:
+                return Selection.dataUnion(this.annotation.selections)
+            default:
+                return null
         }
-        return null
     }
 
     removeEntity(id) {

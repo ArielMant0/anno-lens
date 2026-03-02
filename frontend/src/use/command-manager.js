@@ -21,8 +21,7 @@ class CommandManager {
     }
 
     getColor(index) {
-        if (index >= this.mappings.length) return "black"
-        return this.colors[(index-this.sizeLocked) % this.mappings.length]
+        return this.colors[(index-this.sizeLocked) % this.colors.length]
     }
 
     getKeyMapping(index) {

@@ -5,10 +5,11 @@
                 <b>{{ numActiveTargets }}</b> / <b>{{ data.cmd.maxTargets }}</b> targets (min <b>{{ data.cmd.minTargets }}</b>)
             </div>
             <div class="d-flex">
-                <template v-for="target in data.targets" :key="target.id">
+                <template v-for="(target, i) in data.targets" :key="target.id">
                     <AnnotationEntity v-for="entity in target.entities"
                         :key="entity.id"
                         :entity="entity"
+                        :class="{ 'ml-1': i > 0 }"
                         @remove="removeEntity(target, entity.id)"
                         />
                 </template>

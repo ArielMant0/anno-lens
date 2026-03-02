@@ -49,14 +49,16 @@ def free():
     template = request.json["prompt"]+" Only reply with the answer contents, nothing else."
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a data analyst."),
-        ("human", template)
+        ("human", "{input}")
     ])
     agent = create_agent(
         model=model,
         response_format=BasicAnswer  # Auto-selects ProviderStrategy
     )
+
     chain = prompt | agent
-    answer = chain.invoke()
+    answer = chain.invoke({ "input": template })
+
     return jsonify({ "answer": answer["structured_response"].answer })
 
 
@@ -78,6 +80,30 @@ def free_with_data():
 
     chain = prompt | agent
     answer = chain.invoke({ "data": request.json["data"] })
+
+    return jsonify({
+        "answer": answer["structured_response"].answer,
+        "columns": answer["structured_response"].columns
+    })
+
+@bp.post('/free_text')
+def free_with_text():
+    if config.USE_DUMMY_DATA:
+        return jsonify({ "answer": "free with text answer" })
+
+    template = request.json["prompt"]+" Only reply with the answer contents, nothing else. Text: {text}"
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a data analyst."),
+        ("human", template)
+    ])
+
+    agent = create_agent(
+        model=model,
+        response_format=BasicAnswer  # Auto-selects ProviderStrategy
+    )
+
+    chain = prompt | agent
+    answer = chain.invoke({ "text": request.json["text"] })
 
     return jsonify({
         "answer": answer["structured_response"].answer,

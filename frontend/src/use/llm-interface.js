@@ -19,12 +19,23 @@ export async function llmFree(prompt) {
  * @param {Array} data list of data points for the chosen subset
  * @returns
  */
-export async function llmFreeWithData(prompt, data) {
+export async function llmFreeWithData(prompt, data, text=null) {
     const loader = useLoader()
     console.debug("free_data/", prompt)
-    return loader.post("free_data", { prompt: prompt, data: data })
+    return loader.post("free_data", { prompt: prompt, data: data, text: text })
 }
 
+/**
+ * Asks the model something for a given set of data points
+ * @param {String} prompt prompt send to model
+ * @param {Array} data list of data points for the chosen subset
+ * @returns
+ */
+export async function llmFreeWithText(prompt, text) {
+    const loader = useLoader()
+    console.debug("free_text/", prompt)
+    return loader.post("free_text", { prompt: prompt, text: text })
+}
 
 /**
  * Compare a number of data subsets to each other
@@ -74,7 +85,7 @@ export const SUMMARY_PROMPT = new PromptTemplate(
 )
 
 export const DESCRIPTION_PROMPT = new PromptTemplate(
-    "Describe the most important characteristics of the data using no more than :limit: words.",
+    "Describe notable characteristics of the data using no more than :limit: words.",
     [new PromptVariable("limit", 50, "integer")]
 )
 
@@ -96,4 +107,9 @@ export const COMPARE_PROMPT = new PromptTemplate(
 export const COMBINE_PROMPT = new PromptTemplate(
     "Provide a weighted linear combination of the following columns to indicate :keyword:. Explain your choice using no more than :limit: words.",
     [new PromptVariable("keyword", "healthy cereal options"), new PromptVariable("limit", 100, "integer")]
+)
+
+export const REFINE_PROMPT = new PromptTemplate(
+    "Improve the given text, aiming for :keyword:. Use no more than :limit: words.",
+    [new PromptVariable("keyword", "clear and concise writing"), new PromptVariable("limit", 100, "integer")]
 )

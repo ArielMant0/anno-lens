@@ -146,14 +146,13 @@
     import AnnoInventory from './AnnoInventory.vue';
     import { useTooltip } from '@/stores/tooltip';
     import ColorPicker from './ColorPicker.vue';
-    import { COMBINE_PROMPT, COMPARE_PROMPT, DESCRIPTION_PROMPT, EXTRACT_PROMPT, LABEL_PROMPT, llmCombine, llmComparison, llmExtract, llmFreeWithData } from '@/use/llm-interface';
+    import { COMBINE_PROMPT, COMPARE_PROMPT, DESCRIPTION_PROMPT, EXTRACT_PROMPT, LABEL_PROMPT, llmCombine, llmComparison, llmExtract, llmFreeWithData, REFINE_PROMPT } from '@/use/llm-interface';
     import { toast } from 'vue3-toastify';
     import DataHistograms from './DataHistograms.vue';
     import GlobalNotepad from './annotation/GlobalNotepad.vue';
-    import { AnnotationEntity, ColumnEntity, SelectionEntity } from '@/use/annotation/entity';
+    import { AnnotationEntity } from '@/use/annotation/entity';
     import { ENTRY_SOURCE } from '@/use/annotation/annotation-entry';
     import { ACTION_TARGET } from '@/use/annotation/action-target';
-    import { Selection } from '@/use/selection/selection';
     import { Command, LLMCommand } from '@/use/commands';
     import CM from '@/use/command-manager';
 
@@ -666,7 +665,6 @@
 
             switch (target.type) {
                 case ACTION_TARGET.SELECTION:
-                    console.log(target)
                     // get data points that match the target
                     const datapoints = target.getSelection().filter(DM.getData())
                     if (datapoints.length === 0) {
@@ -674,9 +672,9 @@
                         return
                     }
                     // ask for description / summary
-                    llmFreeWithData(prompt, datapoints)
+                    llmFreeWithData(prompt, DM.describeData(datapoints))
                         .then(response => {
-                            DM.annotateText(response.answer, ENTRY_SOURCE.AI, [], target.annotation)
+                            DM.annotateText(response.answer, ENTRY_SOURCE.AI, [], target.annotation?.id)
                             app.setLLMLoading(false)
                         })
                     break
@@ -698,12 +696,12 @@
                 return
             }
 
-            llmFreeWithData(prompt, datapoints, 5)
+            llmFreeWithData(prompt, DM.describeData(datapoints), 5)
                 .then(response => {
                     let anno = null
                     // get the correct annotation to label
                     if (target.annotation) {
-                        anno = DM.getAnnotationById(target.annotation)
+                        anno = target.annotation
                     } else if (DM.hasTmpAnnotation) {
                         anno = DM.getTmpAnnotation()
                     } else {
@@ -712,7 +710,7 @@
                     }
 
                     if (anno) {
-                        anno.label = response.answer
+                        anno.title = response.answer
                         anno.update()
                         DM.trigger("anno")
                     }
@@ -724,31 +722,22 @@
 
         const extractCommand = new LLMCommand(function(prompt, target) {
             app.setLLMLoading(true)
-            const global = {}
-            Object.entries(DM.stats).forEach(([name, obj]) => {
-                global[name] = {
-                    min: obj.min,
-                    max: obj.max,
-                    mean: obj.mean,
-                    median: obj.median,
-                    distribution: {}
-                }
-                obj.bins.forEach((b,i) => global[name].distribution[b] = obj.countRel[i])
-                return obj
-            })
+
+            // get datapoints for the selection
             const datapoints = target.getSelection().filter(DM.getData())
             if (datapoints.length === 0) {
                 toast.error("no data to extract columns for")
                 return
             }
-            llmExtract(prompt, datapoints, global)
+
+            llmExtract(prompt, DM.describeData(datapoints), DM.describeDataStats())
                 .then(response => {
                     const entities = parseEntities(response)
                     DM.annotateText(
                         response.answer,
                         ENTRY_SOURCE.AI,
                         entities,
-                        target.annotation
+                        target.annotation?.id
                     )
                     app.setLLMLoading(false)
                 })
@@ -778,11 +767,10 @@
                     const entities = parseEntities(response)
                     targets.forEach(t => {
                         if (t.annotation) {
-                            const anno = DM.getAnnotationById(t.annotation)
                             entities.push(new AnnotationEntity(
-                                anno.id,
-                                anno.label,
-                                anno
+                                t.annotation.id,
+                                t.annotation.label,
+                                t.annotation
                             ))
                         }
                         // should we also add selection entities?
@@ -813,6 +801,23 @@
                 })
             }, COMBINE_PROMPT, 2, Infinity, [ACTION_TARGET.COLUMN])
         CM.addKeyMapping(8, "5", "combine", combineCommand)
+
+        const refineCmd = new LLMCommand(function(prompt, target) {
+            app.setLLMLoading(true)
+            const entry = target.annotation.getEntry(target.getEntities().data)
+
+            // get datapoints for the annotation
+            const datapoints = target.getSelection().filter(DM.getData())
+
+            llmFreeWithData(prompt, DM.describeData(datapoints), entry.getText())
+                .then(response => {
+                    entry.setText(response.answer)
+                    app.setLLMLoading(false)
+                })
+            }, REFINE_PROMPT, 1, 1, [ACTION_TARGET.ANNOTATION])
+        // add hotkey for "refine" command
+        CM.addKeyMapping(9, "6", "refine", refineCmd)
+
 
         // resize lens
         window.addEventListener("wheel", function(event) {

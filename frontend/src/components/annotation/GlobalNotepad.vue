@@ -1,23 +1,14 @@
 <template>
     <v-sheet rounded elevation="2" min-height="100" style="width: 100%;">
 
-        <div v-for="anno in annos" :key="anno.id+'_'+anno.timeUpdated" class="pa-1 pt-2">
-            <div >
-                <AnnotationTitle
-                    v-model="anno.label"
-                    :size="anno.data.size"
-                    class="ml-2"
-                    :data-target-type="ACTION_TARGET.SELECTION"
-                    :data-target-selections="anno.getSelectionIds().join(',')"
-                    :data-target-id="anno.id"
-                    :data-target-anno="anno.id"
-                    />
-            </div>
+        <AnnotationPanel v-for="anno in annos"
+            :key="anno.id+'_'+anno.timeUpdated"
+            width="100%"
+            :data="anno"/>
 
-            <AnnotationEntryPanel v-for="e in anno.entries" :key="e.id.id+'_'+e.timeUpdated" :data="e"/>
-        </div>
+        <TextNote v-if="annos === null" class="mt-2 mr-1 ml-1" @submit="DM.saveTmpAnnotation()"/>
 
-        <div v-if="llmLoading" class="d-flex align-center justify-center">
+        <div v-if="llmLoading" class=" mt-4 d-flex align-center justify-center">
             <v-progress-circular size="32" indeterminate></v-progress-circular>
         </div>
     </v-sheet>
@@ -28,9 +19,8 @@
     import { storeToRefs } from 'pinia';
     import DM from '@/use/data-manager';
     import { onMounted, ref, watch } from 'vue';
-    import AnnotationEntryPanel from './AnnotationEntryPanel.vue';
-    import { ACTION_TARGET } from '@/use/annotation/action-target';
-    import AnnotationTitle from './AnnotationTitle.vue';
+    import AnnotationPanel from './AnnotationPanel.vue';
+    import TextNote from './TextNote.vue';
 
     const app = useApp()
     const { selectionTime, annoTime, llmLoading } = storeToRefs(app)
