@@ -6,8 +6,9 @@ import { Lens, LENS_TYPE } from "./Lens"
 import MyWorker from '@/worker/feature-worker?worker'
 import { LensSelection } from "./selection/selection";
 import Annotation from "./annotation/annotation";
-import { TextEntry } from "./annotation/annotation-entry";
+import { ModifierEntry, TextEntry } from "./annotation/annotation-entry";
 import { pick } from "./random"
+import { ColorFunctionModifier } from "./modifiers"
 
 function calcStats(data, c, filterType) {
     const ord = filterType === DATA_TYPES.ORDINAL || filterType === DATA_TYPES.NOMINAL || filterType === DATA_TYPES.BOOLEAN
@@ -449,7 +450,7 @@ class DataManager {
             ids = ids.union(s.data)
             s.calculatePolygon(this.data, this.xAttr, this.yAttr, this.x, this.y)
         })
-        return new Annotation(ids, this.selections.map(s => s.copy()), "Tmp Anno", label)
+        return new Annotation(ids, this.selections.map(s => s.copy()), "Annotation", label)
     }
 
     annotateEmpty() {
@@ -491,6 +492,35 @@ class DataManager {
         }
 
         if (target) {
+            this.callbacks.anno.forEach(f => f(target))
+        }
+    }
+
+    annotateModifier(text, src, entities, id=null) {
+
+        let target = null
+
+        const modifier = new ColorFunctionModifier(entities)
+
+        if (id !== null) {
+            target = this.getAnnotationById(id)
+            if (target) {
+                // if the referenced annotation exists, add an entry
+                target.addEntry(new ModifierEntry(target, text, modifier, src, entities))
+            }
+        } else if (this.hasTmpAnnotation) {
+            // if we have an unsaved annotation, add the entry to it
+            this.tmpAnno.addEntry(new ModifierEntry(this.tmpAnno, text, modifier, src, entities))
+            target = this.tmpAnno
+        } else {
+            // otherwise, create a new unsaved annotation
+            this.tmpAnno = this.createEmptyAnnotation(`A${this.annotations.length+1}`)
+            this.tmpAnno.addEntry(new ModifierEntry(this.tmpAnno, text, modifier, src, entities))
+            target = this.tmpAnno
+        }
+
+        if (target) {
+            this.data.forEach(d => modifier.apply(d))
             this.callbacks.anno.forEach(f => f(target))
         }
     }

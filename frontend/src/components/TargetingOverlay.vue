@@ -180,6 +180,7 @@
             container.addEventListener("scroll", updateHighlights, { passive: true });
         })
 
+        updateHighlights()
     }
 
     function updateHighlights() {

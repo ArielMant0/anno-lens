@@ -26,9 +26,9 @@ export async function llmFreeWithData(prompt, data, text=null) {
 }
 
 /**
- * Asks the model something for a given set of data points
+ * Asks the model something for a given text
  * @param {String} prompt prompt send to model
- * @param {Array} data list of data points for the chosen subset
+ * @param {String} text text that the model should do sth with
  * @returns
  */
 export async function llmFreeWithText(prompt, text) {

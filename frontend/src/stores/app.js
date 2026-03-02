@@ -78,7 +78,6 @@ export const useApp = defineStore('app', {
 
     getters: {
         datasetColor: state => state.datasetObj.colorAttr ? state.datasetObj.colorAttr : state.datasetObj.color,
-        datasetColorType: state => state.datasetObj.type,
         datasetX: state => state.datasetObj.x,
         datasetY: state => state.datasetObj.y,
         columnIndex: state => state.activeLens === 0 ? state.colorIndex : state.colorIndexSec

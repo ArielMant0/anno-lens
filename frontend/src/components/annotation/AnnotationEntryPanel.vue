@@ -24,14 +24,15 @@
                 />
         </div>
 
-        <template v-if="data.type === ENTRY_TYPE.TEXT">
+        <template v-if="data.text">
             <textarea v-if="showMarkdown"
                 v-model="data.text"
                 ref="editArea"
                 style="width: 100%; border: thin solid lightgray; border-radius: 4px;"
-                :rows="Math.floor(data.text.length / 65)"
+                :rows="textRows"
                 class="text-wrap pl-1 pr-1 anno-md"
                 @blur="setShowMarkdown(false)"
+                @keyup="onTextKeyUp"
                 @change="data.update()"
                 >
                 {{ data.text }}
@@ -44,12 +45,14 @@
             </div>
         </template>
 
-        <div class="d-flex flex-wrap mt-1">
-            <AnnotationEntity v-for="ent in data.entities"
-                :key="ent.id"
-                :entity="ent"
-                @remove="data.removeEntity(ent.id)"
-                class="mr-1 mb-1"
+
+        <div class="mt-1">
+            <EntitiesPanel v-if="data.type === ENTRY_TYPE.TEXT"
+                :entities="data.entities"
+                @remove="id => data.removeEntity(id)"
+                />
+            <ModifierPanel v-else-if="data.type === ENTRY_TYPE.MODIFIER"
+                :modifier="data.modifier"
                 />
         </div>
     </v-sheet>
@@ -58,13 +61,14 @@
 <script setup>
     import { marked } from 'marked';
     import { ACTION_TARGET } from '@/use/annotation/action-target';
-    import { ENTRY_SOURCE, ENTRY_TYPE, TextEntry } from '@/use/annotation/annotation-entry';
+    import { ENTRY_SOURCE, ENTRY_TYPE, ModifierEntry, TextEntry } from '@/use/annotation/annotation-entry';
     import { computed, onMounted, useTemplateRef, watch } from 'vue';
-    import AnnotationEntity from './AnnotationEntity.vue';
+    import EntitiesPanel from '../entrypanels/EntitiesPanel.vue';
+    import ModifierPanel from '../entrypanels/ModifierPanel.vue';
 
     const props = defineProps({
         data: {
-            type: [TextEntry],
+            type: [TextEntry, ModifierEntry],
             required: true
         },
         maxWidth: {
@@ -91,6 +95,7 @@
 
     const showMarkdown = ref(false)
     const markdown = ref("")
+    const textRows = ref(1)
 
     function convertMarkdown() {
         const truncate = props.maxLength > 0 && props.data.text.length > props.maxLength
@@ -104,7 +109,19 @@
         showMarkdown.value = value
     }
 
-    onMounted(convertMarkdown)
+    function onTextKeyUp(event) {
+        // on enter, add another row to the text area (up to a maximum of 10)
+        if (event.key === "Enter" && textRows.value < 10) {
+            textRows.value += 1
+        }
+    }
+
+    onMounted(function() {
+        convertMarkdown()
+        if (props.data.text) {
+            textRows.value = Math.floor(props.data.text.length / 65)
+        }
+    })
 
     watch(editArea, function() {
         if (editArea.value) {

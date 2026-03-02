@@ -10,29 +10,17 @@ export const ENTRY_SOURCE = Object.freeze({
 
 export const ENTRY_TYPE = Object.freeze({
     TEXT: 1,
-    VIS: 2,
+    MODIFIER: 2,
+    VIS: 3,
 });
 
 export class AnnotationEntry {
 
-    constructor(annotation, type, src) {
+    constructor(annotation, type, src, entities=[]) {
         this._anno = annotation
         this.id = `entry_${_ENTRY_ID++}`
         this.type = type
         this.source = src
-        this.time = Date.now()
-    }
-
-    update() {
-        throw new Error("called abstract function")
-    }
-}
-
-export class TextEntry extends AnnotationEntry {
-
-    constructor(annotation, text, src, entities=[]) {
-        super(annotation, ENTRY_TYPE.TEXT, src)
-        this.text = text
         this.entities = []
         this.addEntities(entities, false)
         this.timeUpdated = Date.now()
@@ -46,20 +34,7 @@ export class TextEntry extends AnnotationEntry {
     hasEntity(type, id) {
         return this.entities.some(d => d.type === type && d.id === id)
     }
-
-    getText() {
-        return this.text
-    }
-
-    addText(text) {
-        this.setText(this.text + "\n\n" + text)
-    }
-
-    setText(text) {
-        this.text = text
-        this.update()
-    }
-
+    
     addEntities(entities, update=true) {
         const before = this.entities.length
         const tmp = this.entities.concat(entities)
@@ -90,5 +65,44 @@ export class TextEntry extends AnnotationEntry {
             this.entities.splice(index, 1)
             this.update()
         }
+    }
+}
+
+export class TextEntry extends AnnotationEntry {
+
+    constructor(annotation, text, src, entities=[]) {
+        super(annotation, ENTRY_TYPE.TEXT, src)
+        this.text = text
+        this.addEntities(entities, false)
+        this.timeUpdated = Date.now()
+    }
+
+    getText() {
+        return this.text
+    }
+
+    addText(text) {
+        this.setText(this.text + "\n\n" + text)
+    }
+
+    setText(text) {
+        this.text = text
+        this.update()
+    }
+
+}
+
+export class ModifierEntry extends AnnotationEntry {
+
+    constructor(annotation, text, modifier, src, entities=[]) {
+        super(annotation, ENTRY_TYPE.MODIFIER, src)
+        this.text = text
+        this.modifier = modifier
+        this.addEntities(entities, false)
+        this.timeUpdated = Date.now()
+    }
+
+    getModifier() {
+        return this.modifier
     }
 }

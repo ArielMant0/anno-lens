@@ -792,11 +792,12 @@
                 .then(response => {
                     const entities = parseEntities(response)
                     // TODO: add to a global notepad
-                    DM.annotateText(
+                    DM.annotateModifier(
                         response.answer,
                         ENTRY_SOURCE.AI,
                         entities
                     )
+                    app.setColor("_color")
                     app.setLLMLoading(false)
                 })
             }, COMBINE_PROMPT, 2, Infinity, [ACTION_TARGET.COLUMN])

@@ -61,7 +61,7 @@
 
         ctx.clearRect(0, 0, props.width, props.height)
 
-        if (props.hide === true || !DM.featureMaps) return
+        if (props.hide === true || !DM.featureMaps || !DM.featureMaps[props.column]) return
 
         const map = DM.featureMaps[props.column][props.mode]
 
