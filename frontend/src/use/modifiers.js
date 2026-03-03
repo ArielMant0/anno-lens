@@ -3,8 +3,9 @@ import { getAttr } from "./util"
 import { Entity, ENTITY_TYPE } from "./annotation/entity"
 
 export const MODIFIER_TYPE = Object.freeze({
-    COLOR_FUNCTION: 1,
+    COLOR_FUNCTION: "_mod_col",
 })
+export const MODIFIER_COLUMNS = Object.values(MODIFIER_TYPE)
 
 let _MOD_ID = 1
 
@@ -33,8 +34,8 @@ export class ColorFunctionModifier extends Modifier {
     /**
      * Create a new color function modifier that creates a colormap based
      * on column weights (or sth else?)
-     * @param {Entity[]} entities 
-     * @param {Function} colors 
+     * @param {Entity[]} entities
+     * @param {Function} colors
      */
     constructor(entities, options=DEFAULT_CF_OPTIONS) {
         super(MODIFIER_TYPE.COLOR_FUNCTION)
@@ -48,18 +49,16 @@ export class ColorFunctionModifier extends Modifier {
     }
 
     apply(d) {
-        let col = "black"
+        let value = 0
 
         // color points based on a weighted linear combination of their feature values
         if (this.entities.length > 0 && this.entities.at(0).type === ENTITY_TYPE.COLUMN) {
-            col = this.colormap(
-                this.entities.reduce((acc, c) => acc + getAttr(d, c.name) * c.value, 0)
-            )
+            value = this.entities.reduce((acc, c) => acc + getAttr(d, c.name) * c.value, 0)
         }
 
         // assign color to datapoint
-        d._color = col
-        
-        return col
+        d[this.type] = value
+
+        return value
     }
 }

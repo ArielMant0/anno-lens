@@ -1,17 +1,22 @@
 <template>
     <div>
-        <div v-if="modifier.type === MODIFIER_TYPE.COLOR_FUNCTION" class="d-flex align-start" :style="{ height: '150px' }">
-            <v-slider v-for="col in modifier.entities"
-                v-model="col.value"
-                :key="col.name"
-                :label="col.name"
-                :min="0"
-                :max="1"
-                :max-width="100"
-                direction="vertical"
-                class="text-caption"
-                @update:model-value="refreshColor"
-                />
+        <div v-if="modifier.type === MODIFIER_TYPE.COLOR_FUNCTION">
+            <div v-for="col in modifier.entities" :key="col.name" class="d-flex align-center">
+                <div style="width: 100px;" class="text-dots">
+                    {{ col.name }}
+                    <span style="font-size: smaller;">({{ col.value.toFixed(1) }})</span>
+                </div>
+                <v-slider
+                    v-model="col.value"
+                    :min="0"
+                    :max="1"
+                    class="text-caption"
+                    @update:model-value="refreshColor"
+                    hide-details
+                    hide-spin-buttons
+                    density="compact"
+                    />
+            </div>
         </div>
     </div>
 </template>
@@ -29,7 +34,9 @@
 
     function refreshColor() {
         DM.getData(false).forEach(d => props.modifier.apply(d))
-        app.setColor("_color")
+        DM.recomputeFeatureMap(props.modifier.type, 10, function() {
+            app.featureTime = Date.now()
+        })
     }
 
 </script>

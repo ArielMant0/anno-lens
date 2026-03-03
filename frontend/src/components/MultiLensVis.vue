@@ -155,6 +155,7 @@
     import { ACTION_TARGET } from '@/use/annotation/action-target';
     import { Command, LLMCommand } from '@/use/commands';
     import CM from '@/use/command-manager';
+    import { MODIFIER_COLUMNS, MODIFIER_TYPE } from '@/use/modifiers';
 
     const app = useApp()
     const controls = useControls()
@@ -526,7 +527,7 @@
         columns.value = points.columns.filter(d => {
             const n = d.toLowerCase()
             return n !== "id" && n !== "x" && n !== "y" && !app.datasetObj.ignore.includes(d)
-        })
+        }).concat(MODIFIER_COLUMNS)
 
         if (app.datasetObj.parse) {
             points.forEach(d => {
@@ -539,10 +540,12 @@
             })
         }
 
-        // set id if not part of dataset
-        if (!points[0]["id"]) {
-            points.forEach((d, i) => d.id = i)
-        }
+        const missingId = points[0]["id"] === undefined
+        points.forEach((d, i) => {
+            // set id if not part of dataset
+            if (missingId) d.id = i
+            MODIFIER_COLUMNS.forEach(name => d[name] = 0)
+        })
 
         // add primary lens
         DM.addLens(lensRadius.value, lensType.value, true)
@@ -558,11 +561,6 @@
 
         int.scales = scales
         ctypes.value = ct
-
-        points.forEach(d => {
-            d.visited = {}
-            columns.value.forEach(c => d.visited[c] = 0)
-        })
 
         DM.setDataset(app.datasetObj)
         DM.setData(points, toRaw(columns.value), ct, "x", "y", w.value, h.value)
@@ -792,12 +790,13 @@
                 .then(response => {
                     const entities = parseEntities(response)
                     // TODO: add to a global notepad
-                    DM.annotateModifier(
+                    const entry = DM.annotateModifier(
                         response.answer,
                         ENTRY_SOURCE.AI,
                         entities
                     )
-                    app.setColor("_color")
+                    setColorOverride(MODIFIER_TYPE.COLOR_FUNCTION)
+                    int.scales[MODIFIER_TYPE.COLOR_FUNCTION] = entry.modifier.colormap
                     app.setLLMLoading(false)
                 })
             }, COMBINE_PROMPT, 2, Infinity, [ACTION_TARGET.COLUMN])

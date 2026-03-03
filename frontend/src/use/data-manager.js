@@ -8,7 +8,7 @@ import { LensSelection } from "./selection/selection";
 import Annotation from "./annotation/annotation";
 import { ModifierEntry, TextEntry } from "./annotation/annotation-entry";
 import { pick } from "./random"
-import { ColorFunctionModifier } from "./modifiers"
+import { ColorFunctionModifier, MODIFIER_COLUMNS, MODIFIER_TYPE } from "./modifiers"
 
 function calcStats(data, c, filterType) {
     const ord = filterType === DATA_TYPES.ORDINAL || filterType === DATA_TYPES.NOMINAL || filterType === DATA_TYPES.BOOLEAN
@@ -234,7 +234,7 @@ class DataManager {
 
         // calculate stats
         this.stats = {}
-        columns.forEach((c, i) => this.stats[c] = calcStats(data, c, types[i]))
+        this.columns.forEach((c, i) => this.stats[c] = calcStats(data, c, types[i]))
         this.filterStats = this.stats;
 
         // scales for quadtree
@@ -315,7 +315,6 @@ class DataManager {
         const myWorker = new MyWorker();
         // set map upon completion
         myWorker.onmessage = e => {
-            console.log("received message from worker")
             this.featureMaps = e.data.maps
             this.lensMaps = e.data.lenses
             if (callback) {
@@ -331,6 +330,32 @@ class DataManager {
             width: this.width,
             height: this.height,
             radius: radius,
+            size: size,
+        })
+    }
+
+    recomputeFeatureMap(name, size=10, callback=null) {
+        if (this.data.length === 0) return
+        const myWorker = new MyWorker();
+        // set map upon completion
+        myWorker.onmessage = e => {
+            this.featureMaps[name] = e.data.maps[name]
+            this.lensMaps[name] = e.data.lenses[name]
+            if (callback) {
+                callback(this.featureMaps[name])
+            }
+        }
+        const types =  {}
+        types[name] = DATA_TYPES.SEQUENTIAL
+        // compute feature maps in web worker
+        myWorker.postMessage({
+            columns: [name],
+            types: types,
+            data: this.data,
+            stats: this.filterStats,
+            width: this.width,
+            height: this.height,
+            radius: this.lenses[0].radius,
             size: size,
         })
     }
@@ -466,63 +491,54 @@ class DataManager {
         // TODO: what about global notes where there is no associated selection?
         // TODO: what about unsaved annotations?
 
-        let target = null
+        let target = null, entry = null
+
         if (id !== null) {
             target = this.getAnnotationById(id)
-            if (target) {
-                // if the referenced annotation exists, add an entry
-                target.addEntry(new TextEntry(target, text, src, entities))
-                this.callbacks.anno.forEach(f => f(target))
-            }
-            return
-        } else if (this.selections.length === 0) {
-            // no data is selected, so make no tmp annotation
-            return
-        }
-
-        if (this.hasTmpAnnotation) {
+        } else if (this.hasTmpAnnotation) {
             // if we have an unsaved annotation, add the entry to it
-            this.tmpAnno.addEntry(new TextEntry(this.tmpAnno, text, src, entities))
             target = this.tmpAnno
         } else {
             // otherwise, create a new unsaved annotation
             this.tmpAnno = this.createEmptyAnnotation(`A${this.annotations.length+1}`)
-            this.tmpAnno.addEntry(new TextEntry(this.tmpAnno, text, src, entities))
             target = this.tmpAnno
         }
 
         if (target) {
+            entry = new TextEntry(target, text, src, entities)
+            target.addEntry(entry)
             this.callbacks.anno.forEach(f => f(target))
         }
+
+        return entry
     }
 
     annotateModifier(text, src, entities, id=null) {
 
-        let target = null
-
-        const modifier = new ColorFunctionModifier(entities)
+        let target = null, entry = null
 
         if (id !== null) {
             target = this.getAnnotationById(id)
-            if (target) {
-                // if the referenced annotation exists, add an entry
-                target.addEntry(new ModifierEntry(target, text, modifier, src, entities))
-            }
         } else if (this.hasTmpAnnotation) {
-            // if we have an unsaved annotation, add the entry to it
-            this.tmpAnno.addEntry(new ModifierEntry(this.tmpAnno, text, modifier, src, entities))
             target = this.tmpAnno
         } else {
             // otherwise, create a new unsaved annotation
             this.tmpAnno = this.createEmptyAnnotation(`A${this.annotations.length+1}`)
-            this.tmpAnno.addEntry(new ModifierEntry(this.tmpAnno, text, modifier, src, entities))
             target = this.tmpAnno
         }
 
         if (target) {
+            const modifier = new ColorFunctionModifier(entities)
+            entry = new ModifierEntry(target, text, modifier, src, entities)
             this.data.forEach(d => modifier.apply(d))
+            this.recomputeFeatureMap(modifier.type, 10, function() {
+                const app = useApp()
+                app.featureTime = Date.now()
+            })
             this.callbacks.anno.forEach(f => f(target))
         }
+
+        return entry
     }
 
     saveTmpAnnotation() {
