@@ -51,7 +51,7 @@
 
             <template v-for="(entry, idx) in entries" :key="entry.id+'_'+entry.timeUpdated">
                 <v-divider v-if="idx > 0" class="mt-2 mb-1"></v-divider>
-                <AnnotationEntryPanel :data="entry" :max-length="maxEntryLength"/>
+                <AnnotationEntryPanel :data="entry" :max-length="maxEntryLength" :compact="showCompact"/>
             </template>
             <div v-if="numHidden > 0">{{ numHidden }} more...</div>
 
@@ -137,8 +137,7 @@
     const minh = computed(() => props.minHeight + (typeof props.minHeight === "string" ? "" : "px"))
     const maxh = computed(() => props.maxHeight + (typeof props.maxHeight === "string" ? "" : "px"))
     const w = computed(() => props.width + (typeof props.width === "string" ? "" : "px"))
-
-    const newAnnoText = ref("")
+    const showCompact = computed(() => props.maxEntryLength > 0 && props.maxEntryLength <= 200)
 
     const anno = computed(() => props.data ? props.data : DM.getAnnotationById(props.id))
     const numEntries = computed(() => {

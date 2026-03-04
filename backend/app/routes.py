@@ -148,10 +148,10 @@ def combine():
     if config.USE_DUMMY_DATA:
         return jsonify({
             "answer": "combination explanation",
-            "weights": { "potassium": 0.33, "protein": 0.66 }
+            "weights": { "sugars": 0.33, "protein": 0.66 }
         })
 
-    template = request.json["prompt"] + " The weights should sum up to 1. Only reply with the explanation and weights, nothing else. Columns: {columns}"
+    template = request.json["prompt"] + " Weights should be between -1 and 1. Only reply with the explanation and weights, nothing else. Columns: {columns}"
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a data analyst."),

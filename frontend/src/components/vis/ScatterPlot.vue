@@ -17,10 +17,6 @@
     const { hoverX, hoverY } = storeToRefs(app)
 
     const props = defineProps({
-        data: {
-            type: Array,
-            required: true
-        },
         selected: {
             type: Array,
             default: () => ([])
@@ -91,7 +87,7 @@
     const el = ref(null)
     const overlay = ref(null)
 
-    let tree;
+    let _data = [], tree;
     let ctx;
     let x, y, colors, opacities;
 
@@ -106,7 +102,7 @@
 
     function draw() {
         ctx.clearRect(0, 0, props.width, props.height)
-        props.data.forEach(d => {
+        _data.forEach(d => {
             if (dataIds.size > 0 && !dataIds.has(d.id)) return
             ctx.globalAlpha = getOpacity(d)
             ctx.beginPath()
@@ -211,17 +207,17 @@
                 case DATA_TYPES.BOOLEAN:
                 case DATA_TYPES.NOMINAL:
                     scale = d3.scaleOrdinal(d3.schemeCategory10).unknown("black")
-                    vals = Array.from(new Set(props.data.map(getC)).values())
+                    vals = Array.from(new Set(_data.map(getC)).values())
                     vals.sort((a, b) => a-b)
                     break
                 case DATA_TYPES.ORDINAL:
                     scale = d3.scaleOrdinal(d3.schemeBlues[9]).unknown("black")
-                    vals = Array.from(new Set(props.data.map(getC)).values())
+                    vals = Array.from(new Set(_data.map(getC)).values())
                     vals.sort((a, b) => a-b)
                     break;
                 case DATA_TYPES.SEQUENTIAL:
                     scale = d3.scaleSequential(d3.interpolatePlasma).unknown("black")
-                    vals = d3.extent(props.data, getC)
+                    vals = d3.extent(_data, getC)
                     break;
             }
             colors = scale.domain(vals)
@@ -231,7 +227,7 @@
 
         if (props.opacityAttr) {
             opacities = d3.scaleLinear()
-                .domain(d3.extent(props.data, getO))
+                .domain(d3.extent(_data, getO))
                 .range([0.01, 1])
         } else {
             opacities = null
@@ -244,20 +240,21 @@
     }
 
     function init() {
+        _data = DM.getData(true)
         const off = props.radius + 2
 
         x = d3.scaleLinear()
-            .domain(d3.extent(props.data, getX))
+            .domain(d3.extent(_data, getX))
             .range([off, props.width - off])
 
         y = d3.scaleLinear()
-            .domain(d3.extent(props.data, getY))
+            .domain(d3.extent(_data, getY))
             .range([props.height - off, off])
 
         tree = d3.quadtree()
             .x(d => x(getX(d)))
             .y(d => y(getY(d)))
-            .addAll(props.data)
+            .addAll(_data)
 
         ctx = ctx ? ctx : el.value.getContext("2d")
 
@@ -285,6 +282,7 @@
     watch(() => props.selected, updateSelected)
     watch(() => props.time, init)
     watch(() => props.update, function() {
+        _data = DM.getData(false)
         makeColorScale()
         updateSelected()
     })

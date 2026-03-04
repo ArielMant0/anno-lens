@@ -1,7 +1,7 @@
 <template>
 <div style="min-height: 90vh; max-height: 97vh; max-width: 100vw;">
 
-    <div v-if="!loading && data.length > 0" class="d-flex flex-column align-center justify-start mt-2">
+    <div v-if="!loading && numData > 0" class="d-flex flex-column align-center justify-start mt-2">
         <div class="d-flex mt-2">
             <div>
                 <div style="position: relative;">
@@ -19,14 +19,12 @@
                         ref="scatter"
                         id="scatter-main"
                         style="position: absolute; top: 0; left: 0; margin: 0px 170px;"
-                        :data="data"
-                        :selected="dataF"
                         :time="dataTime"
                         :update="lensTime"
                         :x-attr="datasetX"
                         :y-attr="datasetY"
                         :color-attr="chosenColorAttr"
-                        :color-scale="int.scales[chosenColorAttr]"
+                        :color-scale="app.scales[chosenColorAttr]"
                         :radius="5"
                         :width="w"
                         :height="h"
@@ -60,14 +58,15 @@
                                 :name="int.filterAttr"
                                 @clear="setFilter(null)"
                                 :ordinal="int.filterType === DATA_TYPES.ORDINAL || int.filterType === DATA_TYPES.NOMINAL || int.filterType === DATA_TYPES.BOOLEAN"
-                                :scale="int.scales[int.filterAttr]"/>
+                                :scale="app.scales[int.filterAttr]"/>
                         </div>
 
-                        <ColorLegend v-if="int.scales[chosenColorAttr]"
+                        <ColorLegend v-if="app.scales[chosenColorAttr]"
                             :key="chosenColorAttr"
-                            :scale="int.scales[chosenColorAttr]"
+                            :scale="app.scales[chosenColorAttr]"
                             :selected="chosenColorAttr === int.filterAttr ? int.filterValues : []"
                             style="display: block;"
+                            :refresh="lensTime"
                             @click="setFilter"
                             @brush="setFilter"/>
                     </div>
@@ -92,6 +91,7 @@
                 <DataHistograms
                     :active="!moveLens || mouseStill"
                     :time="lensTime"
+                    :refresh="featureTime"
                     :mode="refMode"
                     :selected-column="chosenColorAttr"
                     @update="applyLens"/>
@@ -155,7 +155,7 @@
     import { ACTION_TARGET } from '@/use/annotation/action-target';
     import { Command, LLMCommand } from '@/use/commands';
     import CM from '@/use/command-manager';
-    import { MODIFIER_COLUMNS, MODIFIER_TYPE } from '@/use/modifiers';
+    import { MODIFIER_COLUMNS, MODIFIER_TYPE } from '@/use/annotation/modifiers';
 
     const app = useApp()
     const controls = useControls()
@@ -201,20 +201,20 @@
     })
     const h = computed(() => w.value)
 
-    const data = ref([])
-    const dataF = computed(() => {
-        if (int.filterAttr === null) return []
-        if (int.filterType === DATA_TYPES.ORDINAL || DATA_TYPES.NOMINAL || int.filterType === DATA_TYPES.BOOLEAN) {
-            const v = int.filterValues
-            return data.value
-                .filter(d => v.includes(getAttr(d, int.filterAttr)))
-                .map(d => d.id)
-        }
-        const [a, b] = int.filterValues
-        return data.value
-            .filter(d => getAttr(d, int.filterAttr) >= a && getAttr(d, int.filterAttr) <= b)
-            .map(d => d.id)
-    })
+    // const data = ref([])
+    // const dataF = computed(() => {
+    //     if (int.filterAttr === null) return []
+    //     if (int.filterType === DATA_TYPES.ORDINAL || DATA_TYPES.NOMINAL || int.filterType === DATA_TYPES.BOOLEAN) {
+    //         const v = int.filterValues
+    //         return data.value
+    //             .filter(d => v.includes(getAttr(d, int.filterAttr)))
+    //             .map(d => d.id)
+    //     }
+    //     const [a, b] = int.filterValues
+    //     return data.value
+    //         .filter(d => getAttr(d, int.filterAttr) >= a && getAttr(d, int.filterAttr) <= b)
+    //         .map(d => d.id)
+    // })
 
     const columns = ref([])
     const ctypes = ref([])
@@ -231,6 +231,7 @@
     })
 
     const loading = ref(true)
+    const numData = ref(0)
 
     const colorColumn = ref(datasetColor.value)
     const colorColumnSec = ref(datasetColor.value)
@@ -368,7 +369,7 @@
             int.filterType = null
         }
 
-        DM.computeFilterStats(dataF.value)
+        // DM.computeFilterStats(dataF.value)
         applyLens()
     }
 
@@ -507,9 +508,7 @@
         ready.value = false
         mouseStill.value = false
 
-        data.value = []
         topFeatures.value = []
-        int.scales = {}
         int.mainLens = null
         int.columns = []
         int.otherColumns = []
@@ -559,16 +558,15 @@
         })
         DM.setScales(scales)
 
-        int.scales = scales
+        app.scales = scales
         ctypes.value = ct
 
         DM.setDataset(app.datasetObj)
         DM.setData(points, toRaw(columns.value), ct, "x", "y", w.value, h.value)
 
         loading.value = false
-
-        data.value = points
-
+        numData.value = points.length
+        
         app.setInitialized()
 
         dataTime.value = Date.now()
@@ -795,9 +793,9 @@
                         ENTRY_SOURCE.AI,
                         entities
                     )
-                    setColorOverride(MODIFIER_TYPE.COLOR_FUNCTION)
-                    int.scales[MODIFIER_TYPE.COLOR_FUNCTION] = entry.modifier.colormap
                     app.setLLMLoading(false)
+                    setColorOverride(MODIFIER_TYPE.COLOR_FUNCTION)
+                    app.scales[MODIFIER_TYPE.COLOR_FUNCTION] = entry.modifier.colormap
                 })
             }, COMBINE_PROMPT, 2, Infinity, [ACTION_TARGET.COLUMN])
         CM.addKeyMapping(8, "5", "combine", combineCommand)

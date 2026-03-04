@@ -23,7 +23,7 @@
     import TextNote from './TextNote.vue';
 
     const app = useApp()
-    const { selectionTime, annoTime, llmLoading } = storeToRefs(app)
+    const { lensMoveTime, annoTime, llmLoading } = storeToRefs(app)
 
     const annos = ref([])
 
@@ -34,6 +34,6 @@
 
     onMounted(readAnnotations)
 
-    watch(selectionTime, readAnnotations)
+    watch(lensMoveTime, readAnnotations)
     watch(annoTime, readAnnotations)
 </script>

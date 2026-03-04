@@ -21,7 +21,7 @@
 
                 <div v-for="i in fP"
                     class="text-caption"
-                    :key="'p_'+colsP[i]+'_'+i"
+                    :key="'p_'+colsP[i]+'_'+i+'_'+refresh"
                     :style="{
                         textAlign: 'center',
                         border: '1px solid ' + (colsP[i] === selectedColumn ? 'black' : 'white'),
@@ -54,7 +54,7 @@
             <div :style="{ width: (2*(chartWidth+10))+'px' }" class="d-flex flex-wrap">
                 <div v-for="i in fOP"
                     class="text-caption"
-                    :key="'po_'+colsOtherP[i]+'_'+i"
+                    :key="'po_'+colsOtherP[i]+'_'+i+'_'+refresh"
                     :style="{
                         textAlign: 'center',
                         border: '1px solid ' + (colsOtherP[i] === selectedColumn ? 'black' : 'white'),
@@ -90,15 +90,12 @@
     import BarChart from './vis/BarChart.vue';
     import { useApp } from '@/stores/app';
     import { calcHistogram } from '@/use/util';
-    import { useControls } from '@/stores/controls';
     import { storeToRefs } from 'pinia';
     import CM from '@/use/command-manager';
     import { ACTION_TARGET } from '@/use/annotation/action-target';
 
     const app = useApp()
     const { activeLens, showHotbar } = storeToRefs(app)
-
-    const controls = useControls()
 
     const props = defineProps({
         active: {
@@ -122,6 +119,10 @@
             default: 80
         },
         time: {
+            type: Number,
+            default: 0
+        },
+        refresh: {
             type: Number,
             default: 0
         },

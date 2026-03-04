@@ -27,6 +27,10 @@
             type: Number,
             required: false
         },
+        refresh: {
+            type: Number,
+            default: 0
+        },
         width: {
             type: Number,
             default: 300
@@ -170,4 +174,5 @@
     onMounted(draw)
 
     watch(() => props.selected, highlight)
+    watch(() => props.refresh, draw)
 </script>

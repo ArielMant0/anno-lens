@@ -8,7 +8,7 @@ import { LensSelection } from "./selection/selection";
 import Annotation from "./annotation/annotation";
 import { ModifierEntry, TextEntry } from "./annotation/annotation-entry";
 import { pick } from "./random"
-import { ColorFunctionModifier, MODIFIER_COLUMNS, MODIFIER_TYPE } from "./modifiers"
+import { ColorFunctionModifier, MODIFIER_COLUMNS, MODIFIER_TYPE } from "./annotation/modifiers"
 
 function calcStats(data, c, filterType) {
     const ord = filterType === DATA_TYPES.ORDINAL || filterType === DATA_TYPES.NOMINAL || filterType === DATA_TYPES.BOOLEAN
@@ -64,6 +64,7 @@ class DataManager {
     constructor() {
         this.filterIds = new Set()
         this.callbacks = { lens: [], anno: [] }
+        this.worker = null
         this.reset()
     }
 
@@ -310,19 +311,21 @@ class DataManager {
     }
 
     computeFeatureMaps(radius, size=10, callback=null) {
+        if (this.worker) this.worker.terminate()
         if (this.data.length === 0) return
 
-        const myWorker = new MyWorker();
+        this.worker = new MyWorker();
         // set map upon completion
-        myWorker.onmessage = e => {
+        this.worker.onmessage = e => {
             this.featureMaps = e.data.maps
             this.lensMaps = e.data.lenses
+            this.worker = null
             if (callback) {
                 callback(this.featureMaps)
             }
         }
         // compute feature maps in web worker
-        myWorker.postMessage({
+        this.worker.postMessage({
             columns: this.columns,
             types: this.types,
             data: this.data,
@@ -335,22 +338,23 @@ class DataManager {
     }
 
     recomputeFeatureMap(name, size=10, callback=null) {
+        if (this.worker) this.worker.terminate()
         if (this.data.length === 0) return
-        const myWorker = new MyWorker();
+
+        this.worker = new MyWorker();
         // set map upon completion
-        myWorker.onmessage = e => {
+        this.worker.onmessage = e => {
             this.featureMaps[name] = e.data.maps[name]
             this.lensMaps[name] = e.data.lenses[name]
+            this.worker = null
             if (callback) {
                 callback(this.featureMaps[name])
             }
         }
-        const types =  {}
-        types[name] = DATA_TYPES.SEQUENTIAL
         // compute feature maps in web worker
-        myWorker.postMessage({
+        this.worker.postMessage({
             columns: [name],
-            types: types,
+            types: [this.types[this.columns.indexOf(name)]],
             data: this.data,
             stats: this.filterStats,
             width: this.width,
@@ -358,6 +362,14 @@ class DataManager {
             radius: this.lenses[0].radius,
             size: size,
         })
+    }
+
+    columnUpdate(name, size=10, callback=null) {
+        const idx = this.columns.indexOf(name)
+        if (idx >= 0) {
+            this.stats[name] = calcStats(this.data, name, this.types[idx])
+            this.recomputeFeatureMap(name, size, callback)
+        }
     }
 
     computeFilterStats(ids) {
@@ -528,14 +540,17 @@ class DataManager {
         }
 
         if (target) {
-            const modifier = new ColorFunctionModifier(entities)
-            entry = new ModifierEntry(target, text, modifier, src, entities)
-            this.data.forEach(d => modifier.apply(d))
-            this.recomputeFeatureMap(modifier.type, 10, function() {
+            entry = new ModifierEntry(target, text, src, entities)
+            const modifier = new ColorFunctionModifier(entry, entities)
+            entry.setModifier(modifier)
+
+            target.addEntry(entry)
+            modifier.applyAll(this.data)
+            this.callbacks.anno.forEach(f => f(target))
+            this.columnUpdate(modifier.type, 10, function() {
                 const app = useApp()
                 app.featureTime = Date.now()
             })
-            this.callbacks.anno.forEach(f => f(target))
         }
 
         return entry

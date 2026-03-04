@@ -2,7 +2,7 @@ import { calcDeviation, findInCircle } from "@/use/util";
 import { extent, quadtree, scaleLinear, mean } from "d3";
 
 onmessage = (e) => {
-    console.log("Message received from main script");
+    console.debug("Message received from main script");
     postMessage(calc(
         e.data.columns,
         e.data.types,

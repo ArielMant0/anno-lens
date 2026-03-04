@@ -94,12 +94,16 @@ export class TextEntry extends AnnotationEntry {
 
 export class ModifierEntry extends AnnotationEntry {
 
-    constructor(annotation, text, modifier, src, entities=[]) {
+    constructor(annotation, text, src, entities=[], modifier=null) {
         super(annotation, ENTRY_TYPE.MODIFIER, src)
         this.text = text
         this.modifier = modifier
         this.addEntities(entities, false)
         this.timeUpdated = Date.now()
+    }
+
+    setModifier(modifier) {
+        this.modifier = modifier
     }
 
     getModifier() {

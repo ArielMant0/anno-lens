@@ -49,10 +49,14 @@
         <div class="mt-1">
             <EntitiesPanel v-if="data.type === ENTRY_TYPE.TEXT"
                 :entities="data.entities"
+                :annotation="data._anno.id"
                 @remove="id => data.removeEntity(id)"
                 />
             <ModifierPanel v-else-if="data.type === ENTRY_TYPE.MODIFIER"
                 :modifier="data.modifier"
+                :compact="compact"
+                :annotation="data._anno.id"
+                @update="data.update()"
                 />
         </div>
     </v-sheet>
@@ -70,6 +74,10 @@
         data: {
             type: [TextEntry, ModifierEntry],
             required: true
+        },
+        compact: {
+            type: Boolean,
+            default: false
         },
         maxWidth: {
             type: [Number, String],
