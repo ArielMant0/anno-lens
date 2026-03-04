@@ -1,6 +1,6 @@
 <template>
     <Teleport to="body">
-        <div v-show="visible" id="targeting-overlay">
+        <div v-show="showTargetOverlay" id="targeting-overlay">
             <svg id="to-svg" width="100%" height="100%"></svg>
         </div>
     </Teleport>
@@ -15,11 +15,18 @@
     import { onBeforeUnmount, onMounted, watch } from 'vue';
     import { LLMCommand } from '@/use/commands';
     import { AnnotationEntity, ColumnEntity, SelectionEntity } from '@/use/annotation/entity';
+    import { useApp } from '@/stores/app';
 
+    const app = useApp()
+    const { showTargetOverlay } = storeToRefs(app)
+    
     const controls = useControls()
     const { canTarget, activeMappingId } = storeToRefs(controls)
-
-    const visible = ref(false)
+    
+    const props = defineProps({
+        color: { type: String, default: "magenta" },
+        offset: { type: Number, default: 5 },
+    })
 
     const scrollContainers = new Set();
 
@@ -50,18 +57,18 @@
     }
 
     function show() {
+        if (showTargetOverlay.value || !canTarget.value) return
         console.debug("showing targeting overlay")
-        if (!canTarget.value) return
         reset()
-        visible.value = true
+        showTargetOverlay.value = true
 
         makeHighlights()
     }
 
     function hide() {
-        if (!visible.value) return
+        if (!showTargetOverlay.value) return
         controls.cancelActive()
-        visible.value = false
+        showTargetOverlay.value = false
         reset()
     }
 
@@ -132,7 +139,7 @@
     }
 
     function makeHighlights() {
-        if (!visible.value) return;
+        if (!showTargetOverlay.value) return;
 
         const cmd = controls.activeMapping.command
         if (!(cmd instanceof LLMCommand)) return
@@ -155,14 +162,14 @@
             .attr("fill-opacity", 0.1)
             .attr("stroke", "black")
             .attr("stroke-dasharray", "4 4")
-            .attr("rx", 3)
-            .attr("ry", 3)
-            .attr("x", d => d.rect.left-2)
-            .attr("y", d => d.rect.top-2)
-            .attr("width", d => d.rect.width+4)
-            .attr("height", d => d.rect.height+4)
+            .attr("rx", 5)
+            .attr("ry", 5)
+            .attr("x", d => d.rect.left-props.offset)
+            .attr("y", d => d.rect.top-props.offset)
+            .attr("width", d => d.rect.width+2*props.offset)
+            .attr("height", d => d.rect.height+2*props.offset)
             .on("pointerenter", function() {
-                d3.select(this).attr("stroke", "magenta")
+                d3.select(this).attr("stroke", props.color)
             })
             .on("pointerleave", function() {
                 d3.select(this).attr("stroke", "black")
@@ -191,10 +198,10 @@
             scrollPending = false
             highlights.forEach(d => d.rect = d.el.getBoundingClientRect())
             svgNodes
-                .attr("x", d => d.rect.left-2)
-                .attr("y", d => d.rect.top-2)
-                .attr("width", d => d.rect.width+4)
-                .attr("height", d => d.rect.height+4)
+                .attr("x", d => d.rect.left-props.offset)
+                .attr("y", d => d.rect.top-props.offset)
+                .attr("width", d => d.rect.width+2*props.offset)
+                .attr("height", d => d.rect.height+2*props.offset)
                 .style("display", d => {
                     const parents = getScrollableAncestors(d.el)
                     if (parents.length === 0) {
@@ -214,10 +221,14 @@
     }
 
     onMounted(init)
-    onBeforeUnmount(reset)
+    onBeforeUnmount(function() {
+        reset()
+        window.removeEventListener("resize", makeHighlights)
+        window.removeEventListener("scroll", updateHighlights, { passive: true })
+    })
 
     watch(activeMappingId, function(value) {
-        if (value !== null && !visible.value) {
+        if (value !== null) {
             show()
         }
     })

@@ -68,20 +68,26 @@ export const useApp = defineStore('app', {
         annoTime: 0,
         featureTime: 0,
         selectionTime: 0,
+        hoverTime: 0,
 
         showHotbar: true,
         showInventory: false,
         inventoryTime: 0,
 
         llmLoading: false,
-        initialized: false
+        initialized: false,
+
+        hovered: new Map(),
+        showTargetOverlay: false,
+        showHoverOverlay: false,
     }),
 
     getters: {
         datasetColor: state => state.datasetObj.colorAttr ? state.datasetObj.colorAttr : state.datasetObj.color,
         datasetX: state => state.datasetObj.x,
         datasetY: state => state.datasetObj.y,
-        columnIndex: state => state.activeLens === 0 ? state.colorIndex : state.colorIndexSec
+        columnIndex: state => state.activeLens === 0 ? state.colorIndex : state.colorIndexSec,
+        hasHoveredEntity: state => state.hovered.size > 0
     },
 
     actions: {
@@ -121,6 +127,32 @@ export const useApp = defineStore('app', {
 
         setLLMLoading(value) {
             this.llmLoading = value === true
+        },
+
+        isHoveredEntity(entityId) {
+            return this.hovered.has(entityId)
+        },
+
+        setHoverEntity(entityId, data) {
+            if (!this.isHoveredEntity(entityId)) {
+                this.hovered.set(entityId, data)
+                this.hoverTime = Date.now()
+            }
+        },
+
+        unsetHoverEntity(entityId) {
+            if (this.isHoveredEntity(entityId)) {
+                this.hovered.delete(entityId)
+                this.hoverTime = Date.now()
+            }
+        },
+
+        toggleHoverEntity(entityId, data) {
+            if (this.isHoveredEntity(entityId)) {
+                this.setHoverEntity(entityId, data)
+            } else {
+                this.unsetHoverEntity(entityId)
+            }
         }
     }
 })

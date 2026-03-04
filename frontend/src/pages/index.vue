@@ -8,6 +8,7 @@
             <DatasetSelector/>
             <HotBar/>
         </template>
+        <HoverOverlay/>
         <TargetingOverlay/>
         <CommandEditingPanel/>
     </div>
@@ -23,6 +24,7 @@
     import HotBar from '@/components/HotBar.vue';
     import DatasetSelector from '@/components/DatasetSelector.vue';
     import CommandEditingPanel from '@/components/CommandEditingPanel.vue';
+    import HoverOverlay from '@/components/HoverOverlay.vue';
 
     const app = useApp()
     const controls = useControls()

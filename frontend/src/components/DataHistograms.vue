@@ -227,6 +227,7 @@
     })
 
     watch(() => app.dataset, readGlobal)
+    watch(() => props.refresh, readGlobal)
 
     watch(() => props.active, read)
     watch(() => props.time, read)

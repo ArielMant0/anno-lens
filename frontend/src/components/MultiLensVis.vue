@@ -33,8 +33,6 @@
                         :highlight-color="theme.current.value.colors.primary"
                         @click-lens="onClickLens"
                         @hover="onHover"/>
-
-                    <svg ref="over" :width="w" :height="h" style="position: absolute; top: 0; left: 0; pointer-events: none;"></svg>
                 </div>
             </div>
 
@@ -133,7 +131,7 @@
     import { DATA_TYPES, useApp } from '@/stores/app';
     import { useControls } from '@/stores/controls';
     import { LENS_TYPE } from '@/use/Lens';
-    import { computed, reactive, toRaw, watch } from 'vue';
+    import { computed, reactive, toRaw, useTemplateRef, watch } from 'vue';
     import DM from '@/use/data-manager';
     import ColorLegend from './vis/ColorLegend.vue';
     import FilterDesc from './FilterDesc.vue';
@@ -188,8 +186,7 @@
 
     } = storeToRefs(app)
 
-    const over = ref(null)
-    const scatter = ref(null)
+    const scatter = useTemplateRef("scatter")
 
     const editColor = ref(null)
 
@@ -750,7 +747,7 @@
                 const s = t.getSelection()
                 const e = t.getEntities()
                 const name = e.name ? e.name : `Subset ${i+1}`
-                subsets[name] = s.filtverhaer(allData)
+                subsets[name] = s.filter(allData)
             })
 
             if (Object.keys(subsets).length < 2) {

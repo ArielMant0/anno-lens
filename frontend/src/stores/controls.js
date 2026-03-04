@@ -1,5 +1,6 @@
 import { TargetData } from '@/use/annotation/action-target'
 import CM from '@/use/command-manager'
+import { LLMCommand } from '@/use/commands'
 import { capitalize } from '@/use/util'
 import { defineStore } from 'pinia'
 
@@ -79,9 +80,15 @@ export const useControls = defineStore('controls', {
         keyEvent(event) {
             if (document.activeElement && isInputElement(document.activeElement.tagName)) return
             // if we have an active hotkey/mapping and clicked ESC, cancel the action
-            if (event.key === "Escape" && this.hasActive) {
-                return this.cancelActive()
+            if (this.hasActive) {
+                if (event.key === "Escape") {
+                    return this.cancelActive()
+                }
+                if (event.key === "Enter") {
+                    return this.executeActive()
+                }
             }
+
 
             if (!isValidKey(event.key)) return
 
@@ -132,6 +139,18 @@ export const useControls = defineStore('controls', {
             }
         },
 
+        canExecuteActive() {
+            if (this.hasActive) {
+                const cmd = this.activeMapping.command
+                if (cmd instanceof LLMCommand) {
+                    return this.numActiveTargets >= cmd.minTargets &&
+                        this.numActiveTargets <= cmd.maxTargets
+                }
+                return true
+            }
+            return false
+        },
+
         executeActive() {
             if (this.hasActive) {
                 const targets = CM.getTargets()
@@ -145,7 +164,7 @@ export const useControls = defineStore('controls', {
         },
 
         cancelActive() {
-            if (this.hasActive) {
+            if (this.canExecuteActive()) {
                 CM.clearTargets()
                 this.numActiveTargets = 0
                 this.activeMapping = null

@@ -1,11 +1,15 @@
 <template>
-    <div class="d-flex align-center">
+    <div
+        class="d-flex align-center"
+        @pointerenter="onEnter"
+        @pointerleave="onLeave"
+        >
         <v-chip
             closable
             :size="size"
             @click:close.prevent="emit('remove', entity)"
             @click="emit('click', entity)"
-            :data-target-type="targetType"
+            :data-target-type="entity.targetType"
             :data-target-id="entity.id"
             :data-target-anno="annotation"
             density="compact">
@@ -16,7 +20,7 @@
 </template>
 
 <script setup>
-    import { ACTION_TARGET } from '@/use/annotation/action-target';
+    import { useApp } from '@/stores/app';
     import { Entity, ENTITY_TYPE } from '@/use/annotation/entity';
 
     const props = defineProps({
@@ -26,7 +30,7 @@
         },
         annotation: {
             type: String,
-            default: null
+            default: ""
         },
         size: {
             type: String,
@@ -40,6 +44,8 @@
 
     const emit = defineEmits(["click", "remove"])
 
+    const app = useApp()
+
     const typeIcon = computed(() => {
         switch(props.entity.type) {
             case ENTITY_TYPE.ANNOTATION: return "mdi-note-edit-outline"
@@ -48,12 +54,19 @@
             case ENTITY_TYPE.COLUMN: return "mdi-pillar"
         }
     })
-    const targetType = computed(() => {
-        switch(props.entity.type) {
-            case ENTITY_TYPE.ANNOTATION: return ACTION_TARGET.ANNOTATION
-            case ENTITY_TYPE.DATAPOINT: return ACTION_TARGET.DATAPOINT
-            case ENTITY_TYPE.SELECTION: return ACTION_TARGET.SELECTION
-            case ENTITY_TYPE.COLUMN: return ACTION_TARGET.COLUMN
-        }
-    })
+
+    function onEnter() {
+        app.setHoverEntity(
+            props.entity.id,
+            {
+                type: props.entity.targetType,
+                data: props.entity.data
+            }
+        )
+    }
+
+    function onLeave() {
+        app.unsetHoverEntity(props.entity.id)
+    }
+
 </script>
