@@ -3,7 +3,7 @@
         <v-avatar :color="color" density="comfortable" size="24" class="mr-1" rounded="0">
             {{ label }}
         </v-avatar>
-        <template v-if="size">
+        <template v-if="size && size > 0">
             <div class="text-caption">
                 {{ size }}<v-icon size="small">mdi-scatter-plot</v-icon>
             </div>

@@ -13,7 +13,7 @@
             icon="mdi-plus"
             :color="text.length > 0 ? 'success' : 'default'"
             variant="text"
-            density="compact"
+            density="comfortable"
             rounded="sm"
             :disabled="text.length === 0"
             @click="saveAnnotation"
@@ -41,7 +41,7 @@
                     text.value,
                     ENTRY_SOURCE.USER,
                     [],
-                    props.annotationId
+                    { id: props.annotationId }
                 )
             }
             emit("submit", text.value)

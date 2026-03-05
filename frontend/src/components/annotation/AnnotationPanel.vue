@@ -55,7 +55,7 @@
             </template>
             <div v-if="numHidden > 0">{{ numHidden }} more...</div>
 
-            <TextNote v-if="!hideInput" class="ml-1 mr-1" :annotation-id="anno.id"/>
+            <TextNote v-if="!hideInput" class="mt-1" :annotation-id="anno.id"/>
         </div>
 
         <div v-if="side === 'right'" class="extras">

@@ -367,7 +367,10 @@
                 annoPosData[a.id] = { index: pos, side: "right" }
             })
 
-            annoPolygons.value = data.map(d => ({ id: d.id, polygon: d.polygon, color: d.color }))
+            annoPolygons.value = data
+                .map(d => ({ id: d.id, polygon: d.polygon, color: d.color }))
+                .filter(d => d.polygon)
+                
             annoMeta.sizeL = sizeL
             annoMeta.sizeR = sizeR
             annoPos.value = annoPosData

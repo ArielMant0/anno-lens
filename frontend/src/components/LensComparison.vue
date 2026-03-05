@@ -240,15 +240,7 @@
     }
 
     function annotate(lensIndex, columnIndex, columnValue=null) {
-        const lens = DM.getLens(lensIndex)
-        DM.annotate(
-            lensIndex,
-            columnIndex,
-            props.mode,
-            lens.type,
-            CM.getColor(5),
-            columnValue
-        )
+        // TODO: what to do here?
     }
 
     function drawConnections() {

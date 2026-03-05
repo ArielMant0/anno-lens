@@ -38,6 +38,22 @@ export class Selection {
         return new Selection(SELECTION_TYPE.NONE, int)
     }
 
+    get size() {
+        return this.data.size
+    }
+
+    union(ids) {
+        return this.data.union(ids)
+    }
+
+    intersection(ids) {
+        return this.data.intersection(ids)
+    }
+
+    difference(ids) {
+        return this.data.difference(ids)
+    } 
+
     copy() {
         const s = new Selection(this.type, this.data)
         s.x = this.x

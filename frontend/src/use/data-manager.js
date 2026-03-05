@@ -6,9 +6,9 @@ import { Lens, LENS_TYPE } from "./Lens"
 import MyWorker from '@/worker/feature-worker?worker'
 import { LensSelection } from "./selection/selection";
 import Annotation from "./annotation/annotation";
-import { ModifierEntry, TextEntry } from "./annotation/annotation-entry";
+import { ENTRY_TYPE, ModifierEntry, TextEntry } from "./annotation/annotation-entry";
 import { pick } from "./random"
-import { ColorFunctionModifier, MODIFIER_COLUMNS, MODIFIER_TYPE } from "./annotation/modifiers"
+import { ColorFunctionModifier, MODIFIER_TYPE } from "./annotation/modifiers"
 
 function calcStats(data, c, filterType) {
     const ord = filterType === DATA_TYPES.ORDINAL || filterType === DATA_TYPES.NOMINAL || filterType === DATA_TYPES.BOOLEAN
@@ -59,6 +59,12 @@ const DEFAULT_DESC_OPTIONS = Object.freeze({
     statistics: true
 })
 
+const DEFAULT_ANNO_OPTIONS = Object.freeze({
+    id: null, // annotation id
+    selections: [], // list of selections
+    useGlobal: false, // use active selections
+})
+
 class DataManager {
 
     constructor() {
@@ -91,7 +97,8 @@ class DataManager {
         this.lensMaps = null
 
         this.annotations = []
-        this.tmpAnno = null
+        this.globalAnno = new Annotation([], [], "Notes", "G")
+
         this.annoMap = {}
     }
 
@@ -163,15 +170,15 @@ class DataManager {
         // TODO: update lens selection
         this.selections[index].update(x, y, r)
         this.selections[index].apply(this.tree)
-        // TODO: reset temporary annotation (save to history?)
-        if (this.tmpAnno !== null) {
-            this.tmpAnno = null
-        }
+        const app = useApp()
+        app.numSelections = this.selections.reduce((acc, s) => acc + s.size, 0)
     }
 
     clearLens(index) {
         if (!this.lenses[index]) return
         this.lenses[index].reset()
+        const app = useApp()
+        app.numSelections = this.selections.reduce((acc, s) => acc + s.size, 0)
     }
 
     swapLenses(i, j) {
@@ -423,18 +430,10 @@ class DataManager {
         const ids = this.selections[0].data
 
         if (limit === 1) {
-            // return temporary annotation if it matches
-            if (this.tmpAnno && this.tmpAnno.hasDataOverlap(ids)) {
-                return this.tmpAnno
-            }
             const match = this.annotations.find(d => d.hasDataOverlap(ids))
             return match ? match : null
         } else if (limit > 1) {
             const matches = []
-            // add temporary annotation if it matches
-            if (this.tmpAnno && this.tmpAnno.hasDataOverlap(ids)) {
-                matches.push(this.tmpAnno)
-            }
             // add other annotations until the limit is reached
             for (let i = 0; i < this.annotations.length && matches.length <= limit; ++i) {
                 const d = this.annotations[i]
@@ -444,22 +443,13 @@ class DataManager {
             }
             return matches.length > 0 ? matches : null
         } else {
-            let matches = []
-            // add temporary annotation if it matches
-            if (this.tmpAnno && this.tmpAnno.hasDataOverlap(ids)) {
-                matches.push(this.tmpAnno)
-            }
-            matches = matches.concat(this.annotations.filter(d => d.hasDataOverlap(ids)))
+            const matches = this.annotations.filter(d => d.hasDataOverlap(ids))
             return matches.length > 0 ? matches : null
         }
     }
 
-    get hasTmpAnnotation() {
-        return this.tmpAnno !== null
-    }
-
-    getTmpAnnotation() {
-        return this.tmpAnno
+    getGlobalAnnotation() {
+        return this.globalAnno
     }
 
     findDataInCircle(x, y, radius) {
@@ -482,87 +472,127 @@ class DataManager {
 
     createEmptyAnnotation(label="A1", selections=null) {
         let ids = new Set()
-        const sel = selections === null ? this.selections : selections
-        sel.forEach(s => {
-            ids = ids.union(s.data)
-            s.calculatePolygon(this.data, this.xAttr, this.yAttr, this.x, this.y)
-        })
+        if (selections !== null) {
+            selections.forEach(s => {
+                ids = ids.union(s.data)
+                s.calculatePolygon(this.data, this.xAttr, this.yAttr, this.x, this.y)
+            })
+        }
         return new Annotation(ids, this.selections.map(s => s.copy()), "Annotation", label)
     }
 
-    annotateEmpty() {
-        if (this.hasTmpAnnotation) {
-            // TODO: put unsaved annotation into history/storage
+    createAnnotationFromOptions(options=DEFAULT_ANNO_OPTIONS) {
+        const opts = Object.assign(Object.assign({}, DEFAULT_ANNO_OPTIONS), options)
+        if (opts.id !== null && opts.id !== undefined) {
+            // use a specific existing annotation
+            return this.getAnnotationById(opts.id)
+        } else if (opts.useGlobal) {
+            // use the global annotation
+            return this.globalAnno
+        } else if (opts.selections && opts.selections.length > 0) {
+            // use the given selections for a new annotation
+            return this.createEmptyAnnotation(
+                `A${this.annotations.length+1}`,
+                opts.selections
+            )
+        } else {
+            // use the active selections for a new annotation
+            return this.createEmptyAnnotation(
+                `A${this.annotations.length+1}`,
+                this.selections
+            )
         }
-        this.tmpAnno = this.createEmptyAnnotation(`A${this.annotations.length+1}`)
-        this.callbacks.anno.forEach(f => f(this.tmpAnno))
     }
 
-    annotateText(text, src, entities=[], id=null) {
-
-        // TODO: what about global notes where there is no associated selection?
-        // TODO: what about unsaved annotations?
-
-        let target = null, entry = null
-
-        if (id !== null) {
-            target = this.getAnnotationById(id)
-        } else if (this.hasTmpAnnotation) {
-            // if we have an unsaved annotation, add the entry to it
-            target = this.tmpAnno
-        } else {
-            // otherwise, create a new unsaved annotation
-            this.tmpAnno = this.createEmptyAnnotation(`A${this.annotations.length+1}`)
-            target = this.tmpAnno
-        }
-
-        if (target) {
-            entry = new TextEntry(target, text, src, entities)
-            target.addEntry(entry)
-            this.callbacks.anno.forEach(f => f(target))
-        }
-
-        return entry
+    addAnnotation(anno, update=true) {
+        if (anno.id !== this.globalAnno.id) this.annotations.push(anno)
+        if (update) this.callbacks.anno.forEach(f => f(anno))
+        return anno
     }
 
-    annotateModifier(text, src, entities, id=null) {
+    annotateEmpty(selections=null) {
+        return this.addAnnotation(this.createEmptyAnnotation(
+            `A${this.annotations.length+1}`,
+            selections
+        ))
+    }
 
-        let target = null, entry = null
-
-        if (id !== null) {
-            target = this.getAnnotationById(id)
-        } else if (this.hasTmpAnnotation) {
-            target = this.tmpAnno
-        } else {
-            // otherwise, create a new unsaved annotation
-            this.tmpAnno = this.createEmptyAnnotation(`A${this.annotations.length+1}`)
-            target = this.tmpAnno
+    annotateText(text, src, entities=[], options=DEFAULT_ANNO_OPTIONS) {
+        const target = this.createAnnotationFromOptions(options)
+        if (target) {
+            const entry = new TextEntry(target, text, src, entities)
+            if (target.id === this.globalAnno.id) {
+                target.addEntry(entry)
+            } else {
+                target.addEntry(entry, false)
+                this.addAnnotation(target)
+            }
+            // return the created entry
+            return entry
         }
 
+        return null
+    }
+
+    annotateModifier(text, src, entities, options=DEFAULT_ANNO_OPTIONS) {
+
+        const target = this.createAnnotationFromOptions(options)
+
         if (target) {
-            entry = new ModifierEntry(target, text, src, entities)
+            const entry = new ModifierEntry(target, text, src, entities)
             const modifier = new ColorFunctionModifier(entry, entities)
             entry.setModifier(modifier)
-
-            target.addEntry(entry)
-            modifier.applyAll(this.data)
-            this.callbacks.anno.forEach(f => f(target))
-            this.columnUpdate(modifier.type, 10, function() {
-                const app = useApp()
-                app.featureTime = Date.now()
-            })
+            if (target.id === this.globalAnno.id) {
+                target.addEntry(entry)
+            } else {
+                target.addEntry(entry, false)
+                this.addAnnotation(target)
+            }
+            // return the created entry
+            return entry
         }
 
-        return entry
+        return null
     }
 
-    saveTmpAnnotation() {
-        if (this.tmpAnno !== null) {
-            this.tmpAnno.label = `A${this.annotations.length+1}`
-            this.annotations.push(this.tmpAnno)
-            this.tmpAnno = null
-            const anno = this.annotations.at(-1)
-            this.callbacks.anno.forEach(f => f(anno))
+    /**
+     * Actions to execute (globally) when an entry is added
+     * @param {Entry} entry 
+     */
+    onAddEntry(entry) {
+        if (entry.type === ENTRY_TYPE.MODIFIER) {
+            const modifier = entry.getModifier()
+            modifier.applyAll(this.data)
+
+            const app = useApp()
+            app.setColorOverride(modifier.type)
+            app.scales[MODIFIER_TYPE.COLOR_FUNCTION] = modifier.colormap
+            
+            this.columnUpdate(modifier.type, 10, function() {
+                const now = Date.now()
+                app.featureTime = now
+                app.lensTime = now
+            })
+        }
+    }
+
+    /**
+     * Actions to execute (globally) when an entry is removed
+     * @param {Entry} entry 
+     */
+    onRemoveEntry(entry) {
+        if (entry.type === ENTRY_TYPE.MODIFIER) {
+            const modifier = entry.getModifier()
+            modifier.resetAll(this.data)
+
+            const app = useApp()
+            app.setColorOverride("")
+            
+            this.columnUpdate(modifier.type, 10, function() {
+                const now = Date.now()
+                app.featureTime = now
+                app.lensTime = now
+            })
         }
     }
 
@@ -691,7 +721,7 @@ class DataManager {
             //     delete this.annoMap[c.name][id]
             // })
             this.annotations.splice(idx, 1)
-            for (let i = idx; idx < this.annotations.length; ++i) {
+            for (let i = idx; i < this.annotations.length; ++i) {
                 this.annotations[i].label = `A${i+1}`
             }
             this.callbacks.anno.forEach(f => f())
@@ -704,15 +734,14 @@ class DataManager {
     }
 
     getAnnotationById(id) {
-        if (this.hasTmpAnnotation && this.tmpAnno.id === id) return this.tmpAnno
+        if (this.globalAnno.id === id) return this.globalAnno
         return this.annotations.find(d => d.id === id)
     }
 
     getAnnotationByLabel(label) {
-        if (this.hasTmpAnnotation && this.tmpAnno.label === label) return this.tmpAnno
+        if (this.globalAnno.label === label) return this.globalAnno
         return this.annotations.find(d => d.label === label)
     }
-
 
     clearAnnotations() {
         this.annoMap = {}

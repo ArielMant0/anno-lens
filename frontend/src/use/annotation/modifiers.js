@@ -87,4 +87,11 @@ export class ColorFunctionModifier extends Modifier {
             this.readDomain(data)
         }
     }
+
+    resetAll(data) {
+        if (this.entities.length > 0 && this.entities.at(0).type === ENTITY_TYPE.COLUMN) {
+            data.forEach(d => d[this.type] = 0)
+            this.colormap.domain(this.options.domain)
+        }
+    }
 }

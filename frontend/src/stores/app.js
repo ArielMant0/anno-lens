@@ -53,7 +53,10 @@ export const useApp = defineStore('app', {
         refMode: "global",
         lensType: LENS_TYPE.RARE,
 
+        numSelections: 0,
+
         activeLens: 0,
+        colorOverride: "",
         colorIndex: 0,
         colorIndexSec: 0,
         scales: {},
@@ -113,6 +116,12 @@ export const useApp = defineStore('app', {
                 this.colorIndex = columnIndex
             } else {
                 this.colorIndexSec = columnIndex
+            }
+        },
+
+        setColorOverride(name="") {
+            if (this.colorOverride !== name) {
+                this.colorOverride = name
             }
         },
 

@@ -7,7 +7,7 @@ const COLORS5_2 = ["#619b8a", "#a1c181", "#f0b51d", "#fe8435", "#233d4d"]
 
 class CommandManager {
 
-    constructor(sizeLocked=4, sizeUnlocked=6, colors=COLORS5_2) {
+    constructor(sizeLocked=5, sizeUnlocked=8, colors=COLORS5_2) {
         this.sizeLocked = sizeLocked
         this.sizeUnlocked = sizeUnlocked
         this.colors = colors

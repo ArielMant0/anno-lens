@@ -48,7 +48,7 @@
                                     <span v-if="colorOverride">(override)</span>
                                     <span v-else-if="!int.fromLens">(default)</span>
                                 </div>
-                                <v-btn v-if="colorOverride" size="sm" rounded="sm" density="compact" icon="mdi-delete" color="error" variant="text" @click="setColorOverride('')"/>
+                                <v-btn v-if="colorOverride" size="sm" rounded="sm" density="compact" icon="mdi-delete" color="error" variant="text" @click="app.setColorOverride('')"/>
                             </div>
                             <v-divider v-if="int.filterAttr !== null" vertical class="ml-2 mr-2"></v-divider>
                             <FilterDesc v-if="int.filterAttr !== null"
@@ -84,7 +84,7 @@
                     </div>
                 </div>
 
-                <GlobalNotepad style="min-height: 30vh; max-height: 30vh; overflow-y: auto;"/>
+                <ActiveAnnotationView style="min-height: 30vh; max-height: 30vh; overflow-y: auto;"/>
 
                 <DataHistograms
                     :active="!moveLens || mouseStill"
@@ -100,7 +100,7 @@
         <AnnotationOverlay
             target-id="scatter-main"
             :selected="chosenColorAttr"
-            @select-color="setColorOverride"
+            @select-color="col => app.setColorOverride(col)"
             :time="annoTime"
             :active="!moveLens"/>
 
@@ -119,7 +119,7 @@
 
         <AnnoInventory/>
 
-        <ColorPicker v-model="editColor" @select="setColorOverride"/>
+        <ColorPicker v-model="editColor" @select="col => app.setColorOverride(col)"/>
     </div>
 </div>
 </template>
@@ -147,7 +147,7 @@
     import { COMBINE_PROMPT, COMPARE_PROMPT, DESCRIPTION_PROMPT, EXTRACT_PROMPT, LABEL_PROMPT, llmCombine, llmComparison, llmExtract, llmFreeWithData, REFINE_PROMPT } from '@/use/llm-interface';
     import { toast } from 'vue3-toastify';
     import DataHistograms from './DataHistograms.vue';
-    import GlobalNotepad from './annotation/GlobalNotepad.vue';
+    import ActiveAnnotationView from './annotation/ActiveAnnotationView.vue';
     import { AnnotationEntity } from '@/use/annotation/entity';
     import { ENTRY_SOURCE } from '@/use/annotation/annotation-entry';
     import { ACTION_TARGET } from '@/use/annotation/action-target';
@@ -172,6 +172,7 @@
         lensType,
 
         activeLens,
+        colorOverride,
         colorIndex,
         colorIndexSec,
         columnIndex,
@@ -233,8 +234,6 @@
     const colorColumn = ref(datasetColor.value)
     const colorColumnSec = ref(datasetColor.value)
 
-    const colorOverride = ref("")
-
     const colorType = computed(() => {
         const idx = columns.value.indexOf(chosenColorAttr.value)
         return idx >= 0 ? ctypes.value[idx] : null
@@ -280,13 +279,6 @@
     /// Functions
     ////////////////////////////////////////////////////////////////////////////
 
-    function setColorOverride(c="") {
-        if (c !== colorOverride.value) {
-            colorOverride.value = c
-            applyLens()
-        }
-    }
-
     function setActiveLens(i) {
         if (i !== activeLens.value && i === primaryLens.value || i === secondaryLens.value) {
             activeLens.value = i
@@ -313,16 +305,6 @@
             app.setColor(topFeatures.value[0])
             refMode.value = m
         }
-    }
-
-    function annotate(color) {
-        DM.annotate(
-            activeLens.value,
-            activeLens.value === 0 ? colorIndex.value : colorIndexSec.value,
-            refMode.value,
-            lensType.value,
-            color
-        )
     }
 
     function setFilter(values) {
@@ -491,13 +473,7 @@
     }
 
     function onClickLabel(lensIndex, columnIndex) {
-        DM.annotate(
-            lensIndex,
-            columnIndex,
-            refMode.value,
-            lensType.value,
-            CM.getColor(5)
-        )
+        // TODO: what to do here?
     }
 
     async function init() {
@@ -643,14 +619,21 @@
             applyLens()
         }))
 
-        CM.addKeyMappingLocked(2, "w", "select", new Command(function() {
+        CM.addKeyMappingLocked(2, "s", "select", new Command(function() {
             // TODO: add lens to saved selection
             // DM.addLensToSelection()
             console.log("hotkey select")
         }))
-        CM.addKeyMappingLocked(3, "s", "save", new Command(function() {
-            DM.saveTmpAnnotation()
-        }))
+
+        CM.addKeyMappingLocked(3, "z", "undo", new Command(function() {
+            // TODO: undo action
+            console.log("hotkey undo")
+        }), ["ctrl"])
+
+        CM.addKeyMappingLocked(4, "y", "redo", new Command(function() {
+            // TODO: redo action
+            console.log("hotkey redo")
+        }), ["ctrl"])
 
         // llm hotkeys
         const descCommand = new LLMCommand(function(prompt, target) {
@@ -667,7 +650,12 @@
                     // ask for description / summary
                     llmFreeWithData(prompt, DM.describeData(datapoints))
                         .then(response => {
-                            DM.annotateText(response.answer, ENTRY_SOURCE.AI, [], target.annotation?.id)
+                            DM.annotateText(
+                                response.answer,
+                                ENTRY_SOURCE.AI,
+                                [],
+                                { id: target.annotation?.id }
+                            )
                             app.setLLMLoading(false)
                         })
                     break
@@ -677,7 +665,7 @@
                     break
             }}, DESCRIPTION_PROMPT, 1, 1, [ACTION_TARGET.SELECTION, ACTION_TARGET.VIS])
         // add hotkey for "describe" command
-        CM.addKeyMapping(4, "1", "describe", descCommand)
+        CM.addKeyMapping(5, "1", "describe", descCommand)
 
 
         const labelCommand = new LLMCommand(function(prompt, target) {
@@ -691,27 +679,17 @@
 
             llmFreeWithData(prompt, DM.describeData(datapoints), 5)
                 .then(response => {
-                    let anno = null
                     // get the correct annotation to label
-                    if (target.annotation) {
-                        anno = target.annotation
-                    } else if (DM.hasTmpAnnotation) {
-                        anno = DM.getTmpAnnotation()
-                    } else {
+                    const anno = target.annotation ?
+                        target.annotation :
                         DM.annotateEmpty()
-                        anno = DM.getTmpAnnotation()
-                    }
-
-                    if (anno) {
-                        anno.title = response.answer
-                        anno.update()
-                        DM.trigger("anno")
-                    }
+       
+                    anno.setTitle(response.answer)
                     app.setLLMLoading(false)
                 })
             }, LABEL_PROMPT, 1, 1, [ACTION_TARGET.SELECTION])
         // add hotkey for "label" command
-        CM.addKeyMapping(5, "2", "label", labelCommand)
+        CM.addKeyMapping(6, "2", "label", labelCommand)
 
         const extractCommand = new LLMCommand(function(prompt, target) {
             app.setLLMLoading(true)
@@ -730,13 +708,13 @@
                         response.answer,
                         ENTRY_SOURCE.AI,
                         entities,
-                        target.annotation?.id
+                        { id: target.annotation?.id }
                     )
                     app.setLLMLoading(false)
                 })
             }, EXTRACT_PROMPT, 1, 1, [ACTION_TARGET.SELECTION])
         // add hotkey for "extract" command
-        CM.addKeyMapping(6, "3", "extract", extractCommand)
+        CM.addKeyMapping(7, "3", "extract", extractCommand)
 
         const compareCommand = new LLMCommand(function(prompt, targets) {
             app.setLLMLoading(true)
@@ -768,16 +746,16 @@
                         }
                         // should we also add selection entities?
                     })
-                    // TODO: this needs to have a different selection than the current one
                     DM.annotateText(
                         response.answer,
                         ENTRY_SOURCE.AI,
-                        entities
+                        entities,
+                        { useGlobal: true }
                     )
                     app.setLLMLoading(false)
                 })
             }, COMPARE_PROMPT, 2, Infinity, [ACTION_TARGET.SELECTION])
-        CM.addKeyMapping(7, "4", "compare", compareCommand)
+        CM.addKeyMapping(8, "4", "compare", compareCommand)
 
         const combineCommand = new LLMCommand(function(prompt, targets) {
             app.setLLMLoading(true)
@@ -785,17 +763,17 @@
                 .then(response => {
                     const entities = parseEntities(response)
                     // TODO: add to a global notepad
-                    const entry = DM.annotateModifier(
+                    DM.annotateModifier(
                         response.answer,
                         ENTRY_SOURCE.AI,
-                        entities
+                        entities,
+                        { useGlobal: true }
                     )
                     app.setLLMLoading(false)
-                    setColorOverride(MODIFIER_TYPE.COLOR_FUNCTION)
-                    app.scales[MODIFIER_TYPE.COLOR_FUNCTION] = entry.modifier.colormap
+                    app.setColorOverride(MODIFIER_TYPE.COLOR_FUNCTION)
                 })
             }, COMBINE_PROMPT, 2, Infinity, [ACTION_TARGET.COLUMN])
-        CM.addKeyMapping(8, "5", "combine", combineCommand)
+        CM.addKeyMapping(9, "5", "combine", combineCommand)
 
         const refineCmd = new LLMCommand(function(prompt, target) {
             app.setLLMLoading(true)
@@ -811,7 +789,7 @@
                 })
             }, REFINE_PROMPT, 1, 1, [ACTION_TARGET.ANNOTATION])
         // add hotkey for "refine" command
-        CM.addKeyMapping(9, "6", "refine", refineCmd)
+        CM.addKeyMapping(10, "6", "refine", refineCmd)
 
 
         // resize lens
@@ -849,8 +827,8 @@
     })
 
     watch(dataset, init)
+    watch(colorOverride, applyLens)
 
     watch(() => ([w.value, h.value]), () => plotResize = performance.now())
-
     watch(() => ([wSize.width.value, wSize.height.value]), () => windowResize = performance.now())
 </script>

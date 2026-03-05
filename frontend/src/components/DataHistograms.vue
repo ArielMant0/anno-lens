@@ -65,7 +65,7 @@
                     }">
                     <div>
                         <div :style="{ maxWidth: (chartWidth-5)+'px' }" class="cursor-pointer text-dots hover-bold">
-                            <span :data-target-type="ACTION_TARGET.COLUMN" :data-target-id="colsOtherP[i]">{{ colsOtherP[i] }}</span>
+                            <span @click="setColorOverride(colsOtherP[i])" :data-target-type="ACTION_TARGET.COLUMN" :data-target-id="colsOtherP[i]">{{ colsOtherP[i] }}</span>
                         </div>
                         <BarChart
                             :title="colsOtherP[i]"
@@ -163,16 +163,12 @@
         emit("update")
     }
 
+    function setColorOverride(name) {
+        app.setColorOverride(name)
+    }
+
     function annotate(lensIndex, columnIndex, columnValue=null) {
-        const lens = DM.getLens(lensIndex)
-        DM.annotate(
-            lensIndex,
-            columnIndex,
-            props.mode,
-            lens.type,
-            CM.getColor(5),
-            columnValue
-        )
+        // TODO: do sth here?
     }
 
     function getMerged(index, column) {
