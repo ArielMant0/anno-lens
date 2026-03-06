@@ -59,7 +59,19 @@
         </Teleport>
 
         <Teleport to="body">
-            <div style="z-index: 4999;">
+            <div id="anno-panel-overlay" style="z-index: 4999;">
+                
+                <div v-if="annoLeft.length === 0 && targetRect"
+                    :style="{
+                        position: 'absolute',
+                        width: padding+'px',
+                        height: targetRect.height+'px',
+                        left: (offsetX+getDummyPosX('left'))+'px',
+                        top: offsetY+'px',
+                        backgroundColor: '#ededed'
+                    }"
+                    ></div>
+
                 <AnnotationPanel v-for="aid in annoLeft"
                     :key="aid+'_l_'+annoPos[aid].index"
                     :id="aid"
@@ -82,8 +94,20 @@
                         left: (offsetX+getAnnotationPos(aid, true)[0]-25)+'px',
                         top: (offsetY+getAnnotationPos(aid, true)[1])+'px',
                         fontSize: '12px',
-                    }"/>
+                    }"
+                    />
 
+
+                <div v-if="annoRight.length === 0 && targetRect"
+                    :style="{
+                        position: 'absolute',
+                        width: padding+'px',
+                        height: targetRect.height+'px',
+                        left: (offsetX+getDummyPosX('right'))+'px',
+                        top: offsetY+'px',
+                        backgroundColor: '#ededed'
+                    }"
+                    ></div>
 
                 <AnnotationPanel v-for="aid in annoRight"
                     :key="aid+'_r_'+annoPos[aid].index"
@@ -116,12 +140,12 @@
 <script setup>
     import * as d3 from 'd3'
     import DM from '@/use/data-manager';
-    import { useMouse, useWindowScroll, useWindowSize } from '@vueuse/core';
+    import { useWindowScroll, useWindowSize } from '@vueuse/core';
     import { computed, onMounted, reactive, watch } from 'vue';
     import { euclidean } from '@/use/util';
     import AnnotationPanel from './AnnotationPanel.vue';
-
-    const mouse = useMouse()
+    import { useAnno } from '@/stores/anno';
+    import { storeToRefs } from 'pinia';
 
     const props = defineProps({
         targetId: {
@@ -151,6 +175,9 @@
     })
 
     const emit = defineEmits(["select-color"])
+
+    const annoStore = useAnno()
+    const { hoverTime } = storeToRefs(annoStore)
 
     const scroll = useWindowScroll()
 
@@ -184,18 +211,8 @@
 
     const hoverAnno = ref(null)
     const hoverAnnoCol = ref("")
-    const selectedAnnos = computed(() => {
-        const obj = {}
-        const inside = mouse.x.value >= offsetX.value + props.padding &&
-            mouse.x.value <= offsetX.value + props.padding + targetRect.width &&
-            mouse.y.value >= offsetY.value &&
-            mouse.y.value <= offsetX.value + targetRect.height
+    const selectedAnnos = ref({})
 
-        const mx = mouse.x.value - offsetX.value - props.padding
-        const my = mouse.y.value - offsetY.value
-        DM.getAnnotations().forEach(a => obj[a.id] = isSelected(a))// || inside && a.polygon.some(p => d3.polygonContains(p, [mx, my])))
-        return obj
-    })
     const selectedColums = computed(() => {
         const obj = {}
         DM.columns.forEach(c => obj[c] = false)
@@ -225,6 +242,14 @@
 
     function onDragOver(event) {
         event.dataTransfer.dropEffect = "move"
+    }
+
+    function getDummyPosX(side) {
+        switch(side) {
+            case "left": return -5
+            default:
+            case "right": return props.padding + targetRect.width + 5
+        }
     }
 
     function getAnnotationPos(id, usePadding=false) {
@@ -261,7 +286,7 @@
         actx = actx ? actx : annolinks.value.getContext("2d")
         actx.clearRect(0, 0, width.value, height.value)
 
-        if (props.active === false) return
+        // if (props.active === false) return
 
         const path = d3.line()
             .context(actx)
@@ -273,7 +298,7 @@
 
         const annos = DM.getAnnotations()
         annos.forEach(a => {
-            if (selectedAnnos.value[a.id]) {
+            if ((annoStore.isHovered(a.id) || selectedAnnos.value[a.id]) && annoPos.value[a.id]) {
                 // draw links that connect annotations labels and polygons
                 actx.strokeStyle = a.color ? a.color : "black"
                 const coords = getAnnotationPos(a.id)
@@ -286,19 +311,19 @@
             }
         })
 
-        const scale = d3.scaleLinear()
-            .domain([1, Math.max(2, d3.max(graph.links, d => d.value))])
-            .range([1, 10])
+        // const scale = d3.scaleLinear()
+        //     .domain([1, Math.max(2, d3.max(graph.links, d => d.value))])
+        //     .range([1, 10])
 
-        actx.strokeStyle = "black"
-        actx.globalAlpha = 0.25
-        // draw links that connect annotations
-        graph.links.forEach(d => {
-            actx.lineWidth = scale(d.value)
-            actx.beginPath()
-            path(d.coords)
-            actx.stroke()
-        })
+        // actx.strokeStyle = "black"
+        // actx.globalAlpha = 0.25
+        // // draw links that connect annotations
+        // graph.links.forEach(d => {
+        //     actx.lineWidth = scale(d.value)
+        //     actx.beginPath()
+        //     path(d.coords)
+        //     actx.stroke()
+        // })
     }
 
     function calcLabelPositions() {
@@ -377,11 +402,18 @@
             annoLeft.value = onLeft.map(d => d.id)
             annoRight.value = onRight.map(d => d.id)
         } else {
+            annoPos.value = {}
             annoPolygons.value = []
-            annoPos.value = []
             annoLeft.value = []
             annoRight.value = []
         }
+    }
+
+    function readSelected() {
+        const obj = {}
+        const ids = new Set(DM.getMatchingAnnotations().map(d => d.id))
+        DM.getAnnotations().forEach(d => obj[d.id] = ids.has(d.id))
+        selectedAnnos.value = obj
     }
 
     function update() {
@@ -389,11 +421,13 @@
         // annoFontSize = d3.scaleQuantile(anno.value.map(d => d.columns.map(c => c.count)).flat())
             // .range([16, 14, 12, 10, 8])
         annoFontSize = () => 12
-        // drawLinks()
+        drawLinks()
     }
+
     function init() {
         getCoordinates()
         calcLabelPositions()
+        readSelected()
         // const { nodes, links } = DM.getAnnotationConnections()
         // graph.nodes = nodes
         // graph.links = links
@@ -405,7 +439,7 @@
         annoFontSize = () => 12
         // annoFontSize = d3.scaleQuantile(anno.value.map(d => d.columns.map(c => c.count)).flat())
             // .range([16, 14, 12, 10, 8])
-        // drawLinks()
+        drawLinks()
     }
 
     onMounted(init)
@@ -414,8 +448,14 @@
     watch(wSize.width, getCoordinates)
     watch(wSize.height, getCoordinates)
     watch(scroll.y, update)
-    // watch(() => props.active, drawLinks)
-    // watch(selectedAnnos, drawLinks)
+    
+    watch(() => props.active, function() {
+        readSelected()
+        drawLinks()
+    })
+
+    watch(hoverTime, drawLinks)
+
 
 </script>
 

@@ -431,7 +431,7 @@ class DataManager {
 
         if (limit === 1) {
             const match = this.annotations.find(d => d.hasDataOverlap(ids))
-            return match ? match : null
+            return match ? match : []
         } else if (limit > 1) {
             const matches = []
             // add other annotations until the limit is reached
@@ -441,10 +441,9 @@ class DataManager {
                     matches.push(d)
                 }
             }
-            return matches.length > 0 ? matches : null
+            return matches
         } else {
-            const matches = this.annotations.filter(d => d.hasDataOverlap(ids))
-            return matches.length > 0 ? matches : null
+            return this.annotations.filter(d => d.hasDataOverlap(ids))
         }
     }
 

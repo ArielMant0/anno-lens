@@ -1,5 +1,8 @@
 <template>
-    <div class="d-flex align-center anno-container">
+    <div class="d-flex align-center anno-container"
+        @pointerenter="annoStore.addHoverAnno(anno.id)"
+        @pointerleave="annoStore.removeHoverAnno(anno.id)"
+        >
 
         <div v-if="side === 'left'" class="extras">
             <div>
@@ -90,6 +93,7 @@
     import AnnotationTitle from './AnnotationTitle.vue';
     import MiniColorPicker from '../MiniColorPicker.vue';
     import TextNote from './TextNote.vue';
+    import { useAnno } from '@/stores/anno';
 
     const props = defineProps({
         data: {
@@ -133,6 +137,8 @@
             default: 0
         }
     })
+
+    const annoStore = useAnno()
 
     const minh = computed(() => props.minHeight + (typeof props.minHeight === "string" ? "" : "px"))
     const maxh = computed(() => props.maxHeight + (typeof props.maxHeight === "string" ? "" : "px"))

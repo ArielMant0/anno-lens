@@ -1,3 +1,4 @@
+import { mean } from "d3"
 import DM from "../data-manager"
 import { ENTITY_TYPE } from "./entity"
 
@@ -20,25 +21,25 @@ export default class Annotation {
 
     get polygon() {
         return this.selections.length > 0 ?
-            this.selections[0].polygon :
+            this.selections.map(s => s.polygon).flat() :
             null
     }
 
     get centroid() {
         return this.selections.length > 0 ?
-            this.selections[0].centroid :
+            this.selections.map(s => s.centroid).flat() :
             null
     }
 
     get x() {
         return this.selections.length > 0 ?
-            this.selections[0].x :
+            mean(this.selections, s => s.x) :
             null
     }
 
     get y() {
         return this.selections.length > 0 ?
-            this.selections[0].y :
+            mean(this.selections, s => s.y) :
             null
     }
 
