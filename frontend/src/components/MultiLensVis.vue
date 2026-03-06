@@ -36,7 +36,7 @@
                 </div>
 
                 <div class="d-flex justify-center mt-4">
-                    <LLMChatPanel v-if="app.useChat"/>
+                    <LLMChatPanel v-if="app.useChat" :max-width="w+2*170"/>
                 </div>
             </div>
 
@@ -544,7 +544,7 @@
 
         loading.value = false
         numData.value = points.length
-        
+
         app.setInitialized()
 
         dataTime.value = Date.now()
@@ -688,7 +688,7 @@
                     const anno = target.annotation ?
                         target.annotation :
                         DM.annotateEmpty()
-       
+
                     anno.setTitle(response.answer)
                     app.setLLMLoading(false)
                 })

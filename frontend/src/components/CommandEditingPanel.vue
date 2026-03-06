@@ -35,7 +35,7 @@
 
     const controls = useControls()
 
-    const { activeMapping, hasActive, numActiveTargets } = storeToRefs(controls)
+    const { activeMappingId, numActiveTargets } = storeToRefs(controls)
 
     const props = defineProps({
         maxWidth: {
@@ -71,9 +71,9 @@
     }
 
     watch(numActiveTargets, readTargets)
-    watch(hasActive, function(value) {
-        if (value) {
-            const cmd = activeMapping.value.command
+    watch(activeMappingId, function(value) {
+        if (value !== null) {
+            const cmd = controls.activeMapping.command
             if (cmd instanceof LLMCommand) {
                 data.cmd = cmd
                 data.prompt = cmd.promptTemplate

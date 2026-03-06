@@ -1,6 +1,11 @@
 <template>
-    <v-card density="compact" style="width: 97%; max-width: 97%">
-        <div ref="wrapper" style="min-height: 10px; max-height: 20vh; overflow-y: auto; max-width: 100%;" :key="'up_'+chatTime">
+    <v-card density="compact" style="width: 97%; max-width: 100%">
+        <div
+            ref="wrapper"
+            :style="{ maxWidth: maxw }"
+            style="min-height: 10px; max-height: 20vh; overflow-y: auto;"
+            :key="'up_'+chatTime"
+            >
             <ChatEntry v-for="entry in history"
                 :key="entry.id"
                 :entry="entry"
@@ -14,7 +19,7 @@
 
 <script setup>
     import CHAT, { CHAT_ENTRY_TYPE } from '@/use/llm-chat';
-    import { onMounted, useTemplateRef } from 'vue';
+    import { computed, onMounted, useTemplateRef } from 'vue';
     import ChatEntry from './entrypanels/ChatEntry.vue';
     import ChatInput from './ChatInput.vue';
     import { storeToRefs } from 'pinia';
@@ -25,6 +30,12 @@
 
     const app = useApp()
     const { llmLoading, chatTime } = storeToRefs(app)
+
+    const props = defineProps({
+        maxWidth: { type: [String, Number], default: "100%" }
+    })
+
+    const maxw = computed(() => props.maxWidth + (typeof props.maxWidth === "string" ? "" : "px"))
 
     const history = ref([])
     const wrapper = useTemplateRef("wrapper")

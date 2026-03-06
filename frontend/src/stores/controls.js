@@ -59,9 +59,8 @@ export const useControls = defineStore('controls', {
 
         triggerMapping(mapping) {
             // reset targets if we click a different key while another is still active
-            if (this.activeMapping !== null) {
-                CM.clearTargets()
-                this.numActiveTargets = 0
+            if (this.activeMapping !== null && mapping.id !== this.activeMappingId) {
+                this.cancelActive()
             }
             // set this to the active mapping
             this.activeMapping = mapping
@@ -152,7 +151,7 @@ export const useControls = defineStore('controls', {
         },
 
         executeActive() {
-            if (this.hasActive) {
+            if (this.canExecuteActive()) {
                 const targets = CM.getTargets()
                 // execute callback with selected targets
                 this.activeMapping.execute(targets.length > 1 ? targets : targets.at(0))
@@ -164,7 +163,7 @@ export const useControls = defineStore('controls', {
         },
 
         cancelActive() {
-            if (this.canExecuteActive()) {
+            if (this.hasActive) {
                 CM.clearTargets()
                 this.numActiveTargets = 0
                 this.activeMapping = null

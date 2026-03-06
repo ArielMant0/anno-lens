@@ -11,7 +11,7 @@ from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
 # model = OllamaLLM(model="gemma3:4b")
-model = ChatOpenAI(model="gpt-4o-mini", api_key=config.OPENAI_API_KEY)
+model = ChatOpenAI(model="gpt-5-mini", api_key=config.OPENAI_API_KEY)
 
 class BasicAnswer(BaseModel):
     """

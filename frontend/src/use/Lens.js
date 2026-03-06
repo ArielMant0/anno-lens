@@ -21,8 +21,8 @@ export class Lens {
         this.x = radius
         this.y = radius
         this.radius = radius
-        this.color = active ? "red" : "black"
-        this.active = active;
+        this.color = "black"
+        this.active = active
     }
 
     static getLensName(type) {

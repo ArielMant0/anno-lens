@@ -27,7 +27,7 @@
 </template>
 
 <script setup>
-    import { onMounted } from 'vue'
+    import { onMounted, watch } from 'vue'
     import { PromptTemplate } from '@/use/prompt-template'
 
     const props = defineProps({
@@ -93,6 +93,8 @@
     }
 
     onMounted(parse)
+
+    watch(() => props.prompt.text, parse)
 </script>
 
 <style scoped>
