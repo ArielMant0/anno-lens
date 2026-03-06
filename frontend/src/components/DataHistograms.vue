@@ -1,6 +1,6 @@
 <template>
     <div style="width: 100%;">
-        <div class="mt-2 mb-2">
+        <div class="mt-2">
             <v-text-field v-model="search"
                 placeholder="search attributes .."
                 density="compact"
@@ -10,12 +10,7 @@
                 variant="outlined"/>
         </div>
 
-        <div class="d-flex flex-column align-center" :style="{ maxHeight: (showHotbar ? 45 : 50)+'vh', overflowY: 'auto' }">
-
-            <div style="text-align: center; width: 100%;" class="mb-1 text-dots">
-                <v-icon :color="colorP" class="mr-1" size="small">mdi-circle-outline</v-icon>
-                <span :style="{ fontWeight: activeLens === 0 ? 'bold' : null }">primary</span>
-            </div>
+        <div class="d-flex flex-column align-center" :style="{ maxHeight: (!useChat && showHotbar ? 45 : 55)+'vh', overflowY: 'auto' }">
 
             <div :style="{ width: (2*(chartWidth+10))+'px' }" class="d-flex flex-wrap">
 
@@ -91,11 +86,10 @@
     import { useApp } from '@/stores/app';
     import { calcHistogram } from '@/use/util';
     import { storeToRefs } from 'pinia';
-    import CM from '@/use/command-manager';
     import { ACTION_TARGET } from '@/use/annotation/action-target';
 
     const app = useApp()
-    const { activeLens, showHotbar } = storeToRefs(app)
+    const { activeLens, showHotbar, useChat } = storeToRefs(app)
 
     const props = defineProps({
         active: {

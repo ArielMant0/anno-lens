@@ -5,8 +5,8 @@
         </v-overlay>
         <MultiLensVis/>
         <template v-if="ready && initialized">
-            <DatasetSelector/>
-            <HotBar/>
+            <GlobalSettings/>
+            <HotBar v-if="!useChat"/>
         </template>
         <HoverOverlay/>
         <TargetingOverlay/>
@@ -22,14 +22,14 @@
     import { storeToRefs } from 'pinia';
     import { onMounted } from 'vue';
     import HotBar from '@/components/HotBar.vue';
-    import DatasetSelector from '@/components/DatasetSelector.vue';
+    import GlobalSettings from '@/components/GlobalSettings.vue';
     import CommandEditingPanel from '@/components/CommandEditingPanel.vue';
     import HoverOverlay from '@/components/HoverOverlay.vue';
 
     const app = useApp()
     const controls = useControls()
 
-    const { ready, initialized } = storeToRefs(app)
+    const { ready, initialized, useChat } = storeToRefs(app)
 
     onMounted(function() {
         window.addEventListener("keydown", (event) => controls.keyEvent(event))

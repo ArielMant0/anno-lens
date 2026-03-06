@@ -13,7 +13,7 @@ export class Modifier {
 
     constructor(entry, type) {
         this._entry = entry
-        this.id = `mod_${_MOD_ID++}`
+        this.id = `${_MOD_ID++}_mod`
         this.type = type
     }
 

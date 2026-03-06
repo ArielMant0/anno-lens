@@ -21,7 +21,7 @@ let _TDID = 1
 export class TargetData {
 
     constructor(entities, type, annotation=null) {
-        this.id = `td_${_TDID++}`
+        this.id = `${_TDID++}_td`
         this.entities = entities
         this.type = type
         this.annotation = annotation

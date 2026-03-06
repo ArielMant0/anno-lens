@@ -30,7 +30,7 @@
                 ref="editArea"
                 style="width: 100%; border: thin solid lightgray; border-radius: 4px;"
                 :rows="textRows"
-                class="text-wrap pl-1 pr-1 anno-md"
+                class="text-wrap pl-1 pr-1 md"
                 @blur="setShowMarkdown(false)"
                 @keyup="onTextKeyUp"
                 @change="data.update()"
@@ -38,7 +38,7 @@
                 {{ data.text }}
             </textarea>
             <div v-else v-html="markdown"
-                class="anno-md"
+                class="md"
                 style="width: 95%; height: fit-content;"
                 @click="setShowMarkdown(true)"
                 >
@@ -139,14 +139,3 @@
 
     watch(() => props.data.timeUpdated, convertMarkdown)
 </script>
-
-<style>
-.anno-md ul {
-    padding-left: 12px;
-    list-style-type: disc;
-}
-.anno-md ol {
-    padding-left: 12px;
-    list-style-type: upper-greek;
-}
-</style>

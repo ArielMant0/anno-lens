@@ -26,7 +26,7 @@ export function compareEntityType(a, b) {
 export class Entity {
 
     constructor(type, targetType, data) {
-        this.id = `${type}_${_EID++}`
+        this.id = `${_EID++}_${type}_ent`
         this.type = type
         this.targetType = targetType
         this.data = data

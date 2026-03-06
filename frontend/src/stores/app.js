@@ -50,6 +50,8 @@ export const useApp = defineStore('app', {
         datasetObj: Object.assign({}, DATASETS[1]),
         ready: false,
 
+        useChat: false,
+
         refMode: "global",
         lensType: LENS_TYPE.RARE,
 
@@ -72,6 +74,7 @@ export const useApp = defineStore('app', {
         featureTime: 0,
         selectionTime: 0,
         hoverTime: 0,
+        chatTime: 0,
 
         showHotbar: true,
         showInventory: false,
@@ -105,6 +108,10 @@ export const useApp = defineStore('app', {
             this.dataset = name
         },
 
+        setChat(value) {
+            this.useChat = value === true
+        },
+
         setColor(name) {
             if (this.datasetObj) {
                 this.datasetObj.color = name
@@ -132,6 +139,10 @@ export const useApp = defineStore('app', {
         updateLensData() {
             this.lensTime = Date.now()
             this.selectionTime = this.lensTime
+        },
+
+        updateChat() {
+            this.chatTime = Date.now()
         },
 
         setLLMLoading(value) {

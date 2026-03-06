@@ -22,6 +22,15 @@
     animation: rot-border 1.2s ease-in-out infinite;
 }
 
+.md ul {
+    padding-left: 1em;
+    list-style-type: disc;
+}
+.md ol {
+    padding-left: 2em;
+    list-style-type: upper-greek;
+}
+
 @keyframes rot-border {
     0% {
         stroke-width: 2;

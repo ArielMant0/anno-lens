@@ -198,33 +198,13 @@
         sizeR: 15,
     })
 
-    let actx, annoFontSize = () => 12
-
-    let targetRect = null, dragAnno = null;
-
-    const graph = {
-        nodes: [],
-        links: []
-    }
+    let actx, targetRect = null, dragAnno = null;
 
     const wSize = useWindowSize()
 
     const hoverAnno = ref(null)
     const hoverAnnoCol = ref("")
     const selectedAnnos = ref({})
-
-    const selectedColums = computed(() => {
-        const obj = {}
-        DM.columns.forEach(c => obj[c] = false)
-        // anno.value.forEach(a => {
-        //     a.columns.forEach(c => obj[c.name] = isSelectedColumn(c.name))
-        // })
-        return obj
-    })
-
-    function selectColor(name) {
-        emit("select-color", name)
-    }
 
     function onDragAnno(anno) {
         dragAnno = anno
@@ -271,15 +251,6 @@
         width.value = rect.width
         height.value = rect.height
         targetRect = rect
-    }
-
-    function isSelected(annotation) {
-        return hoverAnno.value === annotation.id //||
-            // annotation.hasColumn(props.selected) ||
-            // annotation.hasColumn(hoverAnnoCol.value)
-    }
-    function isSelectedColumn(name) {
-        return props.selected === name || hoverAnnoCol.value === name
     }
 
     function drawLinks() {
@@ -418,9 +389,6 @@
 
     function update() {
         getCoordinates()
-        // annoFontSize = d3.scaleQuantile(anno.value.map(d => d.columns.map(c => c.count)).flat())
-            // .range([16, 14, 12, 10, 8])
-        annoFontSize = () => 12
         drawLinks()
     }
 
@@ -436,9 +404,6 @@
         //     const t = graph.nodes.find(n => n.id === d.target)
         //     d.coords = [[s.x, s.y], [t.x, t.y]]
         // })
-        annoFontSize = () => 12
-        // annoFontSize = d3.scaleQuantile(anno.value.map(d => d.columns.map(c => c.count)).flat())
-            // .range([16, 14, 12, 10, 8])
         drawLinks()
     }
 

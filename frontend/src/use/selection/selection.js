@@ -14,7 +14,7 @@ export const SELECTION_TYPE = Object.freeze({
 export class Selection {
 
     constructor(type=SELECTION_TYPE.NONE, data=[]) {
-        this.id = `sel_${_SEL_ID++}`
+        this.id = `${_SEL_ID++}_sel`
         this.type = type
         this.data = new Set(data)
 

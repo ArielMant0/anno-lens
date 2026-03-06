@@ -18,7 +18,7 @@ export class AnnotationEntry {
 
     constructor(annotation, type, src, entities=[]) {
         this._anno = annotation
-        this.id = `entry_${_ENTRY_ID++}`
+        this.id = `${_ENTRY_ID++}_entry`
         this.type = type
         this.source = src
         this.entities = []

@@ -7,7 +7,7 @@ let _ANNO_ID = 1
 export default class Annotation {
 
     constructor(data, selections=[], title="Annotation", label="A1") {
-        this.id = `anno_${_ANNO_ID++}`
+        this.id = `${_ANNO_ID++}_anno`
         this.title = title
         this.label = label
         this.data = new Set(data)

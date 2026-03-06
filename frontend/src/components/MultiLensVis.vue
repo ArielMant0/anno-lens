@@ -34,6 +34,10 @@
                         @click-lens="onClickLens"
                         @hover="onHover"/>
                 </div>
+
+                <div class="d-flex justify-center mt-4">
+                    <LLMChatPanel v-if="app.useChat"/>
+                </div>
             </div>
 
             <div class="ml-4" style="min-width: 525px; max-width: 525px;">
@@ -154,6 +158,7 @@
     import { Command, LLMCommand } from '@/use/commands';
     import CM from '@/use/command-manager';
     import { MODIFIER_COLUMNS, MODIFIER_TYPE } from '@/use/annotation/modifiers';
+    import LLMChatPanel from './LLMChatPanel.vue';
 
     const app = useApp()
     const controls = useControls()
