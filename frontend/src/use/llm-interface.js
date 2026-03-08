@@ -7,10 +7,10 @@ import { PromptTemplate, PromptVariable } from "./prompt-template";
  * @param {String} prompt prompt send to model
  * @returns
  */
-export async function llmFree(prompt) {
+export async function llmFree(prompt, history=null) {
     const loader = useLoader()
     console.debug("free/", prompt)
-    return loader.post("free", { prompt: prompt })
+    return loader.post("free", { prompt: prompt, history: history })
 }
 
 /**
@@ -19,10 +19,10 @@ export async function llmFree(prompt) {
  * @param {Array} data list of data points for the chosen subset
  * @returns
  */
-export async function llmFreeWithData(prompt, data, text=null) {
+export async function llmFreeWithData(prompt, data, text=null, history=null) {
     const loader = useLoader()
     console.debug("free_data/", prompt)
-    return loader.post("free_data", { prompt: prompt, data: data, text: text })
+    return loader.post("free_data", { prompt: prompt, data: data, text: text, history: history })
 }
 
 /**
@@ -31,10 +31,10 @@ export async function llmFreeWithData(prompt, data, text=null) {
  * @param {String} text text that the model should do sth with
  * @returns
  */
-export async function llmFreeWithText(prompt, text) {
+export async function llmFreeWithText(prompt, text, history=null) {
     const loader = useLoader()
     console.debug("free_text/", prompt)
-    return loader.post("free_text", { prompt: prompt, text: text })
+    return loader.post("free_text", { prompt: prompt, text: text, history: history })
 }
 
 /**
@@ -43,10 +43,10 @@ export async function llmFreeWithText(prompt, text) {
  * @param {Object} data object containing data points for named subsets
  * @returns
  */
-export async function llmComparison(prompt, data) {
+export async function llmComparison(prompt, data, history=null) {
     const loader = useLoader()
     console.debug("comparison/", prompt)
-    return loader.post("comparison", { prompt: prompt, data: data })
+    return loader.post("comparison", { prompt: prompt, data: data, history: history })
 }
 
 /**
@@ -56,23 +56,16 @@ export async function llmComparison(prompt, data) {
  * @param {Array} global list of column statistics for all data
  * @returns
  */
-export async function llmExtract(prompt, data, global) {
+export async function llmExtract(prompt, data, global, history=null) {
     const loader = useLoader()
     console.debug("extract/", prompt)
-    return loader.post("extract", {
-        prompt: prompt,
-        data: data,
-        global: global
-    })
+    return loader.post("extract", { prompt: prompt, data: data, global: global, history: history })
 }
 
-export async function llmCombine(prompt, columns) {
+export async function llmCombine(prompt, columns, history=null) {
     const loader = useLoader()
     console.debug("combine/", prompt)
-    return loader.post("combine", {
-        prompt: prompt,
-        columns: columns,
-    })
+    return loader.post("combine", { prompt: prompt, columns: columns, history: history })
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////

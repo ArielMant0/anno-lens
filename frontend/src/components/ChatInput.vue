@@ -11,7 +11,7 @@
             @keyup="onKeyUp"
             />
         <v-btn
-            icon="mdi-plus"
+            icon="mdi-send"
             :color="text.length > 0 ? 'success' : 'default'"
             variant="text"
             density="comfortable"

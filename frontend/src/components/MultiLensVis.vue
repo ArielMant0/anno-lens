@@ -3,46 +3,9 @@
 
     <div v-if="!loading && numData > 0" class="d-flex flex-column align-center justify-start mt-2">
         <div class="d-flex mt-2">
+
             <div>
-                <div style="position: relative;">
-                    <FeatureMap
-                        :column="chosenColorAttr"
-                        :hide="int.filterAttr!==null"
-                        :mode="refMode"
-                        :lens-type="lensType"
-                        :time="featureTime"
-                        style="margin: 0px 170px;"
-                        :width="w"
-                        :height="h"/>
-
-                    <ScatterPlot
-                        ref="scatter"
-                        id="scatter-main"
-                        style="position: absolute; top: 0; left: 0; margin: 0px 170px;"
-                        :time="dataTime"
-                        :update="lensTime"
-                        :x-attr="datasetX"
-                        :y-attr="datasetY"
-                        :color-attr="chosenColorAttr"
-                        :color-scale="app.scales[chosenColorAttr]"
-                        :radius="5"
-                        :width="w"
-                        :height="h"
-                        show-lens
-                        :fixed-lens="!moveLens"
-                        :highlight-color="theme.current.value.colors.primary"
-                        @click-lens="onClickLens"
-                        @hover="onHover"/>
-                </div>
-
-                <div class="d-flex justify-center mt-4">
-                    <LLMChatPanel v-if="app.useChat" :max-width="w+2*170"/>
-                </div>
-            </div>
-
-            <div class="ml-4" style="min-width: 525px; max-width: 525px;">
-
-                <div class="d-flex justify-space-between">
+                <div class="d-flex justify-space-between align-center ml-2 mr-2">
                     <div>
                         <div class="d-flex text-caption">
                             <div class="d-flex align-center">
@@ -73,32 +36,72 @@
                             @brush="setFilter"/>
                     </div>
 
-                    <ColorLegend v-if="ready"
-                        :key="'cf_'+lensType"
-                        :tick-format="featureScaleTicks"
-                        :tick-values="[0, 1]"
-                        :num-ticks="2"
-                        :width="200"
-                        style="display: block;"
-                        class="mt-5"
-                        :scale="featureScale"/>
-
-                    <div v-else style="width: 200px; text-align: center;" class="mt-5">
-                        <v-progress-circular indeterminate size="30"></v-progress-circular>
+                    <div>
+                        <ColorLegend v-if="ready"
+                            :key="'cf_'+lensType"
+                            :tick-format="featureScaleTicks"
+                            :tick-values="[0, 1]"
+                            :num-ticks="2"
+                            style="display: block;"
+                            class="mt-5"
+                            :scale="featureScale"/>
+                        
+                        <div v-else style="width: 200px; text-align: center;" class="mt-5">
+                            <v-progress-circular indeterminate size="30"></v-progress-circular>
+                        </div>
                     </div>
                 </div>
+                
+                <div style="position: relative;">
+                    <FeatureMap
+                        :column="chosenColorAttr"
+                        :hide="int.filterAttr!==null"
+                        :mode="refMode"
+                        :lens-type="lensType"
+                        :time="featureTime"
+                        style="margin: 0px 170px;"
+                        :width="w"
+                        :height="h"/>
 
-                <ActiveAnnotationView style="min-height: 30vh; max-height: 30vh; overflow-y: auto;"/>
-
-                <DataHistograms
-                    :active="!moveLens || mouseStill"
-                    :time="lensTime"
-                    :refresh="featureTime"
-                    :mode="refMode"
-                    :selected-column="chosenColorAttr"
-                    @update="applyLens"/>
+                    <ScatterPlot
+                        ref="scatter"
+                        id="scatter-main"
+                        style="position: absolute; top: 0; left: 0; margin: 0px 170px;"
+                        :time="dataTime"
+                        :update="lensTime"
+                        :x-attr="datasetX"
+                        :y-attr="datasetY"
+                        :color-attr="chosenColorAttr"
+                        :color-scale="app.scales[chosenColorAttr]"
+                        :radius="5"
+                        :width="w"
+                        :height="h"
+                        show-lens
+                        :fixed-lens="!moveLens"
+                        :highlight-color="theme.current.value.colors.primary"
+                        @click-lens="onClickLens"
+                        @hover="onHover"/>
+                </div>
             </div>
 
+            <div class="ml-4" style="min-width: 525px; max-width: 525px;">
+
+                <ActiveAnnotationView style="min-height: 30vh; max-height: 30vh; overflow-y: auto;"/>
+                
+                <div class="d-flex justify-center mt-4">
+                    <LLMChatPanel v-if="app.useChat" max-height="30vh"/>
+                </div>
+            </div>
+        </div>
+
+        <div :style="{ width: (w+800)+'px' }">
+            <DataHistograms
+                :active="!moveLens || mouseStill"
+                :time="lensTime"
+                :refresh="featureTime"
+                :mode="refMode"
+                :selected-column="chosenColorAttr"
+                @update="applyLens"/>
         </div>
 
         <AnnotationOverlay

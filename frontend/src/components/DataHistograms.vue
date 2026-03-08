@@ -1,6 +1,6 @@
 <template>
-    <div style="width: 100%;">
-        <div class="mt-2">
+    <div style="min-width: 100%; max-width: 100%;">
+        <div class="mt-2" style="min-width: 100%;">
             <v-text-field v-model="search"
                 placeholder="search attributes .."
                 density="compact"
@@ -10,9 +10,9 @@
                 variant="outlined"/>
         </div>
 
-        <div class="d-flex flex-column align-center" :style="{ maxHeight: (!useChat && showHotbar ? 45 : 55)+'vh', overflowY: 'auto' }">
+        <div class="d-flex flex-column align-start mt-1">
 
-            <div :style="{ width: (2*(chartWidth+10))+'px' }" class="d-flex flex-wrap">
+            <div class="d-flex align-center" style="min-width: 100%; max-width: 100%; overflow-x: auto;">
 
                 <div v-for="i in fP"
                     class="text-caption"
@@ -44,9 +44,7 @@
                 </div>
             </div>
 
-            <v-divider v-if="fOP.length > 0" color="black" class="mt-2 mb-4" thickness="4" opacity="1"></v-divider>
-
-            <div :style="{ width: (2*(chartWidth+10))+'px' }" class="d-flex flex-wrap">
+            <div class="d-flex align-center mt-2" style="min-width: 100%; max-width: 100%; overflow-x: auto;">
                 <div v-for="i in fOP"
                     class="text-caption"
                     :key="'po_'+colsOtherP[i]+'_'+i+'_'+refresh"
