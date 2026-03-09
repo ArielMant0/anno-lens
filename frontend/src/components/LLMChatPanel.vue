@@ -30,9 +30,8 @@
     import ChatInput from './ChatInput.vue';
     import { storeToRefs } from 'pinia';
     import { useApp } from '@/stores/app';
-    import { llmFreeWithData } from '@/use/llm-interface';
+    import { llmFree } from '@/use/apis/llm-api';
     import { parseEntities } from '@/use/util';
-    import DM from '@/use/data-manager';
 
     const app = useApp()
     const { llmLoading, chatTime } = storeToRefs(app)
@@ -62,10 +61,7 @@
         try {
             scrollDown()
             llmLoading.value = true
-            const response = await llmFreeWithData(
-                text,
-                DM.describeDataStats()
-            )
+            const response = await llmFree(text)
             const entities = parseEntities(response)
 
             llmLoading.value = false

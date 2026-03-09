@@ -1,0 +1,17 @@
+name: annolens
+channels:
+  - conda-forge
+dependencies:
+  - flask
+  - flask-cors
+  - langchain
+  - langchain-ollama
+  - langchain-openai
+  - pandas
+  - psycopg
+  - pydantic
+  - pypika
+  - python=3.12
+  - python-dotenv
+
+prefix: "C:\\Users\\beckerfa\\.local\\share\\mamba\\envs\\annolens"

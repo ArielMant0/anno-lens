@@ -1,4 +1,5 @@
-import { DATA_TYPES, useApp } from "@/stores/app"
+import { useApp } from "@/stores/app"
+import { DATA_TYPES } from '@/stores/data';
 import { bin, deviation, min, mean, median, quadtree, scaleLinear, extent, group } from "d3"
 import { circleIntersect, dataToNumbers, findInCircle, getAttr } from "./util"
 import { Lens, LENS_TYPE } from "./Lens"

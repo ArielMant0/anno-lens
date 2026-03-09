@@ -7,7 +7,8 @@
 
 <script setup>
     import * as d3 from 'd3'
-    import { DATA_TYPES, useApp } from '@/stores/app'
+    import { useApp } from '@/stores/app'
+    import { DATA_TYPES } from '@/stores/data';
     import { watch } from 'vue'
     import { findInCircle, getAttr } from '@/use/util'
     import DM from '@/use/data-manager'

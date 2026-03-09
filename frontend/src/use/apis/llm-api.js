@@ -1,71 +1,77 @@
-import { useLoader } from "./loader";
-import { PromptTemplate, PromptVariable } from "./prompt-template";
+import { useLoader } from "../loader";
+import { PromptTemplate, PromptVariable } from "../prompt-template";
 
+const LLM_API_PREFIX = "llm"
 
 /**
  * Asks the model something without any relation to data
  * @param {String} prompt prompt send to model
  * @returns
  */
-export async function llmFree(prompt, history=null) {
+export async function llmFree(prompt) {
     const loader = useLoader()
-    console.debug("free/", prompt)
-    return loader.post("free", { prompt: prompt, history: history })
+    console.debug("ask/", prompt)
+    return loader.post(LLM_API_PREFIX+"/ask", { prompt: prompt })
 }
 
 /**
  * Asks the model something for a given set of data points
  * @param {String} prompt prompt send to model
- * @param {Array} data list of data points for the chosen subset
+ * @param {Array} targets list of target entities
+ * @param {String} target_type type of all target entities
  * @returns
  */
-export async function llmFreeWithData(prompt, data, text=null, history=null) {
+export async function llmFreeTargets(prompt, targets, target_type) {
     const loader = useLoader()
-    console.debug("free_data/", prompt)
-    return loader.post("free_data", { prompt: prompt, data: data, text: text, history: history })
-}
-
-/**
- * Asks the model something for a given text
- * @param {String} prompt prompt send to model
- * @param {String} text text that the model should do sth with
- * @returns
- */
-export async function llmFreeWithText(prompt, text, history=null) {
-    const loader = useLoader()
-    console.debug("free_text/", prompt)
-    return loader.post("free_text", { prompt: prompt, text: text, history: history })
+    console.debug("ask_targets/", prompt)
+    return loader.post(
+        LLM_API_PREFIX+"/ask_targets",
+        { prompt: prompt, targets: targets, target_type: target_type }
+    )
 }
 
 /**
  * Compare a number of data subsets to each other
  * @param {String} prompt prompt send to model
- * @param {Object} data object containing data points for named subsets
+ * @param {Array} targets list of target entities
+ * @param {String} target_type type of all target entities
  * @returns
  */
-export async function llmComparison(prompt, data, history=null) {
+export async function llmCompare(prompt, targets, target_type) {
     const loader = useLoader()
-    console.debug("comparison/", prompt)
-    return loader.post("comparison", { prompt: prompt, data: data, history: history })
+    console.debug("compare/", prompt)
+    return loader.post(
+        LLM_API_PREFIX+"/compare",
+        { prompt: prompt, targets: targets, target_type: target_type }
+    )
 }
 
 /**
  *
  * @param {String} prompt prompt send to model
- * @param {Array} data list of data points for the chosen subset
- * @param {Array} global list of column statistics for all data
+ * @param {Array} targets list of target entities
+ * @param {String} target_type type of all target entities
  * @returns
  */
-export async function llmExtract(prompt, data, global, history=null) {
+export async function llmExtract(prompt, targets, target_type) {
     const loader = useLoader()
     console.debug("extract/", prompt)
-    return loader.post("extract", { prompt: prompt, data: data, global: global, history: history })
+    return loader.post(
+        LLM_API_PREFIX+"/extract",
+        { prompt: prompt, targets: targets, target_type: target_type }
+    )
 }
 
-export async function llmCombine(prompt, columns, history=null) {
+/**
+ *
+ * @param {String} prompt prompt send to model
+ * @param {Array} targets list of target entities
+ * @returns
+ */
+export async function llmCombine(prompt, targets) {
     const loader = useLoader()
     console.debug("combine/", prompt)
-    return loader.post("combine", { prompt: prompt, columns: columns, history: history })
+    return loader.post(LLM_API_PREFIX+"/combine", { prompt: prompt, targets: targets })
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -78,13 +84,8 @@ export const SUMMARY_PROMPT = new PromptTemplate(
 )
 
 export const DESCRIPTION_PROMPT = new PromptTemplate(
-    "Describe notable characteristics of the data using no more than :limit: words.",
-    [new PromptVariable("limit", 50, "integer")]
-)
-
-export const LABEL_PROMPT = new PromptTemplate(
-    "Provide a fitting label for these data points using no more than :limit: words.",
-    [new PromptVariable("limit", 5, "integer")]
+    "Describe notable characteristics of the data using no more than :limit: words. Provide a fitting label using no more than :label: words.",
+    [new PromptVariable("limit", 50, "integer"), new PromptVariable("label", 5, "integer")]
 )
 
 export const EXTRACT_PROMPT = new PromptTemplate(

@@ -1,5 +1,2 @@
-from flask import Blueprint
-
-bp = Blueprint("main", __name__)
-
-from app import routes
+from app.blueprints.llm_api import llm_bp
+from app.blueprints.data_api import ds_bp

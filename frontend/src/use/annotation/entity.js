@@ -25,10 +25,11 @@ export function compareEntityType(a, b) {
 
 export class Entity {
 
-    constructor(type, targetType, data) {
+    constructor(type, targetType, dataId, data) {
         this.id = `${_EID++}_${type}_ent`
         this.type = type
         this.targetType = targetType
+        this.dataId = dataId
         this.data = data
     }
 }
@@ -36,8 +37,8 @@ export class Entity {
 
 export class SelectionEntity extends Entity {
 
-    constructor(data, name=data, selection=null) {
-        super(ENTITY_TYPE.SELECTION, ACTION_TARGET.SELECTION, data)
+    constructor(id, data, name=data, selection=null) {
+        super(ENTITY_TYPE.SELECTION, ACTION_TARGET.SELECTION, id, data)
         this.name = name
         this.selection = selection
     }
@@ -45,16 +46,17 @@ export class SelectionEntity extends Entity {
 
 export class DatapointEntity extends Entity {
 
-    constructor(data, values=null) {
-        super(ENTITY_TYPE.DATAPOINT, ACTION_TARGET.DATAPOINT, data)
+    constructor(id, data, values=null) {
+        super(ENTITY_TYPE.DATAPOINT, ACTION_TARGET.DATAPOINT, id, data)
+        this.name = `data point ${id}`
         this.values = values
     }
 }
 
 export class ColumnEntity extends Entity {
 
-    constructor(data, name=data, value=null) {
-        super(ENTITY_TYPE.COLUMN, ACTION_TARGET.COLUMN, data)
+    constructor(id, data, name=data, value=null) {
+        super(ENTITY_TYPE.COLUMN, ACTION_TARGET.COLUMN, id, data)
         this.name = name
         this.value = value
     }
@@ -62,8 +64,8 @@ export class ColumnEntity extends Entity {
 
 export class AnnotationEntity extends Entity {
 
-    constructor(data, name=data, annotation=null) {
-        super(ENTITY_TYPE.ANNOTATION, ACTION_TARGET.ANNOTATION, data)
+    constructor(id, data, name=data, annotation=null) {
+        super(ENTITY_TYPE.ANNOTATION, ACTION_TARGET.ANNOTATION, id, data)
         this.name = name
         this.annotation = annotation
     }

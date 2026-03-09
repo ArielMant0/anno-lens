@@ -135,7 +135,8 @@
     import * as d3 from 'd3'
     import ScatterPlot from './vis/ScatterPlot.vue'
     import { storeToRefs } from 'pinia'
-    import { DATA_TYPES, useApp } from '@/stores/app';
+    import { useApp } from '@/stores/app';
+    import { DATA_TYPES, useData } from '@/stores/data';
     import { useControls } from '@/stores/controls';
     import { LENS_TYPE } from '@/use/Lens';
     import { computed, reactive, toRaw, useTemplateRef, watch } from 'vue';
@@ -151,7 +152,17 @@
     import AnnoInventory from './AnnoInventory.vue';
     import { useTooltip } from '@/stores/tooltip';
     import ColorPicker from './ColorPicker.vue';
-    import { COMBINE_PROMPT, COMPARE_PROMPT, DESCRIPTION_PROMPT, EXTRACT_PROMPT, LABEL_PROMPT, llmCombine, llmComparison, llmExtract, llmFreeWithData, REFINE_PROMPT } from '@/use/llm-interface';
+    import {
+        COMBINE_PROMPT,
+        COMPARE_PROMPT,
+        DESCRIPTION_PROMPT,
+        EXTRACT_PROMPT,
+        REFINE_PROMPT,
+        llmCombine,
+        llmCompare,
+        llmExtract,
+        llmFreeTargets
+    } from '@/use/apis/llm-api';
     import { toast } from 'vue3-toastify';
     import DataHistograms from './DataHistograms.vue';
     import ActiveAnnotationView from './annotation/ActiveAnnotationView.vue';
@@ -164,16 +175,12 @@
     import LLMChatPanel from './LLMChatPanel.vue';
 
     const app = useApp()
+    const dstore = useData()
     const controls = useControls()
     const tt = useTooltip()
     const theme = useTheme()
 
     const {
-        dataset,
-        datasetX,
-        datasetY,
-        datasetColor,
-
         ready,
 
         refMode,
@@ -194,6 +201,13 @@
         lensMoveTime
 
     } = storeToRefs(app)
+
+    const {
+        datasetId,
+        datasetX,
+        datasetY,
+        datasetColor
+    } = storeToRefs(dstore)
 
     const scatter = useTemplateRef("scatter")
 
@@ -431,13 +445,13 @@
             mouseMove = performance.now()
             updateLens(lx, ly)
             applyLens()
-        } else if (app.datasetObj.meta) {
+        } else if (dstore.dataset.meta) {
             // show tooltip with meta info
             if (points.length === 0) {
                 tt.hide()
             } else {
                 const [mx, my] = event ? d3.pointer(event, document.body) : [lx, ly]
-                const meta = app.datasetObj.meta
+                const meta = dstore.dataset.meta
                 const str = points.map(d => `<div>${meta.map(m => getAttr(d, m)).join(", ")}</div>`).join("\n")
                 tt.show(str, mx, my)
             }
@@ -503,18 +517,22 @@
 
         DM.reset()
 
+        // TODO: fix this, react to dataset change
+
+        return 
+
         const points = await d3.csv(`data/${dataset.value}.csv`, d3.autoType)
         columns.value = points.columns.filter(d => {
             const n = d.toLowerCase()
-            return n !== "id" && n !== "x" && n !== "y" && !app.datasetObj.ignore.includes(d)
+            return n !== "id" && n !== "x" && n !== "y" && !dstore.dataset.ignore.includes(d)
         }).concat(MODIFIER_COLUMNS)
 
-        if (app.datasetObj.parse) {
+        if (dstore.dataset.parse) {
             points.forEach(d => {
                 columns.value.forEach(c => {
-                    if (app.datasetObj.parse[c]) {
+                    if (dstore.datadatasetsetObj.parse[c]) {
                         const s = d[c].replaceAll("'", '"')
-                        d[c] = app.datasetObj.parse[c](s)
+                        d[c] = dstore.dataset.parse[c](s)
                     }
                 })
             })
@@ -542,7 +560,7 @@
         app.scales = scales
         ctypes.value = ct
 
-        DM.setDataset(app.datasetObj)
+        DM.setDataset(dstore.dataset)
         DM.setData(points, toRaw(columns.value), ct, "x", "y", w.value, h.value)
 
         loading.value = false
@@ -649,14 +667,14 @@
 
             switch (target.type) {
                 case ACTION_TARGET.SELECTION:
-                    // get data points that match the target
-                    const datapoints = target.getSelection().filter(DM.getData())
-                    if (datapoints.length === 0) {
+                    // get selection/group ids
+                    const ids = target.getSelectionIds()
+                    if (ids.length === 0) {
                         toast.error("no entity to describe")
                         return
                     }
                     // ask for description / summary
-                    llmFreeWithData(prompt, DM.describeData(datapoints))
+                    llmFreeTargets(prompt, ids, "group")
                         .then(response => {
                             DM.annotateText(
                                 response.answer,
@@ -676,40 +694,17 @@
         CM.addKeyMapping(5, "1", "describe", descCommand)
 
 
-        const labelCommand = new LLMCommand(function(prompt, target) {
-            app.setLLMLoading(true)
-
-            const datapoints = target.getSelection().filter(DM.getData())
-            if (datapoints.length === 0) {
-                toast.error("no data to label")
-                return
-            }
-
-            llmFreeWithData(prompt, DM.describeData(datapoints), 5)
-                .then(response => {
-                    // get the correct annotation to label
-                    const anno = target.annotation ?
-                        target.annotation :
-                        DM.annotateEmpty()
-
-                    anno.setTitle(response.answer)
-                    app.setLLMLoading(false)
-                })
-            }, LABEL_PROMPT, 1, 1, [ACTION_TARGET.SELECTION])
-        // add hotkey for "label" command
-        CM.addKeyMapping(6, "2", "label", labelCommand)
-
         const extractCommand = new LLMCommand(function(prompt, target) {
             app.setLLMLoading(true)
 
-            // get datapoints for the selection
-            const datapoints = target.getSelection().filter(DM.getData())
-            if (datapoints.length === 0) {
+            // get selection/group ids
+            const ids = target.getSelectionIds()
+            if (ids.length === 0) {
                 toast.error("no data to extract columns for")
                 return
             }
 
-            llmExtract(prompt, DM.describeData(datapoints), DM.describeDataStats())
+            llmExtract(prompt, ids, "group")
                 .then(response => {
                     const entities = parseEntities(response)
                     DM.annotateText(
@@ -722,26 +717,19 @@
                 })
             }, EXTRACT_PROMPT, 1, 1, [ACTION_TARGET.SELECTION])
         // add hotkey for "extract" command
-        CM.addKeyMapping(7, "3", "extract", extractCommand)
+        CM.addKeyMapping(6, "3", "extract", extractCommand)
 
         const compareCommand = new LLMCommand(function(prompt, targets) {
             app.setLLMLoading(true)
-            const allData = DM.getData()
             // get data for all involved selections
-            const subsets = {}
-            targets.forEach((t, i) => {
-                const s = t.getSelection()
-                const e = t.getEntities()
-                const name = e.name ? e.name : `Subset ${i+1}`
-                subsets[name] = s.filter(allData)
-            })
+            const groups = targets.map(t => t.getSelectionIds())
 
-            if (Object.keys(subsets).length < 2) {
+            if (groups.length < 2) {
                 toast.error("not enough data for a comparison")
                 return
             }
 
-            llmComparison(prompt, subsets)
+            llmCompare(prompt, groups, "group")
                 .then(response => {
                     const entities = parseEntities(response)
                     targets.forEach(t => {
@@ -763,11 +751,11 @@
                     app.setLLMLoading(false)
                 })
             }, COMPARE_PROMPT, 2, Infinity, [ACTION_TARGET.SELECTION])
-        CM.addKeyMapping(8, "4", "compare", compareCommand)
+        CM.addKeyMapping(7, "4", "compare", compareCommand)
 
         const combineCommand = new LLMCommand(function(prompt, targets) {
             app.setLLMLoading(true)
-            llmCombine(prompt, targets.map(t => t.getData()).flat())
+            llmCombine(prompt, targets.map(t => t.getDataIds()).flat())
                 .then(response => {
                     const entities = parseEntities(response)
                     // TODO: add to a global notepad
@@ -781,23 +769,20 @@
                     app.setColorOverride(MODIFIER_TYPE.COLOR_FUNCTION)
                 })
             }, COMBINE_PROMPT, 2, Infinity, [ACTION_TARGET.COLUMN])
-        CM.addKeyMapping(9, "5", "combine", combineCommand)
+        CM.addKeyMapping(8, "5", "combine", combineCommand)
 
         const refineCmd = new LLMCommand(function(prompt, target) {
             app.setLLMLoading(true)
-            const entry = target.annotation.getEntry(target.getEntities().data)
+            const entry = target.annotation.getEntry(target.getEntities().dataId)
 
-            // get datapoints for the annotation
-            const datapoints = target.getSelection().filter(DM.getData())
-
-            llmFreeWithData(prompt, DM.describeData(datapoints), entry.getText())
+            llmFreeTargets(prompt, entry.id, "anno_entry")
                 .then(response => {
                     entry.setText(response.answer)
                     app.setLLMLoading(false)
                 })
             }, REFINE_PROMPT, 1, 1, [ACTION_TARGET.ANNOTATION])
         // add hotkey for "refine" command
-        CM.addKeyMapping(10, "6", "refine", refineCmd)
+        CM.addKeyMapping(9, "6", "refine", refineCmd)
 
 
         // resize lens
@@ -831,10 +816,10 @@
 
         controls.setInitialized()
 
-        init()
+        // init()
     })
 
-    watch(dataset, init)
+    // watch(dataset, init)
     watch(colorOverride, applyLens)
 
     watch(() => ([w.value, h.value]), () => plotResize = performance.now())

@@ -24,7 +24,7 @@
 <script setup>
     import { onMounted, watch } from 'vue';
     import BarChart from './vis/BarChart.vue';
-    import { DATA_TYPES } from '@/stores/app';
+    import { DATA_TYPES } from '@/stores/data';
     import DM from '@/use/data-manager';
     import { max, range } from 'd3';
 

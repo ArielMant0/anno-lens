@@ -1,4 +1,4 @@
-import { DATA_TYPES, useApp } from "@/stores/app";
+import { DATA_TYPES, useData } from '@/stores/data';
 import { bin, deviation, extent, group, interpolatePlasma, mean, scaleOrdinal, scaleQuantile, scaleSequential, schemeBlues, schemeCategory10, schemeOrRd } from "d3";
 import DM from "./data-manager";
 import { AnnotationEntity, ColumnEntity, DatapointEntity } from "./annotation/entity";
@@ -6,9 +6,9 @@ import { AnnotationEntity, ColumnEntity, DatapointEntity } from "./annotation/en
 let _UID = 1;
 
 export function getDataType(d, name) {
-    const app = useApp()
-    if (app.datasetObj.types && app.datasetObj.types[name]) {
-        return app.datasetObj.types[name]
+    const dstore = useData()
+    if (dstore.dataset.types && dstore.dataset.types[name]) {
+        return dstore.dataset.types[name]
     }
     const v = getAttr(d, name)
     switch (typeof v) {

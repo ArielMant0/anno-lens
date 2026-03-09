@@ -2,54 +2,9 @@
 import { LENS_TYPE } from '@/use/Lens'
 import { defineStore } from 'pinia'
 
-export const DATA_TYPES = Object.freeze({
-    SEQUENTIAL: 1,
-    ORDINAL: 2,
-    NOMINAL: 3,
-    INTEGER: 4,
-    QUANTILE: 5,
-    BOOLEAN: 6,
-    // SET: 7
-})
-
-export const DATASETS = [
-    {
-        name: "Games Tagging",
-        file: "games.dr",
-        x: "x",
-        y: "y",
-        color: "enact violence",
-        type: DATA_TYPES.BOOLEAN,
-        ignore: ["name", "cluster"],
-        meta: ["name"]
-    },{
-        name: "Cereal",
-        file: "cereal.dr",
-        x: "x",
-        y: "y",
-        color: "rating",
-        type: DATA_TYPES.SEQUENTIAL,
-        ignore: ["name"],
-        meta: ["name"],
-        types: {
-            // "calories": DATA_TYPES.INTEGER,
-            // "protein": DATA_TYPES.INTEGER,
-            // "fat": DATA_TYPES.INTEGER,
-            // "sodium": DATA_TYPES.INTEGER,
-            // "sugars": DATA_TYPES.INTEGER,
-            // "potassium": DATA_TYPES.INTEGER,
-            // "vitamins & minerals": DATA_TYPES.INTEGER,
-            "display shelf": DATA_TYPES.ORDINAL,
-        }
-    }
-]
-
 export const useApp = defineStore('app', {
     state: () => ({
-        dataset: "cereal.dr",
-        datasetObj: Object.assign({}, DATASETS[1]),
         ready: false,
-
         useChat: false,
 
         refMode: "global",
@@ -89,9 +44,6 @@ export const useApp = defineStore('app', {
     }),
 
     getters: {
-        datasetColor: state => state.datasetObj.colorAttr ? state.datasetObj.colorAttr : state.datasetObj.color,
-        datasetX: state => state.datasetObj.x,
-        datasetY: state => state.datasetObj.y,
         columnIndex: state => state.activeLens === 0 ? state.colorIndex : state.colorIndexSec,
         hasHoveredEntity: state => state.hovered.size > 0
     },
@@ -100,12 +52,6 @@ export const useApp = defineStore('app', {
 
         setInitialized() {
             this.initialized = true
-        },
-
-        setDataset(name) {
-            const it = DATASETS.find(d => d.file === name)
-            this.datasetObj = it
-            this.dataset = name
         },
 
         setChat(value) {

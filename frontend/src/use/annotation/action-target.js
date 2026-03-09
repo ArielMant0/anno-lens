@@ -39,6 +39,10 @@ export class TargetData {
         return this.entities.map(d => d.data)
     }
 
+    getDataIds() {
+        return this.entities.map(d => d.dataId)
+    }
+
     getSelection() {
         switch (this.type) {
             case ACTION_TARGET.SELECTION:
@@ -47,6 +51,19 @@ export class TargetData {
                     this.entities.at(0).selection
             case ACTION_TARGET.ANNOTATION:
                 return Selection.dataUnion(this.annotation.selections)
+            default:
+                return null
+        }
+    }
+
+    getSelectionIds() {
+        switch (this.type) {
+            case ACTION_TARGET.SELECTION:
+                return this.multiple ?
+                    this.entities.map(d => d.selection.id) :
+                    this.entities.at(0).selection.id
+            case ACTION_TARGET.ANNOTATION:
+                return this.annotation.selections.map(d => d.id)
             default:
                 return null
         }
