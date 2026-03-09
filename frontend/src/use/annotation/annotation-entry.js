@@ -1,4 +1,4 @@
-import { compareEntityType } from "./entity";
+import { compareEntityType, Entity } from "./entity";
 
 let _ENTRY_ID = 1;
 
@@ -24,6 +24,16 @@ export class AnnotationEntry {
         this.entities = []
         this.addEntities(entities, false)
         this.timeUpdated = Date.now()
+    }
+
+    static fromJSON(json) {
+        // TODO: save which kind of entry we had
+        return new TextEntry(
+            json.annotation_id,
+            json.text,
+            ENTRY_SOURCE.AI, // TODO
+            json.entities.map(e => Entity.fromJSON(e))
+        )
     }
 
     update() {

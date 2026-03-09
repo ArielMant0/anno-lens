@@ -1,11 +1,11 @@
 from app.agents.tools import Tools
 from app.agents.answer_types import (
-    AnswerType,
+    EDAAnswer,
     DataComparison,
     WeightedColumns,
     ColumnList
 )
-from app.agents.model import llm, make_prompt
+from app.agents.model import llm, prompt
 
 from langchain.agents import create_agent
 
@@ -49,7 +49,10 @@ User question: {question}
 SQL analysis results:
 {context}
 
-Choose the best output format and produce the final structured result.
+Return exactly one answer type.
+
+Rules:
+- Fill out only the chosen answer type.
 """)
 
 
@@ -79,16 +82,15 @@ def run(question, arguments=None, answer_types=None):
 
 def _run_prompt(question, arguments, answer_types=None):
 
-    # create the prompt
-    prompt = make_prompt(arguments)
+    # create the messages from prompt and data
+    messages = prompt.invoke(arguments)
 
     # get tool result
-    tool_result = agent.invoke(prompt)
+    tool_result = agent.invoke(messages)
 
     # default: make LLM choose the right answer
     if answer_types == None:
-        # analyze tool results
-        result = analyze_multiple(question, tool_result, AnswerType)
+        result = analyze_multiple(question, tool_result, EDAAnswer)
     else:
         result = analyze_single(question, tool_result, answer_types)
 

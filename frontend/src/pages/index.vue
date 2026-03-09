@@ -1,13 +1,15 @@
 <template>
     <div style="height: 100vh;" class="pa-2">
-        <v-overlay v-if="!ready" absolute>
+        <v-overlay v-if="!loaded" absolute>
             <v-progress-circular size="64" indeterminate></v-progress-circular>
         </v-overlay>
-        <MultiLensVis/>
-        <template v-if="ready && initialized">
+
+        <template v-if="loaded">
+            <SystemView/>
             <GlobalSettings/>
             <HotBar v-if="!useChat"/>
         </template>
+        
         <HoverOverlay/>
         <TargetingOverlay/>
         <CommandEditingPanel/>
@@ -16,7 +18,7 @@
 
 <script setup>
     import TargetingOverlay from '@/components/TargetingOverlay.vue';
-    import MultiLensVis from '@/components/MultiLensVis.vue';
+    import SystemView from '@/components/SystemView.vue';
     import { useApp } from '@/stores/app';
     import { useControls } from '@/stores/controls';
     import { storeToRefs } from 'pinia';
@@ -28,13 +30,14 @@
     import { getData } from '@/use/apis/data-api';
     import { convertDType, useData } from '@/stores/data';
     import DM from '@/use/data-manager';
+    import { MODIFIER_COLUMNS } from '@/use/annotation/modifiers';
 
     const app = useApp()
     const dstore = useData()
     const controls = useControls()
 
-    const { ready, initialized, useChat } = storeToRefs(app)
-    const { datasetId } = storeToRefs(dstore)
+    const { useChat } = storeToRefs(app)
+    const { loaded, datasetId } = storeToRefs(dstore)
 
     async function init() {
         // get available datasets
@@ -53,85 +56,42 @@
 
         const dsid = dstore.dataset.id
         // get columns, items groups, and annotations
-        const [columns, items, groups, annotations] = await Promise.all([
+        const [columns, items] = await Promise.all([
             getData("columns", dsid),
             getData("items", dsid),
-            getData("groups", dsid),
-            getData("annotations", dsid)
         ])
 
         columns.forEach(c => c.dtype = convertDType(c.dtype))
 
-        // set data for data manager
-        DM.setData(
-            items,
-            columns.map(d => d.name),
-            columns.map(d => d.dtype),
-            dstore.datasetX,
-            dstore.datasetY,
-        )
+        const useColumns = columns.filter(d => {
+            const n = d.name.toLowerCase()
+            return n !== "id" &&
+                n !== dstore.datasetX &&
+                n !== dstore.datasetY &&
+                !dstore.dataset.ignore.includes(n)
+        }).concat(MODIFIER_COLUMNS)
 
-        dstore.setReady(true)
+        DM.setColumns(useColumns.map(d => d.name), useColumns.map(d => d.dtype), false)
+
+        items.forEach(d => MODIFIER_COLUMNS.forEach(name => d[name] = 0))
+        DM.setData(items, dstore.datasetX, dstore.datasetY, false)
+
+        const [groups, annotations] = await Promise.all([
+            getData("groups", dsid),
+            getData("annotations", dsid)
+        ])
+
+        DM.setAnnotations(annotations, false)
+
+        dstore.setLoaded(true)
     }
 
     onMounted(function() {
-        init()
         window.addEventListener("keydown", (event) => controls.keyEvent(event))
+        init()
     })
 
     watch(datasetId, loadDataset)
 
 </script>
 
-<style>
-.text-dots {
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-.hover-italic:hover {
-    font-style: italic;
-}
-.hover-bold:hover {
-    font-weight: bold;
-}
-.hover-bg-grey:hover {
-    background-color: #efefef;
-}
-
-.aPulse {
-    animation: pulse 500ms cubic-bezier(0.33, 1, 0.68, 1) infinite;
-}
-.aSat {
-    animation: sat 500ms cubic-bezier(0.33, 1, 0.68, 1) infinite;
-}
-
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-    }
-
-    50% {
-        transform: scale(1.15);
-    }
-
-    100% {
-        transform: scale(1);
-    }
-}
-
-@keyframes sat {
-    0% {
-        filter: saturate(1)
-    }
-
-    50% {
-        filter: saturate(1.5)
-    }
-
-    100% {
-        filter: saturate(1)
-    }
-}
-
-</style>

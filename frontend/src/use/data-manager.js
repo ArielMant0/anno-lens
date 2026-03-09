@@ -103,6 +103,16 @@ class DataManager {
         this.annoMap = {}
     }
 
+    update(name="data") {
+        // mark as updated
+        const app = useApp()
+        if (name === "data") {
+            app.updateData()
+        } else if (name === "anno") {
+            app.updateAnno()
+        }
+    }
+
     describeData(datapoints=null, options=DEFAULT_DESC_OPTIONS) {
         const data = datapoints ? datapoints : this.data
         const opts = Object.assign(Object.assign({}, DEFAULT_DESC_OPTIONS), options)
@@ -231,38 +241,56 @@ class DataManager {
     getSelectionById(id) {
         return this.selections.find(d => d.id === id)
     }
-
-    setData(data=[], columns=[], types=[], xAttr="x", yAttr="y", width=500, height=500) {
-        this.data = data
+    
+    setColumns(columns, types, update=true) {
         this.columns = columns
         this.types = types
+
+        if (update) this.update()
+    }
+
+    setData(data, xAttr="x", yAttr="y", update=true) {
+        this.data = data
         this.xAttr = xAttr
         this.yAttr = yAttr
+
+        this.stats = {}
+        // calculate stats
+        if (this.columns) {
+            this.columns.forEach((c, i) => this.stats[c] = calcStats(data, c, this.types[i]))
+        }
+        this.filterStats = this.stats
+
+        if (update) this.update()
+    }
+
+    setSize(width=500, height=500, update=true) {
         this.width = width
         this.height = height
 
-        // calculate stats
-        this.stats = {}
-        this.columns.forEach((c, i) => this.stats[c] = calcStats(data, c, types[i]))
-        this.filterStats = this.stats;
+        if (this.data) {
 
-        // scales for quadtree
-        this.x = scaleLinear()
-            .domain(extent(data, d => getAttr(d, this.xAttr)))
-            .range([5, width-5])
-        this.y = scaleLinear()
-            .domain(extent(data, d => getAttr(d, this.yAttr)))
-            .range([height-5, 5])
+            // scales for quadtree
+            this.x = scaleLinear()
+                .domain(extent(this.data, d => getAttr(d, this.xAttr)))
+                .range([5, width-5])
+            this.y = scaleLinear()
+                .domain(extent(this.data, d => getAttr(d, this.yAttr)))
+                .range([height-5, 5])
+            
+            // calculate quadtree
+            this.tree = quadtree()
+                .x(d => this.x(getAttr(d, this.xAttr)))
+                .y(d => this.y(getAttr(d, this.yAttr)))
+                .addAll(this.data)
+            
+            if (update) this.update()
+        }
+    }
 
-        // calculate quadtree
-        this.tree = quadtree()
-            .x(d => this.x(getAttr(d, this.xAttr)))
-            .y(d => this.y(getAttr(d, this.yAttr)))
-            .addAll(data)
-
-        // mark as updated
-        const app = useApp()
-        app.updateData()
+    setAnnotations(annotations, update=true) {
+        this.annotations = annotations.map(d => Annotation.fromJSON(d))
+        if (update) this.update("anno")
     }
 
     getData(filter=true) {
@@ -274,7 +302,7 @@ class DataManager {
 
     resize(width, height) {
         if (!this.data || this.data.length === 0 || !this.x || !this.y) return
-
+       
         let rx, ry;
         if (this.x && this.y) {
             rx = scaleLinear()
@@ -286,19 +314,7 @@ class DataManager {
                 .range([height-5, 5])
         }
 
-        // scales for quadtree
-        this.x = scaleLinear()
-            .domain(extent(this.data, d => getAttr(d, this.xAttr)))
-            .range([5, width-5])
-        this.y = scaleLinear()
-            .domain(extent(this.data, d => getAttr(d, this.yAttr)))
-            .range([height-5, 5])
-
-        // calculate quadtree
-        this.tree = quadtree()
-            .x(d => this.x(getAttr(d, this.xAttr)))
-            .y(d => this.y(getAttr(d, this.yAttr)))
-            .addAll(this.data)
+        this.setSize(width, height, false)
 
         if (rx && ry) {
             this.lenses.forEach((l, i) => {
@@ -309,9 +325,7 @@ class DataManager {
             })
         }
 
-        // mark as updated
-        const app = useApp()
-        app.updateData()
+        this.update()
 
         if (rx && ry) {
             this.callbacks.lens.forEach(f => f())

@@ -32,6 +32,19 @@ export class Entity {
         this.dataId = dataId
         this.data = data
     }
+
+    static fromJSON(json) {
+        switch (json.type) {
+            case ENTITY_TYPE.SELECTION:
+                return new SelectionEntity(json.id, json.data, json.name)
+            case ENTITY_TYPE.COLUMN:
+                return new ColumnEntity(json.id, json.data, json.name, json.value)
+            case ENTITY_TYPE.ANNOTATION:
+                return new AnnotationEntity(json.id, json.data, json.name)
+            case ENTITY_TYPE.DATAPOINT:
+                return new DatapointEntity(json.id, json.data, json.values)
+        }
+    }
 }
 
 

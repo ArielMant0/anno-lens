@@ -1,4 +1,4 @@
-import { mean } from "d3";
+import { mean, polygonContains } from "d3";
 import { findInCircle, getAttr } from "../util";
 import { makePolygon } from "./polygon";
 
@@ -22,6 +22,11 @@ export class Selection {
         this.y = 0
         this.polygon = []
         this.centroid = []
+    }
+
+    static fromJSON(json) {
+        // TODO: save which kind of selection we have
+        return new BrushSelection(json.ids)
     }
 
     static dataUnion(selections) {
@@ -113,8 +118,22 @@ export class LensSelection extends Selection {
 
 export class LassoSelection extends Selection {
 
-    constructor(data=[], lasso=null) {
+    constructor(data=[], lasso=[]) {
         super(SELECTION_TYPE.LASSO, data)
-        this.lasso = []
+        this.lasso = lasso
     }
+
+    apply(tree) {
+        const points = findInCallback(tree, (x, y) => this.polygon.some(p => polygonContains(p, [x, y])))
+        this.data = new Set(points.map(d => d.id))
+    }
+}
+
+
+export class BrushSelection extends Selection {
+
+    constructor(data=[]) {
+        super(SELECTION_TYPE.BRUSH, data)
+    }
+
 }

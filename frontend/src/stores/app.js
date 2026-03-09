@@ -82,6 +82,10 @@ export const useApp = defineStore('app', {
             this.dataTime = Date.now()
         },
 
+        updateAnno() {
+            this.annoTime = Date.now()
+        },
+
         updateLensData() {
             this.lensTime = Date.now()
             this.selectionTime = this.lensTime

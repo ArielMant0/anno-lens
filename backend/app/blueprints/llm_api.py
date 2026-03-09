@@ -10,7 +10,7 @@ llm_bp = Blueprint("llm", __name__)
 @llm_bp.post('/ask')
 def ask() -> Response:
     if config.USE_DUMMY_DATA:
-        return jsonify(TextAnswer({ "answer": "prompt answer" }))
+        return jsonify(TextAnswer(answer="prompt answer"))
 
     return jsonify(agent.run(request.json["prompt"]))
 
@@ -18,7 +18,7 @@ def ask() -> Response:
 @llm_bp.post('/ask_targets')
 def ask_with_targets() -> Response:
     if config.USE_DUMMY_DATA:
-        return jsonify(TextAnswer({ "answer": "prompt with targets answer" }))
+        return jsonify(TextAnswer(answer="prompt with targets answer"))
 
     return jsonify(agent.run_with_targets(
         request.json["prompt"],
@@ -45,10 +45,10 @@ def extract() -> Response:
 @llm_bp.post('/combine')
 def combine() -> Response:
     if config.USE_DUMMY_DATA:
-        return jsonify(WeightedColumns({
-            "explanation": "prompt with targets answer",
-            "weights": { "sugars": 0.33, "protein": 0.66 }
-        }))
+        return jsonify(WeightedColumns(
+            explanation="prompt with targets answer",
+            weights={ "sugars": 0.33, "protein": 0.66 }
+        ))
 
     return jsonify(agent.combine(
         request.json["prompt"],
@@ -59,10 +59,10 @@ def combine() -> Response:
 @llm_bp.post('/compare')
 def compare() -> Response:
     if config.USE_DUMMY_DATA:
-        return jsonify(DataComparison({
-            "explanation": "comparison explanation",
-            "columns": ["vitamins & minerals"]
-        }))
+        return jsonify(DataComparison(
+            explanation="comparison explanation",
+            columns=["vitamins & minerals"]
+        ))
 
     return jsonify(agent.compare(
         request.json["prompt"],

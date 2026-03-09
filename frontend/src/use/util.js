@@ -48,13 +48,9 @@ export function makeColorScale(data, column, type, primary="blue") {
         case DATA_TYPES.BOOLEAN: {
             return scaleOrdinal(["lightgrey", primary]).domain([false, true]).unknown("red")
         }
-        case DATA_TYPES.INTEGER: {
-            const tmp = extent(data, d => getAttr(d, column))
-            tmp.sort((a, b) => a-b)
-            return scaleOrdinal(schemeBlues).domain(tmp).unknown("black")
-        }
         case DATA_TYPES.QUANTILE:
             return scaleQuantile(data.map(d => getAttr(d, column)), schemeOrRd[6]).unknown("black")
+        case DATA_TYPES.INTEGER:
         case DATA_TYPES.SEQUENTIAL:
             return scaleSequential(interpolatePlasma)
                 .unknown("black")
@@ -63,7 +59,7 @@ export function makeColorScale(data, column, type, primary="blue") {
             const tmp = group(data, d => getAttr(d, column))
             const dom = Array.from(tmp.keys())
             dom.sort((a, b) => a-b)
-            return scaleOrdinal(schemeBlues[9]).domain(dom).unknown("black")
+            return scaleOrdinal(schemeBlues[Math.min(dom.length, 9)]).domain(dom).unknown("black")
         }
         default:
         case DATA_TYPES.NOMINAL: {
@@ -170,14 +166,32 @@ export function findInCircle(tree, px, py, r) {
     const result = [], radius2 = r * r
     tree.visit(function(node, x1, y1, x2, y2) {
         if (node.length) {
-            return x1 >= px + r || y1 >= py + r || x2 < px - r || y2 < py - r;
+            return x1 >= px + r || y1 >= py + r || x2 < px - r || y2 < py - r
         }
 
         const dx = +tree._x.call(null, node.data) - px,
-            dy = +tree._y.call(null, node.data) - py;
+            dy = +tree._y.call(null, node.data) - py
 
         if (dx * dx + dy * dy < radius2) {
-            do { result.push(node.data); } while (node = node.next);
+            do { result.push(node.data) } while (node = node.next)
+        }
+    });
+
+    return result;
+}
+
+export function findInCallback(tree, callback) {
+    const result = []
+    tree.visit(function(node, x1, y1, x2, y2) {
+        if (node.length) {
+            return !callback(x1, y1) && !callback(x2, y2)
+        }
+
+        const dx = +tree._x.call(null, node.data)
+        const dy = +tree._y.call(null, node.data)
+
+        if (callback(dx, dy)) {
+            do { result.push(node.data) } while (node = node.next);
         }
     });
 

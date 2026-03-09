@@ -1,7 +1,7 @@
 <template>
 <div style="min-height: 90vh; max-height: 97vh; max-width: 100vw;">
 
-    <div v-if="!loading && numData > 0" class="d-flex flex-column align-center justify-start mt-2">
+    <div v-if="ready" class="d-flex flex-column align-center justify-start mt-2">
         <div class="d-flex mt-2">
 
             <div>
@@ -124,8 +124,6 @@
             @click-label="onClickLabel"
             :indices="[0]"/>
 
-        <AnnoInventory/>
-
         <ColorPicker v-model="editColor" @select="col => app.setColorOverride(col)"/>
     </div>
 </div>
@@ -149,7 +147,6 @@
     import AnnotationOverlay from './annotation/AnnotationOverlay.vue';
     import LensOverlay from './LensOverlay.vue';
     import { useWindowSize } from '@vueuse/core';
-    import AnnoInventory from './AnnoInventory.vue';
     import { useTooltip } from '@/stores/tooltip';
     import ColorPicker from './ColorPicker.vue';
     import {
@@ -250,7 +247,6 @@
         filterType: null,
     })
 
-    const loading = ref(true)
     const numData = ref(0)
 
     const colorColumn = ref(datasetColor.value)
@@ -499,7 +495,6 @@
     }
 
     async function init() {
-        loading.value = true
         ready.value = false
         mouseStill.value = false
 
@@ -515,58 +510,26 @@
         activeLens.value = primaryLens.value
         moveLens.value = false
 
-        DM.reset()
-
-        // TODO: fix this, react to dataset change
-
-        return 
-
-        const points = await d3.csv(`data/${dataset.value}.csv`, d3.autoType)
-        columns.value = points.columns.filter(d => {
-            const n = d.toLowerCase()
-            return n !== "id" && n !== "x" && n !== "y" && !dstore.dataset.ignore.includes(d)
-        }).concat(MODIFIER_COLUMNS)
-
-        if (dstore.dataset.parse) {
-            points.forEach(d => {
-                columns.value.forEach(c => {
-                    if (dstore.datadatasetsetObj.parse[c]) {
-                        const s = d[c].replaceAll("'", '"')
-                        d[c] = dstore.dataset.parse[c](s)
-                    }
-                })
-            })
-        }
-
-        const missingId = points[0]["id"] === undefined
-        points.forEach((d, i) => {
-            // set id if not part of dataset
-            if (missingId) d.id = i
-            MODIFIER_COLUMNS.forEach(name => d[name] = 0)
-        })
+        DM.setSize(w.value, h.value)
 
         // add primary lens
-        DM.addLens(lensRadius.value, lensType.value, true)
-        // add secondary lens (for suggestions)
-        // DM.addLens(lensRadius.value, lensType.value, false)
+        if (DM.lenses.length === 0) {
+            DM.addLens(lensRadius.value, lensType.value, true)
+        }
 
-        const ct = [], scales = {}
-        columns.value.forEach(c => {
-            ct.push(getDataType(points[0], c))
-            scales[c] = makeColorScale(points, c, ct.at(-1), theme.current.value.colors.primary)
+        const scales = {}
+        DM.columns.forEach((c, i) => {
+            scales[c] = makeColorScale(
+                DM.data,
+                c,
+                DM.types[i],
+                theme.current.value.colors.primary
+            )
         })
         DM.setScales(scales)
 
         app.scales = scales
-        ctypes.value = ct
-
-        DM.setDataset(dstore.dataset)
-        DM.setData(points, toRaw(columns.value), ct, "x", "y", w.value, h.value)
-
-        loading.value = false
-        numData.value = points.length
-
-        app.setInitialized()
+        ctypes.value = DM.types.slice()
 
         dataTime.value = Date.now()
         annoTime.value = Date.now()
@@ -581,19 +544,12 @@
         ready.value = false
         DM.computeFeatureMaps(lensRadius.value, 10, () => {
             topFeatures.value = DM.getBestFeatures(lensType.value, refMode.value)
-            // app.setColor(topFeatures.value.at(-1))
             ready.value = true
             const lens = DM.getLens(0)
             updateLens(lens.x, lens.y)
             applyLens()
             featureTime.value = Date.now()
         })
-    }
-
-    function swapLenses() {
-        if (DM.getLens(1).numResults[refMode.value] > 0) {
-            setActiveLens(Math.abs(1 - activeLens.value))
-        }
     }
 
     function loopFunc(timestamp) {
@@ -816,10 +772,10 @@
 
         controls.setInitialized()
 
-        // init()
+        init()
     })
 
-    // watch(dataset, init)
+    watch(datasetId, init)
     watch(colorOverride, applyLens)
 
     watch(() => ([w.value, h.value]), () => plotResize = performance.now())

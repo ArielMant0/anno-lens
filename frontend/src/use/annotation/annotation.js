@@ -1,13 +1,15 @@
 import { mean } from "d3"
 import DM from "../data-manager"
 import { ENTITY_TYPE } from "./entity"
+import { Selection } from "../selection/selection"
+import { AnnotationEntry } from "./annotation-entry"
 
 let _ANNO_ID = 1
 
 export default class Annotation {
 
-    constructor(data, selections=[], title="Annotation", label="A1") {
-        this.id = `${_ANNO_ID++}_anno`
+    constructor(data, selections=[], title="Annotation", label="A1", id=null) {
+        this.id = id ? id : `${_ANNO_ID++}_anno`
         this.title = title
         this.label = label
         this.data = new Set(data)
@@ -17,6 +19,22 @@ export default class Annotation {
 
         this.selections = selections
         this.color = "#3996d4"
+    }
+
+    static fromJSON(json) {
+        const selections = json.group.map(d => Selection.fromJSON(d))
+        const data = Selection.dataUnion(selections)
+        const anno = new Annotation(
+            data,
+            selections,
+            json.title,
+            json.label,
+            json.id,
+        )
+        anno.timeCreated = Date.parse(json.timeCreated).valueOf()
+        anno.timeUpdated = Date.parse(json.timeUpdated).valueOf()
+        anno.entries = json.entries.map(d => AnnotationEntry.fromJSON(d))
+        return anno
     }
 
     get polygon() {

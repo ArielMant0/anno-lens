@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Literal, List
+from typing import Literal, List, Union, Optional
 
 class TextAnswer(BaseModel):
     """
@@ -47,4 +47,13 @@ class WeightedColumns(BaseModel):
     weights: dict = Field(description="A dictionary containing weights for all columns using their names as keys")
 
 
-AnswerType = TextAnswer | Hypothesis | DataComparison | ColumnList | WeightedColumns
+class EDAAnswer(BaseModel):
+    type: Literal["text", "hypothesis", "data_comparison", "column_list", "weighted_columns"]
+
+    text: Optional[TextAnswer] = None
+    hypothesis: Optional[Hypothesis] = None
+    data_comparison: Optional[ColumnList] = None
+    column_list: Optional[ColumnList] = None
+    weighted_columns: Optional[WeightedColumns] = None
+
+# EDAAnswer = Union[TextAnswer, Hypothesis, DataComparison, ColumnList, WeightedColumns]

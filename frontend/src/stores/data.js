@@ -43,6 +43,7 @@ export function convertDType(dtype) {
         case "integer":
             return DATA_TYPES.INTEGER
         case "string":
+        case "text":
             return DATA_TYPES.NOMINAL
         case "bool":
         case "boolean":
@@ -52,7 +53,7 @@ export function convertDType(dtype) {
 
 export const useData = defineStore('data', {
     state: () => ({
-        ready: false,
+        loaded: false,
 
         datasets: [],
         dataset: null,
@@ -78,8 +79,8 @@ export const useData = defineStore('data', {
 
     actions: {
 
-        setReady(value) {
-            this.ready = value === true
+        setLoaded(value) {
+            this.loaded = value === true
         },
 
         setDatasets(datasets) {

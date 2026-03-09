@@ -52,11 +52,6 @@ Rules:
 - Use joins to retrieve annotation context.
 """)
 
-def make_prompt(arguments):
+usr_prompt = HumanMessagePromptTemplate.from_template("{question}") 
 
-    usr_prompt = HumanMessagePromptTemplate(prompt=PromptTemplate(
-        template="{question}",
-        input_variables=arguments
-    ))
-
-    return ChatPromptTemplate.from_messages([sys_prompt, usr_prompt])
+prompt = ChatPromptTemplate.from_messages([sys_prompt, usr_prompt])

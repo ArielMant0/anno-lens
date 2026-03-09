@@ -39,15 +39,15 @@
 </template>
 
 <script setup>
-    import { useApp } from '@/stores/app'
+    import { useData } from '@/stores/data'
     import DM from '@/use/data-manager'
     import { storeToRefs } from 'pinia'
     import { computed, onMounted, watch } from 'vue'
 
     const model = defineModel()
 
-    const app = useApp()
-    const { dataset } = storeToRefs(app)
+    const dstore = useData()
+    const { datasetId } = storeToRefs(dstore)
 
     const emit = defineEmits(["select"])
 
@@ -77,5 +77,5 @@
 
     onMounted(read)
 
-    watch(dataset, read)
+    watch(datasetId, read)
 </script>
