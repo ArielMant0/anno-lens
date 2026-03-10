@@ -54,6 +54,31 @@ export async function llmFreeTargets(prompt, targets, target_type) {
  * @param {String} target_type type of all target entities
  * @returns
  */
+export async function llmDescribe(prompt, targets, target_type) {
+    const dstore = useData()
+    if (!dstore.datasetId) return console.error("missing dataset id")
+
+    const loader = useLoader()
+    console.debug("describe/", prompt)
+
+    return loader.post(
+        LLM_API_PREFIX+"/describe",
+        {
+            dataset_id: dstore.datasetId,
+            prompt: prompt,
+            targets: targets,
+            target_type: target_type
+        }
+    )
+}
+
+/**
+ * Compare a number of data subsets to each other
+ * @param {String} prompt prompt send to model
+ * @param {Array} targets list of target entities
+ * @param {String} target_type type of all target entities
+ * @returns
+ */
 export async function llmCompare(prompt, targets, target_type) {
     const dstore = useData()
     if (!dstore.datasetId) return console.error("missing dataset id")
@@ -125,12 +150,12 @@ export async function llmCombine(prompt, targets) {
 ///////////////////////////////////////////////////////////////////////////////////////
 
 export const SUMMARY_PROMPT = new PromptTemplate(
-    "Summarize the most important characteristics of the data using no more than :limit: words.",
+    "Summarize the most important characteristics of this data using no more than :limit: words.",
     [new PromptVariable("limit", 50, "integer")]
 )
 
 export const DESCRIPTION_PROMPT = new PromptTemplate(
-    "Describe notable characteristics of the data using no more than :limit: words. Provide a fitting label using no more than :label: words.",
+    "Describe notable characteristics of this data, compared to the complete dataset, using no more than :limit: words. Provide a fitting label for your insights using no more than :label: words.",
     [new PromptVariable("limit", 50, "integer"), new PromptVariable("label", 5, "integer")]
 )
 

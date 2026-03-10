@@ -50,19 +50,57 @@ def get_dataset_summary(dataset_id: int) -> dict:
 
 
 @tool  
-def get_desc_stats(dataset_id: int, column: str) -> dict:
+def get_desc_stats(dataset_id: int) -> dict:
     """
-    Return descriptive statistics for a specific column for list of data points:
-    min, max, mean, standard deviation, median, 25%-percentile, 50%-percentile, 75%-percentile.
+    Return descriptive statistics for the complete dataset:
+        - min, max, mean, standard deviation, median
+        - 25%-percentile, 50%-percentile, 75%-percentile..
     """
+    cur = db_ro.cursor()
     df = DataFrame(m_it.get_items(db_ro.cursor(), dataset_id))
-    return df[column].describe().to_dict()
+    columns = m_col.get_columns(cur, dataset_id)
+    col_names = [c["name"] for c in columns]
+    return df.loc[:,col_names].describe().to_dict()
+
+
+@tool  
+def get_desc_stats_group(group_id: str) -> dict:
+    """
+    Return descriptive statistics for the given group:
+        - min, max, mean, standard deviation, median
+        - 25%-percentile, 50%-percentile, 75%-percentile.
+    """
+    cur = db_ro.cursor()
+    df = DataFrame(m_it.get_items_by_group(cur, group_id))
+    print(df)
+    if df.size == 0:
+        return {}
+    
+    dataset_id = df["dataset_id"].values[0]
+    columns = m_col.get_columns(cur, dataset_id)
+    col_names = [c["name"] for c in columns]
+    return df.loc[:,col_names].describe().to_dict()
+
+
+@tool  
+def get_desc_stats_ids(ids: list[int]) -> dict:
+    """
+    Return descriptive statistics for the given set of data points:
+        - min, max, mean, standard deviation, median
+        - 25%-percentile, 50%-percentile, 75%-percentile.
+    """
+    cur = db_ro.cursor()
+    df = DataFrame(m_it.get_items_by_id(cur, ids))
+    dataset_id = df["dataset_id"].values[0]
+    columns = m_col.get_columns(cur, dataset_id)
+    col_names = [c["name"] for c in columns]
+    return df.loc[:,col_names].describe().to_dict()
 
 
 @tool  
 def get_columns(dataset_id: int) -> list[dict]:
     """
-    Return the list of columns for a given dataset
+    Return the list of columns for a the dataset
     """
     return m_col.get_columns(db_ro.cursor(), dataset_id)
 
@@ -86,19 +124,28 @@ def get_column_by_name(dataset_id: int, name: str) -> dict | None:
 @tool  
 def get_group(group_id: str) -> dict | None:
     """
-    Return the group and its members (as ids) for the given group id if it exists
+    Return the group and its members (as IDs) for the given group_id, if it exists
     """
     cur = db_ro.cursor()
     group = m_gr.get_group(cur, group_id)
-    group["members"] = m_gm.get_group_members(cur, group_id)
-    print(group)
+    group["members"] = m_it.get_items_by_group(cur, group_id)
     return group
+
+
+@tool  
+def get_data_points(ids: list[int]) -> dict | None:
+    """
+    Return data point identified via the passed list of IDs
+    """
+    cur = db_ro.cursor()
+    dataset_id = m_it.get_dataset(cur, ids[0])
+    return m_it.get_items_by_id(cur, dataset_id, ids)
 
 
 @tool  
 def get_annotation(annotation_id: str) -> dict | None:
     """
-    Return the annotation for a given annotation_id id if it exists
+    Return the annotation for a given annotation_id, if it exists
     """
     cur = db_ro.cursor()
     return m_anno.get_annotation(cur, annotation_id)
@@ -117,8 +164,12 @@ tools = [
     get_schema,
     get_dataset_summary,
     get_desc_stats,
+    get_desc_stats_group,
+    get_desc_stats_ids,
     get_columns,
+    get_column_by_name,
     get_group,
+    get_data_points,
     get_annotation,
     query_sql,
 ]

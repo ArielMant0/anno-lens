@@ -71,7 +71,7 @@
                 !dstore.dataset.ignore.includes(n)
         }).concat(MODIFIER_COLUMNS.map(name => ({ id: -1, name: name, dtype: DATA_TYPES.SEQUENTIAL })))
 
-        DM.setColumns(useColumns, false)
+        DM.setColumns(columns, useColumns, false)
 
         items.forEach(d => MODIFIER_COLUMNS.forEach(name => d[name] = 0))
         DM.setData(items, dstore.datasetX, dstore.datasetY, false)

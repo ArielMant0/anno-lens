@@ -9,12 +9,11 @@ from app.utils import (
     update_dict_many
 )
 
-from pypika import Tables, Table, Query
+from pypika import Tables, Query
 
 
 def exists(cur, id: int):
-    annos = Table("annotations")
-    return fetchone(cur, Query.from_(annos).select("*").where(annos.id == id)) is not None
+    return get_annotation(cur, id) is not None
 
 
 def get_annotation(cur, id):

@@ -60,12 +60,12 @@ export class TargetData {
         switch (this.type) {
             case ACTION_TARGET.SELECTION:
                 return this.multiple ?
-                    this.entities.map(d => d.selection.id) :
-                    this.entities.at(0).selection.id
+                    this.entities.map(d => d.dataId) :
+                    [this.entities.at(0).dataId]
             case ACTION_TARGET.ANNOTATION:
                 return this.annotation.selections.map(d => d.id)
             default:
-                return null
+                return []
         }
     }
 

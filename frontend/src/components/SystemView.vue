@@ -2,8 +2,18 @@
 <div style="min-height: 90vh; max-height: 97vh; max-width: 100vw;">
 
     <div v-if="ready" class="d-flex flex-column align-center justify-start mt-2">
-        <div class="d-flex mt-2">
 
+        <div :style="{ width: (w+800)+'px' }" style="min-height: 200px;">
+            <DataHistograms
+                :active="!moveLens || mouseStill"
+                :time="lensTime"
+                :refresh="featureTime"
+                :mode="refMode"
+                :selected-column="chosenColorAttr"
+                @update="applyLens"/>
+        </div>
+
+        <div class="d-flex">
             <div>
                 <div class="d-flex justify-space-between align-center ml-2 mr-2">
                     <div>
@@ -94,16 +104,6 @@
             </div>
         </div>
 
-        <div :style="{ width: (w+800)+'px' }">
-            <DataHistograms
-                :active="!moveLens || mouseStill"
-                :time="lensTime"
-                :refresh="featureTime"
-                :mode="refMode"
-                :selected-column="chosenColorAttr"
-                @update="applyLens"/>
-        </div>
-
         <AnnotationOverlay
             target-id="scatter-main"
             :selected="chosenColorAttr"
@@ -158,6 +158,7 @@
         llmCombine,
         llmCompare,
         llmExtract,
+        llmDescribe,
         llmFreeTargets
     } from '@/use/apis/llm-api';
     import { toast } from 'vue3-toastify';
@@ -168,8 +169,9 @@
     import { ACTION_TARGET } from '@/use/annotation/action-target';
     import { Command, LLMCommand } from '@/use/commands';
     import CM from '@/use/command-manager';
-    import { MODIFIER_COLUMNS, MODIFIER_TYPE } from '@/use/annotation/modifiers';
+    import { MODIFIER_TYPE } from '@/use/annotation/modifiers';
     import LLMChatPanel from './LLMChatPanel.vue';
+    import { updateData } from '@/use/apis/data-api';
 
     const app = useApp()
     const dstore = useData()
@@ -214,7 +216,7 @@
     const w = computed(() => {
         const ww = wSize.width.value
         const wh = wSize.height.value
-        return Math.max(500, Math.floor(Math.min(ww*0.9-850, wh*0.7)))
+        return Math.max(500, Math.floor(Math.min(ww*0.7-550, wh*0.675)))
     })
     const h = computed(() => w.value)
 
@@ -271,7 +273,7 @@
     const primaryLens = ref(0)
     const secondaryLens = ref(1)
 
-    const lensRadius = ref(35)
+    const lensRadius = ref(50)
 
     const featureScale = computed(() => {
         if (lensType.value === LENS_TYPE.FREQUENT) {
@@ -291,7 +293,6 @@
 
     let windowResize = null, plotResize = null, mouseMove = null, sizeTime = null
     let loop, looptime;
-    let llmToastSum = null, llmToastComp = null
 
     ////////////////////////////////////////////////////////////////////////////
     /// Functions
@@ -494,6 +495,21 @@
         // TODO: what to do here?
     }
 
+    function syncSelections() {
+        if (DM.selections.length > 0) {
+            const active = DM.selections[0]
+            // let backend know what the current selection looks like
+            return updateData(
+                "group",
+                {
+                    "dataset_id": dstore.datasetId,
+                    "id": active.id,
+                    "ids": Array.from(active.data)
+                }
+            )
+        }
+    }
+
     async function init() {
         ready.value = false
         mouseStill.value = false
@@ -618,7 +634,7 @@
         }), ["ctrl"])
 
         // llm hotkeys
-        const descCommand = new LLMCommand(function(prompt, target) {
+        const descCommand = new LLMCommand(async function(prompt, target) {
             app.setLLMLoading(true)
 
             switch (target.type) {
@@ -629,17 +645,18 @@
                         toast.error("no entity to describe")
                         return
                     }
+                    await syncSelections()
                     // ask for description and label
-                    llmFreeTargets(prompt, ids, "group")
-                        .then(response => {
-                            DM.annotateText(
-                                response.answer,
-                                ENTRY_SOURCE.AI,
-                                [],
-                                { id: target.annotation?.id }
-                            )
-                            app.setLLMLoading(false)
-                        })
+                    const response = await llmDescribe(prompt, ids, "group")
+                    const entities = parseEntities(response)
+                    const entry = DM.annotateText(
+                        response.answer,
+                        ENTRY_SOURCE.AI,
+                        entities,
+                        { id: target.annotation?.id }
+                    )
+                    entry._anno.setTitle(response.label)
+                    app.setLLMLoading(false)
                     break
                 case ACTION_TARGET.VIS:
                     // TODO: add the response text to the global notes
@@ -650,7 +667,7 @@
         CM.addKeyMapping(5, "1", "describe", descCommand)
 
 
-        const extractCommand = new LLMCommand(function(prompt, target) {
+        const extractCommand = new LLMCommand(async function(prompt, target) {
             app.setLLMLoading(true)
 
             // get selection/group ids
@@ -660,22 +677,22 @@
                 return
             }
 
-            llmExtract(prompt, ids, "group")
-                .then(response => {
-                    const entities = parseEntities(response)
-                    DM.annotateText(
-                        response.answer,
-                        ENTRY_SOURCE.AI,
-                        entities,
-                        { id: target.annotation?.id }
-                    )
-                    app.setLLMLoading(false)
-                })
-            }, EXTRACT_PROMPT, 1, 1, [ACTION_TARGET.SELECTION])
+            await syncSelections()
+            const response = await llmExtract(prompt, ids, "group")
+            const entities = parseEntities(response)
+            DM.annotateText(
+                response.answer,
+                ENTRY_SOURCE.AI,
+                entities,
+                { id: target.annotation?.id }
+            )
+            app.setLLMLoading(false)
+
+        }, EXTRACT_PROMPT, 1, 1, [ACTION_TARGET.SELECTION])
         // add hotkey for "extract" command
         CM.addKeyMapping(6, "3", "extract", extractCommand)
 
-        const compareCommand = new LLMCommand(function(prompt, targets) {
+        const compareCommand = new LLMCommand(async function(prompt, targets) {
             app.setLLMLoading(true)
             // get data for all involved selections
             const groups = targets.map(t => t.getSelectionIds())
@@ -685,58 +702,55 @@
                 return
             }
 
-            llmCompare(prompt, groups, "group")
-                .then(response => {
-                    const entities = parseEntities(response)
-                    targets.forEach(t => {
-                        if (t.annotation) {
-                            entities.push(new AnnotationEntity(
-                                t.annotation.id,
-                                t.annotation.label,
-                                t.annotation
-                            ))
-                        }
-                        // should we also add selection entities?
-                    })
-                    DM.annotateText(
-                        response.answer,
-                        ENTRY_SOURCE.AI,
-                        entities,
-                        { useGlobal: true }
-                    )
-                    app.setLLMLoading(false)
-                })
-            }, COMPARE_PROMPT, 2, Infinity, [ACTION_TARGET.SELECTION])
+            await syncSelections()
+            const response = await llmCompare(prompt, groups, "group")
+            const entities = parseEntities(response)
+            targets.forEach(t => {
+                if (t.annotation) {
+                    entities.push(new AnnotationEntity(
+                        t.annotation.id,
+                        t.annotation.label,
+                        t.annotation
+                    ))
+                }
+                // should we also add selection entities?
+            })
+            DM.annotateText(
+                response.answer,
+                ENTRY_SOURCE.AI,
+                entities,
+                { useGlobal: true }
+            )
+            app.setLLMLoading(false)
+        }, COMPARE_PROMPT, 2, Infinity, [ACTION_TARGET.SELECTION])
         CM.addKeyMapping(7, "4", "compare", compareCommand)
 
-        const combineCommand = new LLMCommand(function(prompt, targets) {
+        const combineCommand = new LLMCommand(async function(prompt, targets) {
             app.setLLMLoading(true)
-            llmCombine(prompt, targets.map(t => t.getDataIds()).flat())
-                .then(response => {
-                    const entities = parseEntities(response)
-                    // TODO: add to a global notepad
-                    DM.annotateModifier(
-                        response.answer,
-                        ENTRY_SOURCE.AI,
-                        entities,
-                        { useGlobal: true }
-                    )
-                    app.setLLMLoading(false)
-                    app.setColorOverride(MODIFIER_TYPE.COLOR_FUNCTION)
-                })
-            }, COMBINE_PROMPT, 2, Infinity, [ACTION_TARGET.COLUMN])
+            await syncSelections()
+            const response = await llmCombine(prompt, targets.map(t => t.getDataIds()).flat())
+            const entities = parseEntities(response)
+            // TODO: add to a global notepad
+            DM.annotateModifier(
+                response.answer,
+                ENTRY_SOURCE.AI,
+                entities,
+                { useGlobal: true }
+            )
+            app.setLLMLoading(false)
+            app.setColorOverride(MODIFIER_TYPE.COLOR_FUNCTION)
+        }, COMBINE_PROMPT, 2, Infinity, [ACTION_TARGET.COLUMN])
         CM.addKeyMapping(8, "5", "combine", combineCommand)
 
-        const refineCmd = new LLMCommand(function(prompt, target) {
+        const refineCmd = new LLMCommand(async function(prompt, target) {
             app.setLLMLoading(true)
             const entry = target.annotation.getEntry(target.getEntities().dataId)
 
-            llmFreeTargets(prompt, entry.id, "anno_entry")
-                .then(response => {
-                    entry.setText(response.answer)
-                    app.setLLMLoading(false)
-                })
-            }, REFINE_PROMPT, 1, 1, [ACTION_TARGET.ANNOTATION])
+            await syncSelections()
+            const response = await llmFreeTargets(prompt, entry.id, "anno_entry")
+            entry.setText(response.answer)
+            app.setLLMLoading(false)
+        }, REFINE_PROMPT, 1, 1, [ACTION_TARGET.ANNOTATION])
         // add hotkey for "refine" command
         CM.addKeyMapping(9, "6", "refine", refineCmd)
 

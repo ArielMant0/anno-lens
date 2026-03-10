@@ -130,8 +130,9 @@
                 controls.targetEvent(element, targetType)
                 break
             case ACTION_TARGET.COLUMN:
+                const colId = DM.columnsRaw.find(d => d.name === targetId).id
                 controls.targetEvent(
-                    new ColumnEntity(targetId, targetId),
+                    new ColumnEntity(colId, targetId, targetId),
                     targetType
                 )
                 break

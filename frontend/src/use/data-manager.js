@@ -243,8 +243,8 @@ class DataManager {
         return this.selections.find(d => d.id === id)
     }
     
-    setColumns(columns, update=true) {
-        this.columnsRaw = columns
+    setColumns(rawColumns, columns, update=true) {
+        this.columnsRaw = rawColumns
         this.columns = columns.map(d => d.name)
         this.types = columns.map(d => d.dtype)
 

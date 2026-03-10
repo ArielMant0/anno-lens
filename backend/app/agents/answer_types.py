@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Any, Literal, List
+from typing import Any, Dict, List
 
 from langchain_core.utils.json_schema import dereference_refs
 
@@ -24,6 +24,17 @@ class TextAnswer(CustomBaseModel):
     answer: str = Field(description="The answer formatted as markdown")
 
 
+class SummaryAnswer(CustomBaseModel):
+    """
+    An answer consisting of the summary text, a label for the given target
+    and a list of relevant column IDs.
+    """
+    answer: str = Field(description="The summary formatted as markdown")
+    label: str = Field(description="The label")
+
+    columns: List[int] = Field([], description="A list of column IDs mentioned in the answer")
+
+
 class Hypothesis(CustomBaseModel):
     """
     A hypothesis and a list of evidence that supports it.
@@ -35,37 +46,37 @@ class Hypothesis(CustomBaseModel):
 class DataComparison(CustomBaseModel):
     """
     An explanation of the comparison between the given entities and a list
-    of column names relevant to the explanation.
+    of column IDs relevant to the answer.
     """
     answer: str = Field(description="The explanation formatted as markdown")
-    columns: List[str] = Field(description="The list of relevant column names")
+    columns: List[str] = Field(description="The list of column IDs mentioned in the answer")
 
 
 class ColumnList(CustomBaseModel):
     """
-    A list of columns identified as relevant and an explanation for their choice.
+    A list of column IDs identified as relevant and an explanation for their choice.
     """
     answer: str = Field(description="The explanation formatted as markdown")
-    columns: List[str] = Field(description="The list of relevant column names")
+    columns: List[str] = Field(description="The list of relevant column IDs")
 
 
-class WeightedColumns(CustomBaseModel):
+class ColumnWeights(CustomBaseModel):
     """
-    A list of weighted columns for the given tabular data and an
+    A dictionary of column IDs with associated numerical weights and an
     explanation for their choice.
     """
     answer: str = Field(description="The explanation formatted as markdown")
-    weights: dict = Field(description="A dictionary containing weights for all columns using their names as keys")
+    columns_weights: Dict = Field(description="A dictionary containing numerical weights for all columns using their IDs as keys")
 
 
 class EDAAnswer(CustomBaseModel):
     answer: str = Field(description="The answer text formatted as markdown")
 
-    columns: List[int] = Field([], description="A list of column ids relevant for the answer")
-    columns_weights: dict = Field({}, description="Weights for columns by id, if necessary")
+    columns: List[int] = Field([], description="A list of column IDs relevant for the answer")
+    columns_weights: Dict = Field({}, description="Weights for columns by id, if necessary")
 
-    groups: List[str] = Field([], description="A list of group ids relevant for the answer")
-    annotations: List[str] = Field([], description="A list of annotation ids relevant for the answer")
+    groups: List[str] = Field([], description="A list of group IDs relevant for the answer")
+    annotations: List[str] = Field([], description="A list of annotation IDs relevant for the answer")
 
     evidence: List[str] = Field([], description="Additional supporting evidence")
 

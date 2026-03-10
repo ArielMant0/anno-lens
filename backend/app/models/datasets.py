@@ -15,10 +15,9 @@ def get_datasets(cur):
 
 def get_dataset_item_table(cur, dataset):
     ds = Table("datasets")
-    return fetchone(
-        cur,
-        Query.from_(ds).select("table_name").where(ds.id == dataset).get_sql()
-    )["table_name"]
+    q = Query.from_(ds).select("table_name").where(ds.id == dataset)
+    result = fetchone(cur, q.get_sql())
+    return result["table_name"] if result is not None else None
 
 
 def add_dataset(cur, data: dict, return_field: str = "id"):

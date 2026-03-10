@@ -7,18 +7,30 @@ from typing import Literal
 
 from app.agents.answer_types import (
     EDAAnswer,
+    ColumnList,
+    ColumnWeights,
     DataComparison,
-    WeightedColumns,
-    ColumnList
+    SummaryAnswer,
 )
-from app.agents.model import llm, prompt
+from app.agents.model import llm, make_prompt
 from app.agents.state import EDAState
 from app.agents.tools import tools, tools_by_name
 
 given_output_msg = "Return the desired structured output."
 
+
+def describe(dataset_id: int, question: str, targets: list, target_type: str):
+    return ask_model_with_targets(
+        dataset_id,
+        question,
+        targets,
+        target_type,
+        SummaryAnswer
+    )
+
+
 def compare(dataset_id: int, question: str, targets: list, target_type: str):
-    return ask_model(
+    return ask_model_with_targets(
         dataset_id,
         question,
         targets,
@@ -28,41 +40,38 @@ def compare(dataset_id: int, question: str, targets: list, target_type: str):
 
 
 def combine(dataset_id: int, question: str, columns: list[str]):
-    human = question + "  Weights should be between -1 and 1. Columns: {columns}"
-    return ask_model(
+    return ask_model_with_targets(
         dataset_id,
-        human,
+        question + " Weights should be between -1 and 1.",
         columns,
         "column",
-        WeightedColumns
+        ColumnWeights
     )
 
 
 def extract(dataset_id: int, question: str, targets: list, target_type: str):
     return ask_model_with_targets(
         dataset_id,
-        question + "  Ignore identifier columns like 'id' or 'name'.",
+        question + " Ignore identifier columns like 'id' or 'name'.",
         targets,
         target_type,
         ColumnList
     )
 
 
-def ask_model_with_targets(dataset_id: int, question: str, targets: list, target_type: str, answer_type):
+def ask_model_with_targets(dataset_id: int, question: str, targets: list, target_type: str, answer_type = EDAAnswer):
     
-    question += + " Target ids (type: {target_type}): {targets}"
+    question += " Focus your analysis on these targets (type: {target_type}) provided as database IDs: {targets}"
     arguments = {
         "targets": targets,
         "target_type": target_type
     }
-
     return ask_model(dataset_id, question, arguments, answer_type)
 
 
 def ask_model(dataset_id: int, question: str, arguments: dict = {}, answer_types = EDAAnswer):
 
     arguments["dataset_id"] = dataset_id
-    arguments["question"] = question
 
     tool_llm = llm.bind_tools(tools)
     struc_llm = llm.with_structured_output(answer_types, method="function_calling")
@@ -104,8 +113,6 @@ def ask_model(dataset_id: int, question: str, arguments: dict = {}, answer_types
         Produce fitting structured output based on analysis results
         """
 
-        # initial user question
-        question = state["messages"][1].content
         # analysis result from last step
         analysis = state["messages"][-1].content
 
@@ -162,7 +169,7 @@ Analysis:
     agent = agent_builder.compile()
 
     # Invoke
-    model_input = prompt.invoke(arguments)
+    model_input = make_prompt(question).invoke(arguments)
     model_output = agent.invoke(model_input)
 
     return model_output["structured_answer"].dict()

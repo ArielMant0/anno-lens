@@ -1,13 +1,10 @@
 from app.extensions import db
-from app.utils import fetchall
 
 from flask import Blueprint, jsonify, request, Response
-from pypika import Table, Query
 
 import app.models as models
 
 ds_bp = Blueprint("data", __name__)
-cur = db.cursor()
 
 #########################################################################
 ## Get data
@@ -15,26 +12,31 @@ cur = db.cursor()
 
 @ds_bp.get("/datasets")
 def get_datasets() -> Response:
+    cur = db.cursor()
     return jsonify(models.m_ds.get_datasets(cur))
 
 
 @ds_bp.get("/<int:dataset>/items")
 def get_items(dataset) -> Response:
+    cur = db.cursor()
     return jsonify(models.m_it.get_items(cur, dataset))
 
 
 @ds_bp.get("/<int:dataset>/groups")
 def get_groups(dataset) -> Response:
+    cur = db.cursor()
     return jsonify(models.m_gr.get_groups(cur, dataset))
 
 
 @ds_bp.get("/<int:dataset>/columns")
 def get_columns(dataset) -> Response:
+    cur = db.cursor()
     return jsonify(models.m_col.get_columns(cur, dataset))
 
 
 @ds_bp.get("/<int:dataset>/annotations")
 def get_annotations(dataset) -> Response:
+    cur = db.cursor()
     return jsonify(models.m_anno.get_annotations(cur, dataset))
 
 
@@ -44,7 +46,7 @@ def get_annotations(dataset) -> Response:
 
 @ds_bp.post("/create/annotation")
 def create_annotation() -> Response:
-
+    cur = db.cursor()
     data = request.json
 
     aid = models.m_anno.add_annotation(cur, data, "id")
@@ -74,6 +76,7 @@ def create_annotation() -> Response:
 
 @ds_bp.post("/create/annotation_entry")
 def create_annotation_entry() -> Response:
+    cur = db.cursor()
     data = request.json
 
     eid = models.m_ae.add_anno_entry(cur, data, "id")
@@ -94,17 +97,23 @@ def create_annotation_entry() -> Response:
 
 @ds_bp.post("/create/group")
 def create_group() -> Response:
+    cur = db.cursor()
     data = request.json
 
-    # add group
-    gid = models.m_gr.add_group(cur, { "dataset_id": data["dataset_id"] })
-    # add members to groups
-    models.m_gm.add_group_members(
-        cur,
-        [{ "group_id": gid, "item_id": d } for d in data["ids"]]
-    )
+    # get group id
+    gid = data["id"]
 
-    db.commit()
+    try:
+        if not models.m_gr.exists(cur, gid):
+            models.m_gr.add_group(cur, data)
+            # add members to groups
+            models.m_gm.add_group_members(
+                cur,
+                [{ "group_id": data["id"], "item_id": d } for d in data["ids"]]
+            )
+            db.commit()
+    except:
+        return Response("error", status=500)
 
     return Response("TODO", status=200)
 
@@ -115,33 +124,32 @@ def create_group() -> Response:
 
 @ds_bp.post("/update/annotation")
 def update_annotation() -> Response:
+    cur = db.cursor()
     return Response("TODO", status=200)
 
 
 @ds_bp.post("/update/group")
 def update_group() -> Response:
+    cur = db.cursor()
     data = request.json
 
     # get group id
-    gid = data["group_id"]
-    # get members in database
-    tmp = models.m_gm.get_group_members(cur, gid)
-    if tmp is not None:
-        existing = set([member["id"] for member in tmp])
-        current = set(data["ids"])
-
-        to_del = existing.difference(current)
-        if len(to_del) > 0:
-            # delete old group members
-            models.m_gm.delete_group_members(cur, list(to_del))
-
-        to_add = current.difference(existing)
-        if len(to_add) > 0:
-            # add new group members
+    gid = data["id"]
+    try:
+        if models.m_gr.exists(cur, gid):
+            models.m_gr.update_group_members(cur, gid, data["ids"])
+        else:
+            models.m_gr.add_group(cur, data)
+            # add members to groups
             models.m_gm.add_group_members(
                 cur,
-                [{ "group_id": gid, "item_id": d } for d in to_add]
+                [{ "group_id": gid, "item_id": d } for d in data["ids"]]
             )
+
+        db.commit()
+    except Exception as e:
+        print(str(e))
+        return Response("error", status=500)
 
     db.commit()
 
@@ -154,6 +162,7 @@ def update_group() -> Response:
 
 @ds_bp.post("/delete/annotation")
 def delete_annotation() -> Response:
+    cur = db.cursor()
     data = request.json
     # delete this annotation
     models.m_anno.delete_annotation(cur, data["id"])
@@ -165,6 +174,7 @@ def delete_annotation() -> Response:
 
 @ds_bp.post("/delete/anno_entry")
 def delete_anno_entry() -> Response:
+    cur = db.cursor()
     data = request.json
     # delete this annotation entry
     models.m_ae.delete_anno_entry(cur, data["id"])
@@ -176,6 +186,7 @@ def delete_anno_entry() -> Response:
 
 @ds_bp.post("/delete/anno_column_link")
 def delete_anno_column_link() -> Response:
+    cur = db.cursor()
     data = request.json
     # delete this entry column link
     models.m_acl.delete_anno_column_link(cur, data["id"])
@@ -187,6 +198,7 @@ def delete_anno_column_link() -> Response:
 
 @ds_bp.post("/delete/anno_anno_link")
 def delete_anno_anno_link() -> Response:
+    cur = db.cursor()
     data = request.json
     # delete this entry annotation link
     models.m_aal.delete_anno_anno_link(cur, data["id"])
@@ -198,6 +210,7 @@ def delete_anno_anno_link() -> Response:
 
 @ds_bp.post("/delete/group")
 def delete_group() -> Response:
+    cur = db.cursor()
     data = request.json
     # delete this group
     models.m_gr.delete_group(cur, data["id"])
@@ -209,6 +222,7 @@ def delete_group() -> Response:
 
 @ds_bp.post("/delete/anno_group_link")
 def delete_anno_group_link() -> Response:
+    cur = db.cursor()
     data = request.json
     # delete this group link
     models.m_agl.delete_anno_group_link(cur, data["id"])

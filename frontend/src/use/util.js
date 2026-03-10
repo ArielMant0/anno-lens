@@ -228,14 +228,14 @@ export function parseEntities(response) {
 
     if (response.columns) {
         entities = response.columns.map(id => {
-            const col = DM.columns.find(d => d.id === id)
+            const col = DM.columnsRaw.find(d => d.id === id)
             return col ? new ColumnEntity(id, col.name) : null
         })
     }
 
     if (response.columns_weights) {
-        for (const id in response.weights) {
-            const col = DM.columns.find(d => d.id === id)
+        for (const id in response.columns_weights) {
+            const col = DM.columnsRaw.find(d => d.id === id)
             if (col) {
                 const existing = entities.find(d => d.dataId === id)
                 if (existing) {

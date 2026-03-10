@@ -1,8 +1,13 @@
 import config
 
 import app.agents.eda_agent as agent
-from app.agents.answer_types import ColumnList, DataComparison, TextAnswer, WeightedColumns
-
+from app.agents.answer_types import (
+    ColumnList,
+    ColumnWeights,
+    DataComparison,
+    SummaryAnswer,
+    TextAnswer,
+)
 from flask import Blueprint, jsonify, request, Response
 
 llm_bp = Blueprint("llm", __name__)
@@ -31,13 +36,27 @@ def ask_with_targets() -> Response:
     ))
 
 
+@llm_bp.post('/describe')
+def describe() -> Response:
+    if config.USE_DUMMY_DATA:
+        return jsonify(SummaryAnswer(answer="prompt with targets answer", label="a label"))
+
+    return jsonify(agent.ask_model_with_targets(
+        request.json["dataset_id"],
+        request.json["prompt"],
+        request.json["targets"],
+        request.json["target_type"],
+        SummaryAnswer
+    ))
+
+
 @llm_bp.post('/extract')
 def extract() -> Response:
     if config.USE_DUMMY_DATA:
-        return jsonify(ColumnList({
-            "explanation": "prompt with targets answer",
-            "columns": ["potassium", "protein"],
-        }))
+        return jsonify(ColumnList(
+            answer="prompt with targets answer",
+            columns=["potassium", "protein"],
+        ))
 
     return jsonify(agent.extract(
         request.json["dataset_id"],
@@ -50,7 +69,7 @@ def extract() -> Response:
 @llm_bp.post('/combine')
 def combine() -> Response:
     if config.USE_DUMMY_DATA:
-        return jsonify(WeightedColumns(
+        return jsonify(ColumnWeights(
             explanation="prompt with targets answer",
             weights={ "sugars": 0.33, "protein": 0.66 }
         ))
