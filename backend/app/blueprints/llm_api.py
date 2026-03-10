@@ -12,7 +12,10 @@ def ask() -> Response:
     if config.USE_DUMMY_DATA:
         return jsonify(TextAnswer(answer="prompt answer"))
 
-    return jsonify(agent.run(request.json["prompt"]))
+    return jsonify(agent.ask_model(
+        request.json["dataset_id"],
+        request.json["prompt"]
+    ))
 
 
 @llm_bp.post('/ask_targets')
@@ -20,7 +23,8 @@ def ask_with_targets() -> Response:
     if config.USE_DUMMY_DATA:
         return jsonify(TextAnswer(answer="prompt with targets answer"))
 
-    return jsonify(agent.run_with_targets(
+    return jsonify(agent.ask_model_with_targets(
+        request.json["dataset_id"],
         request.json["prompt"],
         request.json["targets"],
         request.json["target_type"],
@@ -36,6 +40,7 @@ def extract() -> Response:
         }))
 
     return jsonify(agent.extract(
+        request.json["dataset_id"],
         request.json["prompt"],
         request.json["targets"],
         request.json["target_type"],
@@ -51,6 +56,7 @@ def combine() -> Response:
         ))
 
     return jsonify(agent.combine(
+        request.json["dataset_id"],
         request.json["prompt"],
         request.json["targets"]
     ))
@@ -65,6 +71,7 @@ def compare() -> Response:
         ))
 
     return jsonify(agent.compare(
+        request.json["dataset_id"],
         request.json["prompt"],
         request.json["targets"],
         request.json["target_type"],

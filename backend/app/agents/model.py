@@ -2,56 +2,39 @@
 import config
 
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import PromptTemplate
 from langchain_core.prompts.chat import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate
 )
-from langchain.messages import SystemMessage
 
 llm = ChatOpenAI(
-    model="gpt-4o",
-    temperature=0,
+    model="gpt-4o-mini",
+    temperature=0.001,
     api_key=config.OPENAI_API_KEY
 )
 
-sys_prompt = SystemMessage("""
-You are a data analysis assistant.
+sys_prompt = SystemMessagePromptTemplate.from_template("""
+You are an assistant for exploratory data analysis.
 
-You can query a SQL dataset that contains:
+Dataset id: {dataset_id}
 
-- items
-- columns
-- groups
-- group_members
-- annotations
-- anno_group_links
-- anno_entries
-- anno_entry_links
-- entities
-     
-Each dataset refers to a separate table via table_name where the data
-with all column values is stored.
-
-Annotations are made up of
-- 0 or more groups referenced via anno_group_links
-- 1 or more annotation entries referenced via anno_entries
-     
-Anotation entries may reference entities via anno_entry_links.
-
-Workflow:
-
-1. Inspect schema if needed.
-2. Query dataset using SQL if needed.
-3. Analyze results.
-4. Produce a structured answer.
+Use tools if necessary to analyze the dataset specified by its id.
+Focus your analysis on the given target, if any are specified.
+Return an analysis explaining the findings.
+Be concise and and avoid overly wordy explanations.   
 
 Rules:
-- Use LIMIT 50 unless aggregating.
+- Use LIMIT 25 unless aggregating.
 - Prefer aggregations for analysis.
 - Use joins to retrieve annotation context.
 """)
 
-usr_prompt = HumanMessagePromptTemplate.from_template("{question}") 
+usr_prompt = HumanMessagePromptTemplate.from_template("{question}")
 
-prompt = ChatPromptTemplate.from_messages([sys_prompt, usr_prompt])
+prompt = ChatPromptTemplate.from_messages([
+    sys_prompt,
+    usr_prompt
+])
+
+

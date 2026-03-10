@@ -62,6 +62,7 @@
             scrollDown()
             llmLoading.value = true
             const response = await llmFree(text)
+            console.log(response)
             const entities = parseEntities(response)
 
             llmLoading.value = false

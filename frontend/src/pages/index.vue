@@ -28,7 +28,7 @@
     import CommandEditingPanel from '@/components/CommandEditingPanel.vue';
     import HoverOverlay from '@/components/HoverOverlay.vue';
     import { getData } from '@/use/apis/data-api';
-    import { convertDType, useData } from '@/stores/data';
+    import { convertDType, DATA_TYPES, useData } from '@/stores/data';
     import DM from '@/use/data-manager';
     import { MODIFIER_COLUMNS } from '@/use/annotation/modifiers';
 
@@ -69,9 +69,9 @@
                 n !== dstore.datasetX &&
                 n !== dstore.datasetY &&
                 !dstore.dataset.ignore.includes(n)
-        }).concat(MODIFIER_COLUMNS)
+        }).concat(MODIFIER_COLUMNS.map(name => ({ id: -1, name: name, dtype: DATA_TYPES.SEQUENTIAL })))
 
-        DM.setColumns(useColumns.map(d => d.name), useColumns.map(d => d.dtype), false)
+        DM.setColumns(useColumns, false)
 
         items.forEach(d => MODIFIER_COLUMNS.forEach(name => d[name] = 0))
         DM.setData(items, dstore.datasetX, dstore.datasetY, false)

@@ -227,21 +227,40 @@ export function parseEntities(response) {
     let entities = []
 
     if (response.columns) {
-        entities = response.columns.map(c => new ColumnEntity(c))
-    }
-    if (response.weights) {
-        const result = []
-        for (const name in response.weights) {
-            result.push(new ColumnEntity(name, name, response.weights[name]))
-        }
-        entities = entities.concat(result)
-    }
-    if (response.datapoints) {
-        entities = entities.concat(response.datapoints.map(d => new DatapointEntity(d)))
-    }
-    if (response.annotations) {
-        entities = entities.concat(response.annotations.map(a => new AnnotationEntity(a)))
+        entities = response.columns.map(id => {
+            const col = DM.columns.find(d => d.id === id)
+            return col ? new ColumnEntity(id, col.name) : null
+        })
     }
 
-    return entities
+    if (response.columns_weights) {
+        for (const id in response.weights) {
+            const col = DM.columns.find(d => d.id === id)
+            if (col) {
+                const existing = entities.find(d => d.dataId === id)
+                if (existing) {
+                    existing.value = response.columns_weights[id]
+                } else {
+                    entities.push(new ColumnEntity(id, col.name, response.columns_weights[id]))
+                }
+            }
+            
+        }
+    }
+
+    // TODO: parse groups/selections
+    // if (response.groups) {
+    //     entities = entities.concat(response.datapoints.map(d => new DatapointEntity(d)))
+    // }
+    
+    if (response.annotations) {
+        response.annotations.forEach(aid => {
+            const anno = DM.getAnnotationById(aid)
+            if (anno) {
+                entities.push(new AnnotationEntity(aid, aid, anno.label, anno))
+            }
+        })
+    }
+
+    return entities.filter(d => d !== null)
 }

@@ -17,6 +17,27 @@ def exists(cur, id: int):
     return fetchone(cur, Query.from_(annos).select("*").where(annos.id == id)) is not None
 
 
+def get_annotation(cur, id):
+    annos, entries, glinks, clinks, alinks = Tables(
+        "annotations",
+        "anno_entries",
+        "anno_group_links",
+        "anno_column_links",
+        "anno_anno_links",
+    )
+
+    q = Query.from_(annos) \
+        .join(glinks).on(glinks.annotation_id == annos.id) \
+        .join(entries).on(entries.annotation_id == annos.id) \
+        .join(clinks).on(clinks.anno_entry_id == entries.id) \
+        .join(alinks).on(alinks.anno_entry_id == entries.id) \
+        .select("*")
+
+    q = q.where(annos.id == id)
+
+    return fetchone(cur, q.get_sql())
+
+
 def get_annotations(cur, dataset=None):
     annos, entries, glinks, clinks, alinks = Tables(
         "annotations",

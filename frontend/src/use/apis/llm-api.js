@@ -1,3 +1,4 @@
+import { useData } from "@/stores/data";
 import { useLoader } from "../loader";
 import { PromptTemplate, PromptVariable } from "../prompt-template";
 
@@ -9,9 +10,16 @@ const LLM_API_PREFIX = "llm"
  * @returns
  */
 export async function llmFree(prompt) {
+    const dstore = useData()
+    if (!dstore.datasetId) return console.error("missing dataset id")
+        
     const loader = useLoader()
     console.debug("ask/", prompt)
-    return loader.post(LLM_API_PREFIX+"/ask", { prompt: prompt })
+
+    return loader.post(LLM_API_PREFIX+"/ask", {
+        dataset_id: dstore.datasetId,
+        prompt: prompt
+    })
 }
 
 /**
@@ -22,11 +30,20 @@ export async function llmFree(prompt) {
  * @returns
  */
 export async function llmFreeTargets(prompt, targets, target_type) {
+    const dstore = useData()
+    if (!dstore.datasetId) return console.error("missing dataset id")
+
     const loader = useLoader()
     console.debug("ask_targets/", prompt)
+
     return loader.post(
         LLM_API_PREFIX+"/ask_targets",
-        { prompt: prompt, targets: targets, target_type: target_type }
+        {
+            dataset_id: dstore.datasetId,
+            prompt: prompt,
+            targets: targets,
+            target_type: target_type
+        }
     )
 }
 
@@ -38,11 +55,20 @@ export async function llmFreeTargets(prompt, targets, target_type) {
  * @returns
  */
 export async function llmCompare(prompt, targets, target_type) {
+    const dstore = useData()
+    if (!dstore.datasetId) return console.error("missing dataset id")
+
     const loader = useLoader()
     console.debug("compare/", prompt)
+
     return loader.post(
         LLM_API_PREFIX+"/compare",
-        { prompt: prompt, targets: targets, target_type: target_type }
+        {
+            dataset_id: dstore.datasetId,
+            prompt: prompt,
+            targets: targets,
+            target_type: target_type
+        }
     )
 }
 
@@ -54,11 +80,20 @@ export async function llmCompare(prompt, targets, target_type) {
  * @returns
  */
 export async function llmExtract(prompt, targets, target_type) {
+    const dstore = useData()
+    if (!dstore.datasetId) return console.error("missing dataset id")
+
     const loader = useLoader()
     console.debug("extract/", prompt)
+
     return loader.post(
         LLM_API_PREFIX+"/extract",
-        { prompt: prompt, targets: targets, target_type: target_type }
+        {
+            dataset_id: dstore.datasetId,
+            prompt: prompt,
+            targets: targets,
+            target_type: target_type
+        }
     )
 }
 
@@ -69,9 +104,20 @@ export async function llmExtract(prompt, targets, target_type) {
  * @returns
  */
 export async function llmCombine(prompt, targets) {
+    const dstore = useData()
+    if (!dstore.datasetId) return console.error("missing dataset id")
+
     const loader = useLoader()
     console.debug("combine/", prompt)
-    return loader.post(LLM_API_PREFIX+"/combine", { prompt: prompt, targets: targets })
+
+    return loader.post(
+        LLM_API_PREFIX+"/combine",
+        {
+            dataset_id: dstore.datasetId,
+            prompt: prompt,
+            targets: targets,
+        }
+    )
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////

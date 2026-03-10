@@ -629,7 +629,7 @@
                         toast.error("no entity to describe")
                         return
                     }
-                    // ask for description / summary
+                    // ask for description and label
                     llmFreeTargets(prompt, ids, "group")
                         .then(response => {
                             DM.annotateText(

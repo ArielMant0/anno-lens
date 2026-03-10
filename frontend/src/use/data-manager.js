@@ -78,6 +78,7 @@ class DataManager {
     reset() {
         this.tree = null
         this.data = []
+        this.columnsRaw = []
         this.columns = []
         this.types = []
         this.scales = {}
@@ -242,9 +243,10 @@ class DataManager {
         return this.selections.find(d => d.id === id)
     }
     
-    setColumns(columns, types, update=true) {
-        this.columns = columns
-        this.types = types
+    setColumns(columns, update=true) {
+        this.columnsRaw = columns
+        this.columns = columns.map(d => d.name)
+        this.types = columns.map(d => d.dtype)
 
         if (update) this.update()
     }

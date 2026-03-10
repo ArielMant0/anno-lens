@@ -1,4 +1,10 @@
-from app.agents.tools import Tools
+import json
+
+from langgraph.graph import StateGraph, START, END
+from langchain.messages import ToolMessage
+
+from typing import Literal
+
 from app.agents.answer_types import (
     EDAAnswer,
     DataComparison,
@@ -6,92 +12,157 @@ from app.agents.answer_types import (
     ColumnList
 )
 from app.agents.model import llm, prompt
+from app.agents.state import EDAState
+from app.agents.tools import tools, tools_by_name
 
-from langchain.agents import create_agent
+given_output_msg = "Return the desired structured output."
 
-agent = create_agent(llm, tools=Tools)
-
-def compare(question, targets, target_type):
-    return run_with_targets(question, targets, target_type, [DataComparison])
-
-
-def combine(question, columns):
-    human = question + "  Weights should be between -1 and 1. Columns: {columns}"
-    return run_with_targets(human, columns, "column", [WeightedColumns])
-
-
-def extract(question, targets, target_type):
-    return run_with_targets(
-        question + "  Ignore identifier columns like 'id' or 'name'.",
+def compare(dataset_id: int, question: str, targets: list, target_type: str):
+    return ask_model(
+        dataset_id,
+        question,
         targets,
         target_type,
-        [ColumnList]
+        DataComparison
     )
 
 
-def analyze_single(question, context, answer_type):
-    structured_llm = llm.with_structured_output(answer_type)
-    return structured_llm.invoke(f"""
-User question: {question}
-
-SQL analysis results:
-{context}
-
-Produce the final structured result.
-""")
-
-
-def analyze_multiple(question, context, answer_types):
-    structured_llm = llm.with_structured_output(answer_types)
-    return structured_llm.invoke(f"""
-User question: {question}
-
-SQL analysis results:
-{context}
-
-Return exactly one answer type.
-
-Rules:
-- Fill out only the chosen answer type.
-""")
+def combine(dataset_id: int, question: str, columns: list[str]):
+    human = question + "  Weights should be between -1 and 1. Columns: {columns}"
+    return ask_model(
+        dataset_id,
+        human,
+        columns,
+        "column",
+        WeightedColumns
+    )
 
 
-def run_with_targets(question, targets, target_types, answer_types=None):
+def extract(dataset_id: int, question: str, targets: list, target_type: str):
+    return ask_model_with_targets(
+        dataset_id,
+        question + "  Ignore identifier columns like 'id' or 'name'.",
+        targets,
+        target_type,
+        ColumnList
+    )
+
+
+def ask_model_with_targets(dataset_id: int, question: str, targets: list, target_type: str, answer_type):
     
-    # default: only pass text prompt
+    question += + " Target ids (type: {target_type}): {targets}"
     arguments = {
-        "question": question + " Target ids (type: {target_type}): {targets}",
         "targets": targets,
-        "target_types": target_types
+        "target_type": target_type
     }
 
-    return _run_prompt(question, arguments, answer_types)
+    return ask_model(dataset_id, question, arguments, answer_type)
 
 
-def run(question, arguments=None, answer_types=None):
-    
-    # default: only pass text prompt
-    if arguments == None:
-        arguments = {}
+def ask_model(dataset_id: int, question: str, arguments: dict = {}, answer_types = EDAAnswer):
 
-    # add question to arguments object
+    arguments["dataset_id"] = dataset_id
     arguments["question"] = question
 
-    return _run_prompt(question, arguments, answer_types)
+    tool_llm = llm.bind_tools(tools)
+    struc_llm = llm.with_structured_output(answer_types, method="function_calling")
+
+    def llm_call(state: EDAState):
+        """LLM decides whether to call a tool or not"""
+
+        return {
+            "messages": state["messages"] + [tool_llm.invoke(state["messages"])],
+            "llm_calls": state.get('llm_calls', 0) + 1
+        }
+
+    def tool_node(state: EDAState):
+        """Performs the tool call"""
+
+        result = []
+        increase = 0
+        num_calls = state.get('tool_calls', 0)
+
+        if num_calls < 5:
+            for tool_call in state["messages"][-1].tool_calls:
+                tool = tools_by_name[tool_call["name"]]
+                observation = tool.invoke(tool_call["args"])
+                result.append(ToolMessage(
+                    content=observation if type(observation) is str else json.dumps(observation),
+                    tool_call_id=tool_call["id"]
+                ))
+        
+            increase += 1
+
+        return {
+            "messages": result,
+            "tool_calls": num_calls + increase
+        }
 
 
-def _run_prompt(question, arguments, answer_types=None):
+    def structure_node(state: EDAState):
+        """
+        Produce fitting structured output based on analysis results
+        """
 
-    # create the messages from prompt and data
-    messages = prompt.invoke(arguments)
+        # initial user question
+        question = state["messages"][1].content
+        # analysis result from last step
+        analysis = state["messages"][-1].content
 
-    # get tool result
-    tool_result = agent.invoke(messages)
+        struc_prompt = f"""
+User question:
+{question}
 
-    # default: make LLM choose the right answer
-    if answer_types == None:
-        result = analyze_multiple(question, tool_result, EDAAnswer)
-    else:
-        result = analyze_single(question, tool_result, answer_types)
+Analysis:
+{analysis}
 
-    return result
+{given_output_msg}
+"""
+
+        result = struc_llm.invoke(struc_prompt)
+
+        return { "structured_answer": result }
+
+
+    def should_continue(state: EDAState) -> Literal["tool_node", "structure_node"]:
+        """
+        Decide if we should continue the loop or go to structuring based upon whether the LLM made a tool call
+        """
+
+        messages = state["messages"]
+        last_message = messages[-1]
+
+        # If the LLM makes a tool call, then perform an action
+        if last_message.tool_calls:
+            return "tool_node"
+
+        # Otherwise, we stop (reply to the user)
+        return "structure_node"
+    
+
+    # Build workflow
+    agent_builder = StateGraph(EDAState)
+
+    # Add nodes
+    agent_builder.add_node("llm_call", llm_call)
+    agent_builder.add_node("tool_node", tool_node)
+    agent_builder.add_node("structure_node", structure_node)
+
+    # Add edges to connect nodes
+    agent_builder.add_edge(START, "llm_call")
+    agent_builder.add_edge("tool_node", "llm_call")
+    agent_builder.add_conditional_edges(
+        "llm_call",
+        should_continue,
+        ["tool_node", "structure_node"]
+    )
+    agent_builder.add_edge("structure_node", END)
+
+    # Compile the agent
+    agent = agent_builder.compile()
+
+    # Invoke
+    model_input = prompt.invoke(arguments)
+    model_output = agent.invoke(model_input)
+
+    return model_output["structured_answer"].dict()

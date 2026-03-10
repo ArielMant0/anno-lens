@@ -15,6 +15,11 @@ def exists(cur, id: int):
     return fetchone(cur, Query.from_(groups).select("*").where(groups.id == id)) is not None
 
 
+def get_group(cur, id):
+    groups = Table("groups")
+    return fetchone(cur, Query.from_(groups).select("*").where(groups.id == id).get_sql())
+
+
 def get_groups(cur, dataset=None):
     groups = Table("groups")
     if dataset is not None:
