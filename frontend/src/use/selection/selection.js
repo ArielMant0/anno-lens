@@ -43,6 +43,14 @@ export class Selection {
         return new Selection(SELECTION_TYPE.NONE, int)
     }
 
+    toJSON() {
+        return {
+            "id": this.id,
+            "type": this.type,
+            "ids": Array.from(this.data)
+        }
+    }
+
     get size() {
         return this.data.size
     }
@@ -103,6 +111,13 @@ export class LensSelection extends Selection {
         this.update(x, y, r)
     }
 
+    copy() {
+        const s = new LensSelection(this.x, this.y, this.r, this.data)
+        s.polygon = this.polygon.map(p => p.slice())
+        s.centroid = this.centroid.map(c => c.slice())
+        return s
+    }
+
     update(x, y, r) {
         this.x = x
         this.y = y
@@ -122,6 +137,15 @@ export class LassoSelection extends Selection {
         super(SELECTION_TYPE.LASSO, data)
         this.lasso = lasso
     }
+    
+    copy() {
+        const s = new LassoSelection(this.data, this.lasso.slice())
+        s.x = this.x
+        s.y = this.y
+        s.polygon = this.polygon.map(p => p.slice())
+        s.centroid = this.centroid.map(c => c.slice())
+        return s
+    }
 
     apply(tree) {
         const points = findInCallback(tree, (x, y) => this.polygon.some(p => polygonContains(p, [x, y])))
@@ -136,4 +160,12 @@ export class BrushSelection extends Selection {
         super(SELECTION_TYPE.BRUSH, data)
     }
 
+    copy() {
+        const s = new BrushSelection(this.data)
+        s.x = this.x
+        s.y = this.y
+        s.polygon = this.polygon.map(p => p.slice())
+        s.centroid = this.centroid.map(c => c.slice())
+        return s
+    }
 }

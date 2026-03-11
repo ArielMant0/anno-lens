@@ -1,5 +1,6 @@
 from app.utils import (
     fetchall,
+    fetchone,
     insert_dict,
     insert_dict_many,
     update_dict,
@@ -9,6 +10,16 @@ from app.utils import (
 )
 
 from pypika import Table, Query
+
+
+def exists(cur, id: str):
+    return get_anno_entry(cur, id) is not None
+
+
+def get_anno_entry(cur, id: str):
+    entries = Table("anno_entries")
+    q = Query.from_(entries).select("*").where(entries.id == id)
+    return fetchone(cur, q.get_sql())
 
 
 def get_anno_entries(cur, annotation=None):

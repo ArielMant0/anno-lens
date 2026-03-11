@@ -37,6 +37,18 @@ export default class Annotation {
         return anno
     }
 
+    toJSON() {
+        return {
+            "id": this.id,
+            "title": this.title,
+            "label": this.label,
+            "time_created": this.timeCreated,
+            "time_updated": this.timeUpdated,
+            "data": Array.from(this.data),
+            "entries": this.entries.map(e => e.toJSON())
+        }
+    }
+
     get polygon() {
         return this.selections.length > 0 ?
             this.selections.map(s => s.polygon).flat() :

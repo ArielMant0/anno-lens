@@ -1,3 +1,10 @@
+import app.models.groups as m_gr
+import app.models.group_members as m_gm
+import app.models.anno_anno_links as m_aal
+import app.models.anno_column_links as m_acl
+import app.models.anno_group_links as m_agl
+import app.models.anno_entries as m_ae
+
 from app.utils import (
     fetchall,
     fetchone,
@@ -10,6 +17,83 @@ from app.utils import (
 )
 
 from pypika import Tables, Query
+
+def create_from_json(cur, data: dict):
+    aid = data["id"]
+    did = data["dataset_id"]
+
+    if not exists(cur, aid):
+        add_annotation(cur, data, "id")
+
+        gid = data["group_id"]
+        group_links = [{ "annotation_id": aid, "group_id": gid }]
+
+        if not m_gr.exists(gid):
+            m_gr.add_group(cur, { "id": gid, "dataset_id": did })
+            m_gm.add_group_members(
+                cur,
+                [{ "group_id": gid, "item_id": d } for d in data["data"]]
+            )
+
+        # link this group to the annotation
+        m_agl.add_anno_group_links(cur, group_links)
+
+        # go through all entries
+        for entry in data["entries"]:
+
+            eid = m_ae.add_anno_entry(cur, { "annotation_id": aid }, "id")
+
+            col_links = m_ae.parse_column_entities(entry["entities"], eid)
+            anno_links = m_ae.parse_anno_entities(entry["entities"], eid)
+
+            m_acl.add_anno_column_links(cur, col_links)
+            m_aal.add_anno_anno_links(cur, anno_links)
+
+        return True
+    
+    return False
+
+
+def update_from_json(cur, data: dict):
+    aid = data["id"]
+
+    if exists(cur, aid):
+        did = data["dataset_id"]
+        gid = data["group_id"]
+
+        if not m_gr.exists(gid):
+            m_gr.add_group(cur, { "id": gid, "dataset_id": did })
+            m_gm.add_group_members(
+                cur,
+                [{ "group_id": gid, "item_id": d } for d in data["data"]]
+            )
+        else:
+            # update group members
+            m_gr.update_group_members(cur, gid, data["data"])
+
+        # link this group to the annotation
+        if not m_agl.exists(cur, aid, gid):
+            m_agl.add_anno_group_links(cur, [{ "annotation_id": aid, "group_id": gid }])
+
+        # go through all entries
+        for entry in data["entries"]:
+
+            eid = entry["id"]
+            if m_ae.exists(cur, eid):
+                # TODO: update entry
+                pass
+            else:
+                m_ae.add_anno_entry(cur, { "id": eid, "annotation_id": aid })
+
+                col_links = m_ae.parse_column_entities(entry["entities"], eid)
+                anno_links = m_ae.parse_anno_entities(entry["entities"], eid)
+
+                m_acl.add_anno_column_links(cur, col_links)
+                m_aal.add_anno_anno_links(cur, anno_links)
+
+        return True
+    
+    return False
 
 
 def exists(cur, id: int):

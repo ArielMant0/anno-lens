@@ -24,10 +24,23 @@ Rules:
 - Prefer aggregations for analysis.
 """
 
-def make_prompt(user_question: str):
+struc_prompt = """
+Convert the analysis results into the specified structured output.
+
+Analysis results:
+{analysis}
+"""
+
+
+def make_prompt(question: str):
     return ChatPromptTemplate([
         ("system", sys_prompt),
-        ("human", user_question)
+        ("human", question)
     ])
 
 
+def make_structure_prompt(question: str):
+    return ChatPromptTemplate([
+        ("system", struc_prompt),
+        ("human", question)
+    ])

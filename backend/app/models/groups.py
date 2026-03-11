@@ -1,4 +1,4 @@
-from app.models import m_gm
+import app.models.group_members as m_gm
 from app.utils import (
     fetchall,
     fetchone,

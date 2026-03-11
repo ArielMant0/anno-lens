@@ -12,11 +12,9 @@ from app.agents.answer_types import (
     DataComparison,
     SummaryAnswer,
 )
-from app.agents.model import llm, make_prompt
+from app.agents.model import llm, make_prompt, make_structure_prompt
 from app.agents.state import EDAState
 from app.agents.tools import tools, tools_by_name
-
-given_output_msg = "Return the desired structured output."
 
 
 def describe(dataset_id: int, question: str, targets: list, target_type: str):
@@ -76,6 +74,7 @@ def ask_model(dataset_id: int, question: str, arguments: dict = {}, answer_types
     tool_llm = llm.bind_tools(tools)
     struc_llm = llm.with_structured_output(answer_types, method="function_calling")
 
+
     def llm_call(state: EDAState):
         """LLM decides whether to call a tool or not"""
 
@@ -83,6 +82,7 @@ def ask_model(dataset_id: int, question: str, arguments: dict = {}, answer_types
             "messages": state["messages"] + [tool_llm.invoke(state["messages"])],
             "llm_calls": state.get('llm_calls', 0) + 1
         }
+
 
     def tool_node(state: EDAState):
         """Performs the tool call"""
@@ -115,18 +115,12 @@ def ask_model(dataset_id: int, question: str, arguments: dict = {}, answer_types
 
         # analysis result from last step
         analysis = state["messages"][-1].content
+        print("analysis", analysis)
 
-        struc_prompt = f"""
-User question:
-{question}
+        arguments["analysis"] = analysis
+        struc_input = make_structure_prompt(question).invoke(arguments)
 
-Analysis:
-{analysis}
-
-{given_output_msg}
-"""
-
-        result = struc_llm.invoke(struc_prompt)
+        result = struc_llm.invoke(struc_input)
 
         return { "structured_answer": result }
 
@@ -136,8 +130,7 @@ Analysis:
         Decide if we should continue the loop or go to structuring based upon whether the LLM made a tool call
         """
 
-        messages = state["messages"]
-        last_message = messages[-1]
+        last_message = state["messages"][-1]
 
         # If the LLM makes a tool call, then perform an action
         if last_message.tool_calls:

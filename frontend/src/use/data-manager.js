@@ -1,5 +1,5 @@
 import { useApp } from "@/stores/app"
-import { DATA_TYPES } from '@/stores/data';
+import { DATA_TYPES, useData } from '@/stores/data';
 import { bin, deviation, min, mean, median, quadtree, scaleLinear, extent, group } from "d3"
 import { circleIntersect, dataToNumbers, findInCircle, getAttr } from "./util"
 import { Lens, LENS_TYPE } from "./Lens"
@@ -10,6 +10,7 @@ import Annotation from "./annotation/annotation";
 import { ENTRY_TYPE, ModifierEntry, TextEntry } from "./annotation/annotation-entry";
 import { pick } from "./random"
 import { ColorFunctionModifier, MODIFIER_TYPE } from "./annotation/modifiers"
+import { updateData } from "./apis/data-api";
 
 function calcStats(data, c, filterType) {
     const ord = filterType === DATA_TYPES.ORDINAL || filterType === DATA_TYPES.NOMINAL || filterType === DATA_TYPES.BOOLEAN
@@ -524,6 +525,46 @@ class DataManager {
         if (anno.id !== this.globalAnno.id) this.annotations.push(anno)
         if (update) this.callbacks.anno.forEach(f => f(anno))
         return anno
+    }
+
+    async syncAnnotation(id) {
+        const anno = id === this.globalAnno.id ?
+            this.globalAnno :
+            this.getAnnotationById(id)
+
+        if (!anno) return
+
+        const dstore = useData()
+        const json = anno.toJSON()
+        json.dataset_id = dstore.datasetId
+        json.group_id = anno.id
+        return updateData("annotation", json)
+    }
+
+    async syncAnnotationEntry(entry) {
+        const dstore = useData()
+        const json = entry.toJSON()
+        json.dataset_id = dstore.datasetId
+        return updateData("anno_entry", json)
+    }
+
+    async syncSelection(id) {
+        const sel = this.getSelectionById(id)
+        if (!sel) return
+
+        const dstore = useData()
+        const json = sel.toJSON()
+        json.dataset_id = dstore.datasetId
+        return updateData("group", json)
+    }
+
+    async syncSelections() {
+        const dstore = useData()
+        return Promise.all(this.selections.map(s => {
+            const json = s.toJSON()
+            json.dataset_id = dstore.datasetId
+            return updateData("group", json)
+        }))
     }
 
     annotateEmpty(selections=null) {

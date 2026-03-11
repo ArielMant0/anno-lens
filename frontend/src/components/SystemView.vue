@@ -495,21 +495,6 @@
         // TODO: what to do here?
     }
 
-    function syncSelections() {
-        if (DM.selections.length > 0) {
-            const active = DM.selections[0]
-            // let backend know what the current selection looks like
-            return updateData(
-                "group",
-                {
-                    "dataset_id": dstore.datasetId,
-                    "id": active.id,
-                    "ids": Array.from(active.data)
-                }
-            )
-        }
-    }
-
     async function init() {
         ready.value = false
         mouseStill.value = false
@@ -645,7 +630,7 @@
                         toast.error("no entity to describe")
                         return
                     }
-                    await syncSelections()
+                    await DM.syncSelections()
                     // ask for description and label
                     const response = await llmDescribe(prompt, ids, "group")
                     const entities = parseEntities(response)
@@ -677,7 +662,7 @@
                 return
             }
 
-            await syncSelections()
+            await DM.syncSelections()
             const response = await llmExtract(prompt, ids, "group")
             const entities = parseEntities(response)
             DM.annotateText(
@@ -702,7 +687,7 @@
                 return
             }
 
-            await syncSelections()
+            await DM.syncSelections()
             const response = await llmCompare(prompt, groups, "group")
             const entities = parseEntities(response)
             targets.forEach(t => {
@@ -727,7 +712,7 @@
 
         const combineCommand = new LLMCommand(async function(prompt, targets) {
             app.setLLMLoading(true)
-            await syncSelections()
+            await DM.syncSelections()
             const response = await llmCombine(prompt, targets.map(t => t.getDataIds()).flat())
             const entities = parseEntities(response)
             // TODO: add to a global notepad
@@ -746,7 +731,7 @@
             app.setLLMLoading(true)
             const entry = target.annotation.getEntry(target.getEntities().dataId)
 
-            await syncSelections()
+            await DM.syncSelections()
             const response = await llmFreeTargets(prompt, entry.id, "anno_entry")
             entry.setText(response.answer)
             app.setLLMLoading(false)

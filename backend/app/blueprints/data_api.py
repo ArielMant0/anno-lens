@@ -47,29 +47,8 @@ def get_annotations(dataset) -> Response:
 @ds_bp.post("/create/annotation")
 def create_annotation() -> Response:
     cur = db.cursor()
-    data = request.json
-
-    aid = models.m_anno.add_annotation(cur, data, "id")
-
-    group_links = []
-    # get all related groups for this annotation
-    for g in data["groups"]:
-        group_links.append({ "annotation_id": aid, "group_id": g["id"] })
-
-    models.m_agl.add_anno_group_links(cur, group_links)
-
-    # go through all entries
-    for entry in data["entries"]:
-
-        eid = models.m_ae.add_anno_entry(cur, { "annotation_id": aid }, "id")
-
-        col_links = models.m_ae.parse_column_entities(entry["entities"], eid)
-        anno_links = models.m_ae.parse_anno_entities(entry["entities"], eid)
-
-        models.m_acl.add_anno_column_links(cur, col_links)
-        models.m_aal.add_anno_anno_links(cur, anno_links)
-
-    db.commit()
+    if models.m_anno.create_from_json(cur, request.json):
+        db.commit()
 
     return Response("TODO", status=200)
 
@@ -125,6 +104,17 @@ def create_group() -> Response:
 @ds_bp.post("/update/annotation")
 def update_annotation() -> Response:
     cur = db.cursor()
+    data = request.json
+
+    aid = data["id"]
+
+    if models.m_anno.exists(cur, aid):
+        models.m_anno.update_from_json(cur, data)
+    else:
+        models.m_anno.create_from_json(cur, data)
+
+    db.commit()
+
     return Response("TODO", status=200)
 
 

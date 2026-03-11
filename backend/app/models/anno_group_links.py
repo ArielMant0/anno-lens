@@ -1,12 +1,28 @@
 from app.utils import (
     fetchall,
+    fetchone,
     insert_dict,
     insert_dict_many,
     delete_id,
     delete_id_many
 )
 
-from pypika import Table, Query
+from pypika import Table, Query, Criterion
+
+
+def exists(cur, annotation: str, group: str):
+    return get_anno_group_link(cur, annotation, group) is not None
+
+
+def get_anno_group_link(cur, annotation: str, group: str):
+    links = Table("anno_group_links")
+    q = Query.from_(links) \
+        .select("*") \
+        .where(Criterion.all([
+            links.annotation_id == annotation,
+            links.group_id == group
+        ]))
+    return fetchone(cur, q.get_sql())
 
 
 def get_anno_group_links(cur, annotation=None):

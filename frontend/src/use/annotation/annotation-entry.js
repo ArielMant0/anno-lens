@@ -36,6 +36,16 @@ export class AnnotationEntry {
         )
     }
 
+    toJSON() {
+        return {
+            id: this.id,
+            type: this.type,
+            source: this.source,
+            time_updated: this.timeUpdated,
+            entities: this.entities.map(e => e.toJSON())
+        }
+    }
+
     update() {
         this.timeUpdated = Date.now()
         this._anno.update()
@@ -87,6 +97,12 @@ export class TextEntry extends AnnotationEntry {
         this.timeUpdated = Date.now()
     }
 
+    toJSON() {
+        const json = super.toJSON()
+        json.text = this.text
+        return json
+    }
+
     getText() {
         return this.text
     }
@@ -110,6 +126,13 @@ export class ModifierEntry extends AnnotationEntry {
         this.modifier = modifier
         this.addEntities(entities, false)
         this.timeUpdated = Date.now()
+    }
+
+    toJSON() {
+        const json = super.toJSON()
+        json.text = this.text
+        json.modifier = this.modifier
+        return json
     }
 
     setModifier(modifier) {
