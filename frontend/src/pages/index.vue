@@ -9,7 +9,7 @@
             <GlobalSettings/>
             <HotBar v-if="!useChat"/>
         </template>
-        
+
         <HoverOverlay/>
         <TargetingOverlay/>
         <CommandEditingPanel/>
@@ -53,6 +53,8 @@
         if (!dstore.dataset) {
             return console.warn("tried to load dataset without id")
         }
+
+        dstore.setLoaded(false)
 
         const dsid = dstore.dataset.id
         // get columns, items groups, and annotations

@@ -48,7 +48,10 @@ CREATE TABLE anno_entries (
     annotation_id TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    text TEXT,
+    text TEXT DEFAULT NULL,
+    type INTEGER NOT NULL,
+    source INTEGER NOT NULL,
+    data TEXT DEFAULT NULL,
     FOREIGN KEY (annotation_id) REFERENCES annotations(id) ON DELETE CASCADE
 );
 

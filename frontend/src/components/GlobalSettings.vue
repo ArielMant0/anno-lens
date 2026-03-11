@@ -21,7 +21,7 @@
                     hide-details
                     hide-spin-buttons
                     hide-no-data
-                    @update:model-value="v => app.setDataset(v)"
+                    @update:model-value="v => dstore.setDataset(v)"
                     :items="datasets"/>
 
                 <v-switch

@@ -8,9 +8,9 @@ from pathlib import Path
 from pypika import Table, Query
 
 column_list = [
-    { "name": "name", "dtype": "text", "description": "cereal name" },
-    { "name": "manufacturer", "dtype": "text", "description": "manufacturer name" },
-    { "name": "type", "dtype": "text", "description": "whether it is eaten hot or cold" },
+    { "name": "name", "dtype": "string", "description": "cereal name" },
+    { "name": "manufacturer", "dtype": "string", "description": "manufacturer name" },
+    { "name": "type", "dtype": "string", "description": "whether it is eaten hot or cold" },
     { "name": "calories", "dtype": "integer", "description": "calories per serving" },
     { "name": "protein", "dtype": "integer", "description": "grams of protein" },
     { "name": "fat", "dtype": "integer", "description": "grams of fat" },
@@ -20,12 +20,12 @@ column_list = [
     { "name": "sugars", "dtype": "integer", "description": "grams of sugars" },
     { "name": "potassium", "dtype": "integer", "description": "miligrams of potassium" },
     { "name": "vitamins_minerals", "dtype": "integer", "description": "percentage of FDA recommended vitamins & minerals" },
-    { "name": "display_shelf", "dtype": "text", "description": "display shelf for the cereal" },
+    { "name": "display_shelf", "dtype": "string", "description": "display shelf for the cereal" },
     { "name": "weight", "dtype": "float", "description": "weight in ounces of one serving" },
     { "name": "cups", "dtype": "float", "description": "number of cups in one serving" },
     { "name": "rating", "dtype": "float", "description": "average customer rating from 0 to 100" },
-    { "name": "x", "dtype": "float", "description": "x coordinate" },
-    { "name": "y", "dtype": "float", "description": "y coordinate" },
+    { "name": "x", "dtype": "float", "description": "t-SNE x coordinate" },
+    { "name": "y", "dtype": "float", "description": "t-SNE y coordinate" },
 ]
 
 
@@ -92,7 +92,7 @@ def insert_items(cur, dataset_id):
 
     column_names = [c["name"] for c in column_list]
     all_columns = ["dataset_id", "item_id"] + column_names
-    
+
     data_list = df.loc[:, all_columns].values.tolist()
 
     items = Table("items")
@@ -104,7 +104,7 @@ def insert_items(cur, dataset_id):
 
     # insert the items
     cur.executemany(
-        f"INSERT INTO data_cereals (dataset_id, item_id, {','.join(column_names)}) " +
+        f"INSERT INTO cereals (dataset_id, item_id, {','.join(column_names)}) " +
         f"VALUES (%s, %s, {make_sql_params(column_names)})",
         data_list
     )
@@ -119,8 +119,8 @@ def import_data():
     datasets = Table("datasets")
     q = Query.into(datasets) \
         .columns("name", "table_name") \
-        .insert('cereals', 'data_cereals')
-    
+        .insert('cereals', 'cereals')
+
     ds_id = cur.execute(q.get_sql() + " RETURNING id").fetchone()["id"]
     print(f"inserted dataset {ds_id}")
 
@@ -128,7 +128,7 @@ def import_data():
     insert_columns(cur, ds_id)
     # insert items (in big table and single table)
     insert_items(cur, ds_id)
-    
+
     db.commit()
 
 
