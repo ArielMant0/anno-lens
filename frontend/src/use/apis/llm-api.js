@@ -155,7 +155,7 @@ export const SUMMARY_PROMPT = new PromptTemplate(
 )
 
 export const DESCRIPTION_PROMPT = new PromptTemplate(
-    "Describe notable characteristics of this data, compared to the complete dataset, using no more than :limit: words. Provide a fitting label for your insights using no more than :label: words.",
+    "Describe notable characteristics of this data using no more than :limit: words. Provide a fitting label for your insights using no more than :label: words.",
     [new PromptVariable("limit", 50, "integer"), new PromptVariable("label", 5, "integer")]
 )
 

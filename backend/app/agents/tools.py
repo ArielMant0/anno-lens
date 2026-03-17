@@ -72,7 +72,6 @@ def get_desc_stats_group(group_id: str) -> dict:
     """
     cur = db_ro.cursor()
     df = DataFrame(m_it.get_items_by_group(cur, group_id))
-    print(df)
     if df.size == 0:
         return {}
     

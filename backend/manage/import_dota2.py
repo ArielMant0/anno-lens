@@ -30,7 +30,6 @@ column_list = [
     { "name": "attack_rate", "dtype": "float", "description": "hero's attack" },
     { "name": "base_attack_time", "dtype": "float", "description": "hero's attack time at level 0" },
     { "name": "move_speed", "dtype": "integer", "description": "hero's movement speed" },
-    { "name": "turn_rate", "dtype": "float", "description": "how fast the hero can turn around" },
     { "name": "legs", "dtype": "integer", "description": "the number of legs the hero has" },
     { "name": "day_vision", "dtype": "integer", "description": "how much vision the hero has at daytime" },
     { "name": "night_vision", "dtype": "integer", "description": "how much vision the hero has at nighttime" },
@@ -74,7 +73,7 @@ def insert_items(cur, dataset_id):
     column_names = [c["name"] for c in column_list]
     all_columns = ["dataset_id", "item_id"] + column_names
 
-    df.fillna(0)
+    df.fillna(0, inplace=True)
     data_list = df.loc[:, all_columns].values.tolist()
 
     items = Table("items")

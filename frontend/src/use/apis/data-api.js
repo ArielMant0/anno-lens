@@ -9,7 +9,7 @@ const DATA_API_PREFIX = "data"
  */
 export async function getData(type, dataset=null) {
     const loader = useLoader()
-    return dataset ? 
+    return dataset !== null ? 
         loader.get(`/${DATA_API_PREFIX}/${dataset}/${type}`) :
         loader.get(`/${DATA_API_PREFIX}/${type}`)
 }

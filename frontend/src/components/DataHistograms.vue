@@ -17,6 +17,7 @@
                 <div v-for="i in fP"
                     class="text-caption"
                     :key="'p_'+colsP[i]+'_'+i+'_'+refresh"
+                    :data-hist-col="colsP[i]"
                     :style="{
                         textAlign: 'center',
                         border: '1px solid ' + (colsP[i] === selectedColumn ? 'black' : 'white'),
@@ -42,9 +43,7 @@
                             :height="chartHeight"/>
                     </div>
                 </div>
-            </div>
 
-            <div class="d-flex align-center mt-2" style="min-width: 100%; max-width: 100%; overflow-x: auto;">
                 <div v-for="i in fOP"
                     class="text-caption"
                     :key="'po_'+colsOtherP[i]+'_'+i+'_'+refresh"
@@ -83,11 +82,9 @@
     import BarChart from './vis/BarChart.vue';
     import { useApp } from '@/stores/app';
     import { calcHistogram } from '@/use/util';
-    import { storeToRefs } from 'pinia';
     import { ACTION_TARGET } from '@/use/annotation/action-target';
 
     const app = useApp()
-    const { activeLens, showHotbar, useChat } = storeToRefs(app)
 
     const props = defineProps({
         active: {
@@ -176,6 +173,15 @@
         return data
     }
 
+    function goToActiveChart() {
+        if (props.selectedColumn) {
+            const node = document.querySelector(`*[data-hist-col="${props.selectedColumn}"]`)
+            if (node) {
+                node.scrollIntoView({ "behavior": "smooth", "block": "nearest" })
+            }
+        }
+    }
+
     function read() {
         const limit = props.active ? undefined : 5
 
@@ -219,4 +225,6 @@
 
     watch(() => props.active, read)
     watch(() => props.time, read)
+
+    watch(() => props.selectedColumn, goToActiveChart)
 </script>

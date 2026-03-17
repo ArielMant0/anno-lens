@@ -25,7 +25,6 @@ CREATE TABLE IF NOT EXISTS dota2 (
     attack_rate FLOAT NOT NULL,
     base_attack_time FLOAT NOT NULL,
     move_speed INTEGER NOT NULL,
-    turn_rate FLOAT NOT NULL,
     legs INTEGER NOT NULL,
     day_vision INTEGER NOT NULL,
     night_vision INTEGER NOT NULL,

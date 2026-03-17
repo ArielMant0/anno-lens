@@ -56,7 +56,7 @@
 
         dstore.setLoaded(false)
 
-        const dsid = dstore.dataset.id
+        const dsid = dstore.datasetId
         // get columns, items groups, and annotations
         const [columns, items] = await Promise.all([
             getData("columns", dsid),

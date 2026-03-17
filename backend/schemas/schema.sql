@@ -21,6 +21,7 @@ CREATE TABLE columns (
 
 CREATE TABLE groups (
     id TEXT PRIMARY KEY,
+    type INTEGER NOT NULL,
     dataset_id INTEGER NOT NULL,
     FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE
 );
@@ -51,7 +52,7 @@ CREATE TABLE anno_entries (
     text TEXT DEFAULT NULL,
     type INTEGER NOT NULL,
     source INTEGER NOT NULL,
-    data TEXT DEFAULT NULL,
+    data JSONB DEFAULT NULL,
     FOREIGN KEY (annotation_id) REFERENCES annotations(id) ON DELETE CASCADE
 );
 

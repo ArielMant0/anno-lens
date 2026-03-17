@@ -152,10 +152,14 @@ export function calcDeviation(data, column, type, stats, none=NaN) {
             (vals)
 
         gl = tmp.reduce((acc, d, i) => {
-            return acc + vals.length > 0 ?
-                Math.abs((d.length / vals.length) - stats[column].countRel[i]) :
-                0
-        }, 0)
+            if (vals.length > 0 && stats[column].countRel > 0) {
+                return acc + Math.abs((d.length / vals.length) - stats[column].countRel[i])
+            }
+            if (stats[column].countRel[i] > 0 ) {
+                return acc + stats[column].countRel[i]
+            }
+            return acc + 0
+        }, 0) / Math.max(1, stats[column].count.reduce((acc, d) => acc + (d.length > 0 ? 1 : 0), 0))
     }
 
     return [vd, gl]

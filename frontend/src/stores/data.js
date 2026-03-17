@@ -12,7 +12,6 @@ export const DATA_TYPES = Object.freeze({
 
 export const DATASETS = [
     {
-        id: 1,
         name: "dota2",
         x: "x",
         y: "y",
@@ -21,7 +20,6 @@ export const DATASETS = [
         ignore: ["name"],
         meta: ["name"]
     },{
-        id: 2,
         name: "cereals",
         x: "x",
         y: "y",
@@ -95,21 +93,16 @@ export const useData = defineStore('data', {
         setDatasets(datasets) {
             this.datasets = datasets
             if (!this.dataset && datasets.length > 0) {
-                this.setDataset(datasets.at(0).id, datasets.at(0).name)
+                this.setDataset(datasets.at(0).id)
             }
         },
 
-        setDataset(id, name=null) {
-            const byId = DATASETS.find(d => d.id === id)
-            if (byId) {
-                this.dataset = byId
-                this.datasetId = byId.id
-            } else if (name) {
-                const byName = DATASETS.find(d => d.name === id)
-                if (byName) {
-                    this.dataset = byName
-                    this.datasetId = byName.id
-                }
+        setDataset(id) {
+            const ds = this.datasets.find(d => d.id === id)
+            if (ds) {
+                const meta = DATASETS.find(d => d.name === ds.name)
+                this.dataset = meta
+                this.datasetId = id
             }
         },
 

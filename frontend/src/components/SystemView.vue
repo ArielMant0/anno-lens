@@ -277,7 +277,6 @@
 
     const featureScale = computed(() => {
         if (lensType.value === LENS_TYPE.FREQUENT) {
-            // return d3.scaleSequential(d3.interpolateGreys)
             return d3.scaleSequential(t => d3.interpolateGreys(1-t))
         }
         return d3.scaleSequential(d3.interpolateGreys)

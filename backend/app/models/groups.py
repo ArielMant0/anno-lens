@@ -39,7 +39,7 @@ def add_group(cur, data: dict, return_field: str = "id"):
     return insert_dict(
         cur,
         "groups",
-        ["id", "dataset_id"],
+        ["id", "type", "dataset_id"],
         data,
         return_field
     )
@@ -49,7 +49,7 @@ def add_groups(cur, data: list[dict]):
     return insert_dict_many(
         cur,
         "groups",
-        ["id", "dataset_id"],
+        ["id", "type", "dataset_id"],
         data
     )
 

@@ -1,4 +1,20 @@
-from pypika import Table, Query, Parameter
+from pypika import Table, Query
+
+def get_items_diff(existing: list, update: list, key: str):
+    to_add = []
+    for c in update:
+        matches = [d for d in existing if d[key] == c[key]]
+        if len(matches) == 0:
+            to_add.append(c)
+
+    to_del = []
+    for c in existing:
+        matches = [d for d in update if d[key] == c[key]]
+        if len(matches) == 0:
+            to_del.append(c)
+
+    return (to_add, to_del)
+
 
 def make_sql_params(list, template="%s"):
     return ", ".join([template for _ in list])

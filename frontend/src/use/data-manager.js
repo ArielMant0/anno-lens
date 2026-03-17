@@ -523,6 +523,7 @@ class DataManager {
 
     addAnnotation(anno, update=true) {
         if (anno.id !== this.globalAnno.id) this.annotations.push(anno)
+        this.syncAnnotation(anno.id)
         if (update) this.callbacks.anno.forEach(f => f(anno))
         return anno
     }

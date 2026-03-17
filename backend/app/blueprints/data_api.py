@@ -107,7 +107,6 @@ def update_annotation() -> Response:
     data = request.json
 
     aid = data["id"]
-
     if models.m_anno.exists(cur, aid):
         models.m_anno.update_from_json(cur, data)
     else:

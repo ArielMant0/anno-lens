@@ -22,10 +22,9 @@ def get_dataset(cur, id):
 
 def get_items(cur, dataset):
     table_name = get_dataset_item_table(cur, dataset)
-    items = Table(table_name)
     return fetchall(
         cur,
-        Query.from_(items).select("*").where(items.dataset_id == dataset).get_sql()
+        Query.from_(table_name).select("*").get_sql()
     )
 
 

@@ -1,7 +1,7 @@
 import { mean } from "d3"
 import DM from "../data-manager"
 import { ENTITY_TYPE } from "./entity"
-import { Selection } from "../selection/selection"
+import { Selection, SELECTION_TYPE } from "../selection/selection"
 import { AnnotationEntry } from "./annotation-entry"
 
 let _ANNO_ID = 1
@@ -40,11 +40,16 @@ export default class Annotation {
     toJSON() {
         return {
             "id": this.id,
+            "author": "User",
             "title": this.title,
             "label": this.label,
             "time_created": this.timeCreated,
             "time_updated": this.timeUpdated,
-            "data": Array.from(this.data),
+            "group": new Selection(
+                this.data,
+                SELECTION_TYPE.BASE,
+                this.id
+            ).toJSON(),
             "entries": this.entries.map(e => e.toJSON())
         }
     }

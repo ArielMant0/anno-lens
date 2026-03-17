@@ -5,16 +5,15 @@ import { makePolygon } from "./polygon";
 let _SEL_ID = 1;
 
 export const SELECTION_TYPE = Object.freeze({
-    NONE: 0,
-    LENS: 1,
-    LASSO: 2,
-    BRUSH: 3,
+    BASE: 1,
+    LENS: 2,
+    LASSO: 3,
 })
 
 export class Selection {
 
-    constructor(type=SELECTION_TYPE.NONE, data=[]) {
-        this.id = `${_SEL_ID++}_sel`
+    constructor(data=[], type=SELECTION_TYPE.BASE, id=null) {
+        this.id = id ?? `${_SEL_ID++}_sel`
         this.type = type
         this.data = new Set(data)
 
@@ -107,7 +106,7 @@ export class Selection {
 export class LensSelection extends Selection {
 
     constructor(x=0, y=0, r=30, data=[]) {
-        super(SELECTION_TYPE.LENS, data)
+        super(data, SELECTION_TYPE.LENS)
         this.update(x, y, r)
     }
 
@@ -134,7 +133,7 @@ export class LensSelection extends Selection {
 export class LassoSelection extends Selection {
 
     constructor(data=[], lasso=[]) {
-        super(SELECTION_TYPE.LASSO, data)
+        super(data, SELECTION_TYPE.LASSO)
         this.lasso = lasso
     }
     
@@ -150,22 +149,5 @@ export class LassoSelection extends Selection {
     apply(tree) {
         const points = findInCallback(tree, (x, y) => this.polygon.some(p => polygonContains(p, [x, y])))
         this.data = new Set(points.map(d => d.id))
-    }
-}
-
-
-export class BrushSelection extends Selection {
-
-    constructor(data=[]) {
-        super(SELECTION_TYPE.BRUSH, data)
-    }
-
-    copy() {
-        const s = new BrushSelection(this.data)
-        s.x = this.x
-        s.y = this.y
-        s.polygon = this.polygon.map(p => p.slice())
-        s.centroid = this.centroid.map(c => c.slice())
-        return s
     }
 }

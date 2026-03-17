@@ -1,7 +1,5 @@
 import app.models.groups as m_gr
 import app.models.group_members as m_gm
-import app.models.anno_anno_links as m_aal
-import app.models.anno_column_links as m_acl
 import app.models.anno_group_links as m_agl
 import app.models.anno_entries as m_ae
 
@@ -20,34 +18,34 @@ from pypika import Tables, Query
 
 def create_from_json(cur, data: dict):
     aid = data["id"]
-    did = data["dataset_id"]
+    group = data.get("group", None)
 
     if not exists(cur, aid):
         add_annotation(cur, data, "id")
 
-        gid = data["group_id"]
-        group_links = [{ "annotation_id": aid, "group_id": gid }]
 
-        if not m_gr.exists(gid):
-            m_gr.add_group(cur, { "id": gid, "dataset_id": did })
-            m_gm.add_group_members(
-                cur,
-                [{ "group_id": gid, "item_id": d } for d in data["data"]]
-            )
+        if group is not None:
+            
+            gid = group["id"]
+            group["dataset_id"] = data["dataset_id"]
 
-        # link this group to the annotation
-        m_agl.add_anno_group_links(cur, group_links)
+            if not m_gr.exists(cur, gid):
+                m_gr.add_group(cur, group)
+                m_gm.add_group_members(
+                    cur,
+                    [{ "group_id": gid, "item_id": d } for d in group["ids"]]
+                )
+
+            group_links = [{ "annotation_id": aid, "group_id": gid }]
+
+            # link this group to the annotation
+            m_agl.add_anno_group_links(cur, group_links)
 
         # go through all entries
         for entry in data["entries"]:
 
-            eid = m_ae.add_anno_entry(cur, { "annotation_id": aid }, "id")
-
-            col_links = m_ae.parse_column_entities(entry["entities"], eid)
-            anno_links = m_ae.parse_anno_entities(entry["entities"], eid)
-
-            m_acl.add_anno_column_links(cur, col_links)
-            m_aal.add_anno_anno_links(cur, anno_links)
+            entry["annotation_id"] = aid
+            m_ae.add_anno_entry(cur, entry)
 
         return True
     
@@ -56,40 +54,41 @@ def create_from_json(cur, data: dict):
 
 def update_from_json(cur, data: dict):
     aid = data["id"]
+    group = data.get("group", None)
 
     if exists(cur, aid):
-        did = data["dataset_id"]
-        gid = data["group_id"]
 
-        if not m_gr.exists(gid):
-            m_gr.add_group(cur, { "id": gid, "dataset_id": did })
-            m_gm.add_group_members(
-                cur,
-                [{ "group_id": gid, "item_id": d } for d in data["data"]]
-            )
-        else:
-            # update group members
-            m_gr.update_group_members(cur, gid, data["data"])
+        if group is not None:
+            
+            gid = group["id"]
+            group["dataset_id"] = data["dataset_id"]
 
-        # link this group to the annotation
-        if not m_agl.exists(cur, aid, gid):
-            m_agl.add_anno_group_links(cur, [{ "annotation_id": aid, "group_id": gid }])
+            if not m_gr.exists(gid):
+                m_gr.add_group(cur, group)
+                m_gm.add_group_members(
+                    cur,
+                    [{ "group_id": gid, "item_id": d } for d in group["ids"]]
+                )
+            else:
+                # update group members
+                m_gr.update_group_members(cur, gid, data["ids"])
+
+            # link this group to the annotation
+            if not m_agl.exists(cur, aid, gid):
+                m_agl.add_anno_group_links(cur, [{ "annotation_id": aid, "group_id": gid }])
 
         # go through all entries
         for entry in data["entries"]:
 
             eid = entry["id"]
+            entry["annotation_id"] = aid
+
             if m_ae.exists(cur, eid):
-                # TODO: update entry
-                pass
+                # update entry and its associated entities (columns, annotations)
+                m_ae.update_anno_entry(cur, entry)
             else:
-                m_ae.add_anno_entry(cur, { "id": eid, "annotation_id": aid })
-
-                col_links = m_ae.parse_column_entities(entry["entities"], eid)
-                anno_links = m_ae.parse_anno_entities(entry["entities"], eid)
-
-                m_acl.add_anno_column_links(cur, col_links)
-                m_aal.add_anno_anno_links(cur, anno_links)
+                # add entry and its associated entities (columns, annotations)
+                m_ae.add_anno_entry(cur, entry)
 
         return True
     
@@ -147,7 +146,7 @@ def add_annotation(cur, data: dict, return_field: str = "id"):
     return insert_dict(
         cur,
         "annotations",
-        ["dataset_id", "author", "title"],
+        ["id", "dataset_id", "author", "title"],
         data,
         return_field
     )
@@ -157,7 +156,7 @@ def add_annotations(cur, data: list[dict]):
     return insert_dict_many(
         cur,
         "annotations",
-        ["dataset_id", "author", "title"],
+        ["id", "dataset_id", "author", "title"],
         data,
     )
 

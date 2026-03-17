@@ -45,6 +45,14 @@ export class Entity {
                 return new DatapointEntity(json.id, json.data, json.values)
         }
     }
+
+    toJSON() {
+        return {
+            id: this.id,
+            type: this.type,
+            data_id: this.dataId
+        }
+    }
 }
 
 
