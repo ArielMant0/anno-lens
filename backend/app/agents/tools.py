@@ -137,8 +137,7 @@ def get_data_points(ids: list[int]) -> dict | None:
     Return data point identified via the passed list of IDs
     """
     cur = db_ro.cursor()
-    dataset_id = m_it.get_dataset(cur, ids[0])
-    return m_it.get_items_by_id(cur, dataset_id, ids)
+    return m_it.get_items_by_id(cur, ids)
 
 
 @tool  
@@ -170,6 +169,6 @@ tools = [
     get_group,
     get_data_points,
     get_annotation,
-    query_sql,
+    # query_sql,
 ]
 tools_by_name = {tool.name: tool for tool in tools}

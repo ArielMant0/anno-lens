@@ -137,11 +137,11 @@
     import { DATA_TYPES, useData } from '@/stores/data';
     import { useControls } from '@/stores/controls';
     import { LENS_TYPE } from '@/use/Lens';
-    import { computed, reactive, toRaw, useTemplateRef, watch } from 'vue';
+    import { computed, reactive, useTemplateRef, watch } from 'vue';
     import DM from '@/use/data-manager';
     import ColorLegend from './vis/ColorLegend.vue';
     import FilterDesc from './FilterDesc.vue';
-    import { findInCircle, getAttr, getDataType, makeColorScale, parseEntities } from '@/use/util';
+    import { findInCircle, getAttr, makeColorScale, parseEntities } from '@/use/util';
     import FeatureMap from './vis/FeatureMap.vue';
     import { useTheme } from 'vuetify';
     import AnnotationOverlay from './annotation/AnnotationOverlay.vue';
@@ -171,7 +171,6 @@
     import CM from '@/use/command-manager';
     import { MODIFIER_TYPE } from '@/use/annotation/modifiers';
     import LLMChatPanel from './LLMChatPanel.vue';
-    import { updateData } from '@/use/apis/data-api';
 
     const app = useApp()
     const dstore = useData()

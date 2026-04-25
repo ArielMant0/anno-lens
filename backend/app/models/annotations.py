@@ -14,7 +14,7 @@ from app.utils import (
     update_dict_many
 )
 
-from pypika import Tables, Query
+from pypika import Table, Tables, Query
 
 def create_from_json(cur, data: dict):
     aid = data["id"]
@@ -63,7 +63,7 @@ def update_from_json(cur, data: dict):
             gid = group["id"]
             group["dataset_id"] = data["dataset_id"]
 
-            if not m_gr.exists(gid):
+            if not m_gr.exists(cur, gid):
                 m_gr.add_group(cur, group)
                 m_gm.add_group_members(
                     cur,
@@ -71,7 +71,7 @@ def update_from_json(cur, data: dict):
                 )
             else:
                 # update group members
-                m_gr.update_group_members(cur, gid, data["ids"])
+                m_gr.update_group_members(cur, gid, group["ids"])
 
             # link this group to the annotation
             if not m_agl.exists(cur, aid, gid):
@@ -96,7 +96,8 @@ def update_from_json(cur, data: dict):
 
 
 def exists(cur, id: int):
-    return get_annotation(cur, id) is not None
+    annos = Table("annotations")
+    return Query.from_(annos).select("id").where(annos.id == id) is not None
 
 
 def get_annotation(cur, id):

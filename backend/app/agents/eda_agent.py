@@ -12,9 +12,16 @@ from app.agents.answer_types import (
     DataComparison,
     SummaryAnswer,
 )
-from app.agents.model import llm, make_prompt, make_structure_prompt
+from app.agents.model import (
+    llm,
+    make_prompt,
+    make_structure_instruction,
+    make_structure_prompt
+)
 from app.agents.state import EDAState
 from app.agents.tools import tools, tools_by_name
+
+from datetime import datetime
 
 
 def describe(dataset_id: int, question: str, targets: list, target_type: str):
@@ -40,7 +47,7 @@ def compare(dataset_id: int, question: str, targets: list, target_type: str):
 def combine(dataset_id: int, question: str, columns: list[str]):
     return ask_model_with_targets(
         dataset_id,
-        question + " Weights should be between -1 and 1.",
+        question + " Weights should be between -1 and 1. Return a markdown list of column ids with their respective weight.",
         columns,
         "column",
         ColumnWeights
@@ -50,7 +57,7 @@ def combine(dataset_id: int, question: str, columns: list[str]):
 def extract(dataset_id: int, question: str, targets: list, target_type: str):
     return ask_model_with_targets(
         dataset_id,
-        question + " Ignore identifier columns like 'id' or 'name'.",
+        question + " Ignore identifier columns like 'id' or 'name'. Return a list of column ids.",
         targets,
         target_type,
         ColumnList
@@ -59,7 +66,7 @@ def extract(dataset_id: int, question: str, targets: list, target_type: str):
 
 def ask_model_with_targets(dataset_id: int, question: str, targets: list, target_type: str, answer_type = EDAAnswer):
     
-    question += " Focus your analysis on these targets (type: {target_type}) provided as database IDs: {targets}"
+    question += " Focus your analysis on these targets (type: {target_type}) provided as database ids: {targets}"
     arguments = {
         "targets": targets,
         "target_type": target_type
@@ -78,8 +85,12 @@ def ask_model(dataset_id: int, question: str, arguments: dict = {}, answer_types
     def llm_call(state: EDAState):
         """LLM decides whether to call a tool or not"""
 
+        print("LLM NODE", datetime.now())
+        result = [tool_llm.invoke(state["messages"])]
+        print("\tresult: ", result)
+
         return {
-            "messages": state["messages"] + [tool_llm.invoke(state["messages"])],
+            "messages": state["messages"] + result,
             "llm_calls": state.get('llm_calls', 0) + 1
         }
 
@@ -91,7 +102,9 @@ def ask_model(dataset_id: int, question: str, arguments: dict = {}, answer_types
         increase = 0
         num_calls = state.get('tool_calls', 0)
 
-        if num_calls < 5:
+        print("TOOL NODE", datetime.now())
+
+        if num_calls < 3:
             for tool_call in state["messages"][-1].tool_calls:
                 tool = tools_by_name[tool_call["name"]]
                 observation = tool.invoke(tool_call["args"])
@@ -101,6 +114,8 @@ def ask_model(dataset_id: int, question: str, arguments: dict = {}, answer_types
                 ))
         
             increase += 1
+
+            print(f"\tresult ({len(result)}): ", result[-1])
 
         return {
             "messages": result,
@@ -113,14 +128,18 @@ def ask_model(dataset_id: int, question: str, arguments: dict = {}, answer_types
         Produce fitting structured output based on analysis results
         """
 
+        print("STRUCTURE NODE", datetime.now())
+
         # analysis result from last step
         analysis = state["messages"][-1].content
-        print("analysis", analysis)
 
         arguments["analysis"] = analysis
+        arguments["instruction"] = make_structure_instruction(answer_types)
         struc_input = make_structure_prompt(question).invoke(arguments)
 
+        print("\tstruc input", analysis)
         result = struc_llm.invoke(struc_input)
+        print("\tstruc output", result)
 
         return { "structured_answer": result }
 
@@ -154,6 +173,7 @@ def ask_model(dataset_id: int, question: str, arguments: dict = {}, answer_types
     agent_builder.add_conditional_edges(
         "llm_call",
         should_continue,
+        # ["tool_node", END]
         ["tool_node", "structure_node"]
     )
     agent_builder.add_edge("structure_node", END)

@@ -144,7 +144,7 @@ def update_anno_entry(cur, data: dict):
     )
 
     if "entities" in data:
-        update_anno_entry_entities(data["entities"])
+        update_anno_entry_entities(cur, data)
 
     return cur
 

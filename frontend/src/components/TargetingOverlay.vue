@@ -192,7 +192,7 @@
     }
 
     function updateHighlights() {
-        if (scrollPending) return
+        if (!showTargetOverlay.value || scrollPending) return
 
         scrollPending = true;
         requestAnimationFrame(() => {

@@ -49,7 +49,7 @@ class DataComparison(CustomBaseModel):
     of column IDs relevant to the answer.
     """
     answer: str = Field(description="The explanation formatted as markdown")
-    columns: List[str] = Field(description="The list of column IDs mentioned in the answer")
+    columns: List[int] = Field(description="The list of column IDs mentioned in the answer")
 
 
 class ColumnList(CustomBaseModel):
@@ -57,7 +57,7 @@ class ColumnList(CustomBaseModel):
     A list of column IDs identified as relevant and an explanation for their choice.
     """
     answer: str = Field(description="The explanation formatted as markdown")
-    columns: List[str] = Field(description="The list of relevant column IDs")
+    columns: List[int] = Field(description="The list of relevant column IDs")
 
 
 class ColumnWeights(CustomBaseModel):

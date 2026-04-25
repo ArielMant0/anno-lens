@@ -120,7 +120,8 @@ def update_dict(conn, table: str, fields: list[str], data: dict):
     
     # for each field, set current value
     for f in fields:
-        q = q.set(f, data[f])
+        if f in data:
+            q = q.set(f, data[f])
 
     # limit to only this row
     q = q.where(t.id == data["id"])

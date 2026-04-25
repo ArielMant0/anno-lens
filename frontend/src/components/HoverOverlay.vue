@@ -22,7 +22,7 @@
 
     const scrollContainers = new Set();
 
-    let svgNodes = [], highlights = []
+    let svgNodes = null, highlights = []
     let scrollPending = false
 
     function getScrollableAncestors(el) {
@@ -117,7 +117,8 @@
     }
 
     function updateHighlights() {
-        if (scrollPending) return
+        if (showHoverOverlay.value || showTargetOverlay.value || scrollPending) return
+        if (!svgNodes) return
 
         scrollPending = true;
         requestAnimationFrame(() => {
